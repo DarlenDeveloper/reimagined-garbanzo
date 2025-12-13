@@ -137,7 +137,7 @@ export default function ChatsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-[#8C9A8F] truncate">{conv.lastMessage}</span>
                     {conv.unread > 0 && (
-                      <span className="h-5 w-5 rounded-full bg-[#1B4332] text-white text-xs flex items-center justify-center">
+                      <span className="h-4 min-w-4 px-1 rounded-full bg-[#1B4332] text-white text-[10px] flex items-center justify-center">
                         {conv.unread}
                       </span>
                     )}

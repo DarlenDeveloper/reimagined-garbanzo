@@ -25,6 +25,7 @@ import {
   MessageCircle,
   ChevronDown,
   ChevronRight,
+  Share2,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
@@ -37,6 +38,7 @@ const navigation = [
   { name: "Shipping", href: "/dashboard/shipping", icon: PackageSearch },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
+  { name: "Socials", href: "/dashboard/socials", icon: Share2 },
   { name: "Users", href: "/dashboard/users", icon: Users },
   { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
 ]

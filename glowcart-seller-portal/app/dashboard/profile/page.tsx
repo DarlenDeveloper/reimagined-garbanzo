@@ -658,24 +658,241 @@ export default function SettingsPage() {
           </>
         )}
 
-        {/* Default content for other sections */}
-        {!["store", "plan", "billing", "users", "payments", "notifications", "security", "shipping"].includes(activeSection) && (
-          <div className="bg-white rounded-xl border border-[#E8E0D5] p-12 text-center">
-            <div className="h-16 w-16 rounded-full bg-[#F5F0E8] flex items-center justify-center mx-auto mb-4">
-              {settingsSections.find(s => s.id === activeSection)?.icon && (
-                <span className="text-[#1B4332]">
-                  {(() => {
-                    const Icon = settingsSections.find(s => s.id === activeSection)?.icon
-                    return Icon ? <Icon className="h-8 w-8" /> : null
-                  })()}
-                </span>
-              )}
+        {/* Checkout Section */}
+        {activeSection === "checkout" && (
+          <>
+            <div className="bg-white rounded-xl border border-[#E8E0D5] overflow-hidden">
+              <div className="p-6 border-b border-[#E8E0D5]">
+                <h3 className="text-lg font-semibold text-[#1B4332]">Checkout settings</h3>
+                <p className="text-sm text-[#8C9A8F] mt-1">Customize your checkout experience</p>
+              </div>
+              <div className="p-6 space-y-6">
+                <div>
+                  <label className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-[#1B4332]">Guest checkout</p>
+                      <p className="text-sm text-[#8C9A8F]">Allow customers to checkout without creating an account</p>
+                    </div>
+                    <input type="checkbox" defaultChecked className="h-5 w-5 rounded border-[#E8E0D5] text-[#1B4332]" />
+                  </label>
+                </div>
+                <div>
+                  <label className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-[#1B4332]">Order notes</p>
+                      <p className="text-sm text-[#8C9A8F]">Allow customers to add notes to their orders</p>
+                    </div>
+                    <input type="checkbox" defaultChecked className="h-5 w-5 rounded border-[#E8E0D5] text-[#1B4332]" />
+                  </label>
+                </div>
+                <div>
+                  <label className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-[#1B4332]">Tip collection</p>
+                      <p className="text-sm text-[#8C9A8F]">Allow customers to add tips at checkout</p>
+                    </div>
+                    <input type="checkbox" className="h-5 w-5 rounded border-[#E8E0D5] text-[#1B4332]" />
+                  </label>
+                </div>
+              </div>
+              <div className="px-6 py-4 bg-[#FAF8F5] border-t border-[#E8E0D5] flex justify-end">
+                <Button>Save</Button>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-[#1B4332] mb-2">
-              {settingsSections.find(s => s.id === activeSection)?.name}
-            </h3>
-            <p className="text-sm text-[#8C9A8F]">This section is coming soon</p>
-          </div>
+          </>
+        )}
+
+        {/* Taxes Section */}
+        {activeSection === "taxes" && (
+          <>
+            <div className="bg-white rounded-xl border border-[#E8E0D5] overflow-hidden">
+              <div className="p-6 border-b border-[#E8E0D5]">
+                <h3 className="text-lg font-semibold text-[#1B4332]">Tax settings</h3>
+                <p className="text-sm text-[#8C9A8F] mt-1">Configure how taxes are calculated</p>
+              </div>
+              <div className="p-6 space-y-6">
+                <div>
+                  <label className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-[#1B4332]">Charge taxes</p>
+                      <p className="text-sm text-[#8C9A8F]">Automatically calculate and charge taxes</p>
+                    </div>
+                    <input type="checkbox" defaultChecked className="h-5 w-5 rounded border-[#E8E0D5] text-[#1B4332]" />
+                  </label>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-[#1B4332] block mb-2">Default tax rate</label>
+                  <Input defaultValue="7.5%" className="bg-white border-[#E8E0D5] w-32" />
+                </div>
+                <div>
+                  <label className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-[#1B4332]">Prices include tax</p>
+                      <p className="text-sm text-[#8C9A8F]">Product prices already include tax</p>
+                    </div>
+                    <input type="checkbox" className="h-5 w-5 rounded border-[#E8E0D5] text-[#1B4332]" />
+                  </label>
+                </div>
+              </div>
+              <div className="px-6 py-4 bg-[#FAF8F5] border-t border-[#E8E0D5] flex justify-end">
+                <Button>Save</Button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Locations Section */}
+        {activeSection === "locations" && (
+          <>
+            <div className="bg-white rounded-xl border border-[#E8E0D5] overflow-hidden">
+              <div className="p-6 border-b border-[#E8E0D5] flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-[#1B4332]">Locations</h3>
+                  <p className="text-sm text-[#8C9A8F] mt-1">Manage your store locations and warehouses</p>
+                </div>
+                <Button>Add location</Button>
+              </div>
+              <div className="divide-y divide-[#E8E0D5]">
+                {[
+                  { name: "Main Warehouse", address: "123 Commerce Street, San Francisco, CA 94102", type: "Warehouse", default: true },
+                  { name: "Downtown Store", address: "456 Market Street, San Francisco, CA 94103", type: "Retail", default: false },
+                ].map((location, idx) => (
+                  <div key={idx} className="flex items-center justify-between px-6 py-4 hover:bg-[#FAF8F5]">
+                    <div className="flex items-center space-x-4">
+                      <div className="h-10 w-10 rounded-xl bg-[#F5F0E8] flex items-center justify-center">
+                        <MapPin className="h-5 w-5 text-[#1B4332]" />
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <p className="font-medium text-[#1B4332]">{location.name}</p>
+                          {location.default && <span className="px-2 py-0.5 bg-[#D1E7DD] text-[#1B4332] text-xs rounded-full">Default</span>}
+                        </div>
+                        <p className="text-sm text-[#8C9A8F]">{location.address}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2 py-1 bg-[#F5F0E8] text-[#1B4332] text-xs font-medium rounded-full">{location.type}</span>
+                      <Button variant="outline" size="sm">Edit</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Languages Section */}
+        {activeSection === "languages" && (
+          <>
+            <div className="bg-white rounded-xl border border-[#E8E0D5] overflow-hidden">
+              <div className="p-6 border-b border-[#E8E0D5]">
+                <h3 className="text-lg font-semibold text-[#1B4332]">Store languages</h3>
+                <p className="text-sm text-[#8C9A8F] mt-1">Manage languages for your store</p>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-[#1B4332] block mb-2">Default language</label>
+                  <select className="w-full h-10 px-3 rounded-xl border border-[#E8E0D5] bg-white text-[#1B4332] text-sm">
+                    <option>English (US)</option>
+                    <option>English (UK)</option>
+                    <option>Spanish</option>
+                    <option>French</option>
+                    <option>German</option>
+                  </select>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-[#1B4332] mb-2">Additional languages</p>
+                  <div className="space-y-2">
+                    {["Spanish", "French"].map((lang, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-[#F5F0E8] rounded-xl">
+                        <span className="text-sm text-[#1B4332]">{lang}</span>
+                        <Button variant="ghost" size="sm" className="text-[#991B1B]">Remove</Button>
+                      </div>
+                    ))}
+                  </div>
+                  <Button variant="outline" size="sm" className="mt-3">Add language</Button>
+                </div>
+              </div>
+              <div className="px-6 py-4 bg-[#FAF8F5] border-t border-[#E8E0D5] flex justify-end">
+                <Button>Save</Button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Policies Section */}
+        {activeSection === "policies" && (
+          <>
+            <div className="bg-white rounded-xl border border-[#E8E0D5] overflow-hidden">
+              <div className="p-6 border-b border-[#E8E0D5]">
+                <h3 className="text-lg font-semibold text-[#1B4332]">Store policies</h3>
+                <p className="text-sm text-[#8C9A8F] mt-1">Manage your store's legal policies</p>
+              </div>
+              <div className="divide-y divide-[#E8E0D5]">
+                {[
+                  { name: "Refund policy", status: "Published" },
+                  { name: "Privacy policy", status: "Published" },
+                  { name: "Terms of service", status: "Published" },
+                  { name: "Shipping policy", status: "Draft" },
+                ].map((policy, idx) => (
+                  <div key={idx} className="flex items-center justify-between px-6 py-4 hover:bg-[#FAF8F5]">
+                    <div>
+                      <p className="font-medium text-[#1B4332]">{policy.name}</p>
+                      <span className={`text-xs ${policy.status === "Published" ? "text-[#1B4332]" : "text-[#8C9A8F]"}`}>
+                        {policy.status}
+                      </span>
+                    </div>
+                    <Button variant="outline" size="sm">Edit</Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Apps Section */}
+        {activeSection === "apps" && (
+          <>
+            <div className="bg-white rounded-xl border border-[#E8E0D5] overflow-hidden">
+              <div className="p-6 border-b border-[#E8E0D5] flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-[#1B4332]">Apps and integrations</h3>
+                  <p className="text-sm text-[#8C9A8F] mt-1">Manage connected apps and sales channels</p>
+                </div>
+                <Button>Browse apps</Button>
+              </div>
+              <div className="p-6 space-y-4">
+                {[
+                  { name: "Chipper Cash", desc: "Payment processing", status: "Connected" },
+                  { name: "Uber Delivery", desc: "Same-day delivery", status: "Connected" },
+                  { name: "Skynet Shipping", desc: "International shipping", status: "Connected" },
+                  { name: "Google Analytics", desc: "Website analytics", status: "Not connected" },
+                ].map((app, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 border border-[#E8E0D5] rounded-xl">
+                    <div className="flex items-center space-x-4">
+                      <div className="h-10 w-10 rounded-xl bg-[#F5F0E8] flex items-center justify-center">
+                        <Smartphone className="h-5 w-5 text-[#1B4332]" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-[#1B4332]">{app.name}</p>
+                        <p className="text-sm text-[#8C9A8F]">{app.desc}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        app.status === "Connected" ? "bg-[#D1E7DD] text-[#1B4332]" : "bg-[#F5F0E8] text-[#8C9A8F]"
+                      }`}>
+                        {app.status}
+                      </span>
+                      <Button variant="outline" size="sm">
+                        {app.status === "Connected" ? "Manage" : "Connect"}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

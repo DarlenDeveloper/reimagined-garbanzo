@@ -92,7 +92,18 @@
   - User status tracking
   - Activity monitoring
 
-### 11. Profile
+### 11. Socials (NEW)
+- **Route**: `/dashboard/socials`
+- **File**: `app/dashboard/socials/page.tsx`
+- **Features**:
+  - Store social feed
+  - Create posts (24h for free, 7 days for premium)
+  - Follower management
+  - Engagement metrics (likes, comments, shares, views)
+  - Post expiration countdown
+  - Media attachments (images, videos)
+
+### 12. Profile
 - **Route**: `/dashboard/profile`
 - **File**: `app/dashboard/profile/page.tsx`
 - **Features**:
@@ -100,8 +111,9 @@
   - Logo/Banner upload
   - Business hours
   - Account settings
+  - Complete settings sections (checkout, taxes, locations, languages, policies, apps)
 
-### 12. Notifications
+### 13. Notifications
 - **Route**: `/dashboard/notifications`
 - **File**: `app/dashboard/notifications/page.tsx`
 - **Features**:
@@ -117,13 +129,16 @@ The sidebar includes all pages in this order:
 2. Products
 3. Orders
 4. Inventory
-5. Deliveries ⭐ NEW
-6. Shipping ⭐ NEW
+5. Deliveries
+6. Shipping
 7. Analytics
 8. Payments
-9. Users ⭐ NEW
-10. Profile
+9. Socials ⭐ NEW
+10. Users
 11. Notifications
+12. Customer Service (dropdown)
+13. Chats
+14. Settings/Profile
 
 ## New Features Added
 
@@ -199,9 +214,85 @@ All pages use dummy data from `lib/dummy-data.ts`:
 - `DUMMY_TRANSACTIONS`
 - `DUMMY_METRICS`
 - `DUMMY_NOTIFICATIONS`
-- `DUMMY_DELIVERIES` ⭐ NEW
-- `DUMMY_SHIPMENTS` ⭐ NEW
-- `DUMMY_USERS` ⭐ NEW
+- `DUMMY_DELIVERIES`
+- `DUMMY_SHIPMENTS`
+- `DUMMY_USERS`
+- `DUMMY_SOCIAL_POSTS` ⭐ NEW
+- `DUMMY_FOLLOWERS` ⭐ NEW
+- `DUMMY_PRODUCT_SPECS` ⭐ NEW (comprehensive specs for all 18 products)
+
+## Product Specifications System ⭐ NEW
+
+The platform supports comprehensive product specifications for ALL product categories:
+
+### Size Charts Available:
+- `CLOTHING_SIZE_CHART` - Men's/Women's/Kids tops, bottoms
+- `FOOTWEAR_SIZE_CHART` - Men's/Women's/Kids shoes (US, UK, EU, CM)
+- `RING_SIZE_CHART` - US, UK, EU with diameter/circumference
+- `BRA_SIZE_CHART` - Band and cup sizes
+- `TV_SIZE_GUIDE` - Viewing distance recommendations
+- `MATTRESS_SIZE_CHART` - All standard sizes with dimensions
+- `BICYCLE_SIZE_CHART` - Road and mountain bikes by rider height
+
+### Product Category Specification Templates:
+Templates in `PRODUCT_SPEC_TEMPLATES` for easy product creation:
+
+**Electronics:**
+- Audio (headphones, speakers, earbuds)
+- TV (all sizes, resolutions, smart features)
+- Smartphones (cameras, battery, storage)
+- Laptops (processor, RAM, graphics)
+- Cameras (sensor, megapixels, video)
+
+**Clothing:**
+- Tops (size, material, fit, neckline)
+- Bottoms (size, rise, inseam)
+- Dresses (length, occasion)
+- Outerwear (insulation, water resistance)
+
+**Footwear:**
+- Sneakers, Boots, Sandals, Formal shoes
+
+**Furniture:**
+- Seating, Tables, Storage, Beds
+
+**Beauty:**
+- Skincare, Makeup, Haircare, Fragrance
+
+**Vehicles:**
+- Cars (engine, transmission, MPG, VIN)
+- Motorcycles (displacement, seat height)
+- Bicycles (frame size, gears)
+
+**Appliances:**
+- Kitchen, Laundry, Climate control
+
+**Sports & Fitness:**
+- Equipment, Fitness machines, Outdoor gear
+
+### Type Definitions (in `types/index.ts`):
+- `ClothingSpecs` - Full clothing attributes
+- `FootwearSpecs` - Shoe specifications
+- `ElectronicsSpecs` - General electronics
+- `TVSpecs` - Television-specific
+- `SmartphoneSpecs` - Mobile phone specs
+- `LaptopSpecs` - Computer specifications
+- `VehicleSpecs` - Car specifications
+- `MotorcycleSpecs` - Motorcycle specs
+- `FurnitureSpecs` - Furniture attributes
+- `MattressSpecs` - Mattress specifications
+- `BeautyProductSpecs` - Cosmetics/skincare
+- `FoodProductSpecs` - Food/beverage items
+- `SportsEquipmentSpecs` - Sports gear
+- `FitnessEquipmentSpecs` - Gym equipment
+- `ApplianceSpecs` - Home appliances
+- `JewelrySpecs` - Jewelry items
+- `WatchSpecs` - Watch specifications
+- `BookSpecs` - Books/media
+- `ToySpecs` - Toys/games
+- `PetProductSpecs` - Pet supplies
+- `GardenProductSpecs` - Garden/outdoor
+- `ToolSpecs` - Tools/hardware
 
 ## Next Steps
 

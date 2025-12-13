@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Plus, Search, ChevronDown, ChevronRight, Filter, ArrowUpDown, MoreHorizontal, Edit, Trash2, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { DUMMY_PRODUCTS, DUMMY_INVENTORY } from "@/lib/dummy-data"
+import { DUMMY_PRODUCTS, DUMMY_INVENTORY, DUMMY_PRODUCT_SPECS } from "@/lib/dummy-data"
 import { formatCurrency } from "@/lib/utils"
 import { Product } from "@/types"
 
@@ -197,36 +197,53 @@ export default function ProductsPage() {
               {/* Expanded Details */}
               {expandedRows.has(product.productId) && (
                 <div className="px-4 py-4 bg-[#FAF8F5] border-t border-[#E8E0D5]">
-                  <div className="ml-[100px] grid grid-cols-3 gap-6">
-                    <div>
-                      <h4 className="text-xs font-medium text-[#8C9A8F] uppercase mb-2">Description</h4>
-                      <p className="text-sm text-[#1B4332]">{product.description || "No description"}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-medium text-[#8C9A8F] uppercase mb-2">Details</h4>
-                      <div className="space-y-1 text-sm">
-                        <p><span className="text-[#8C9A8F]">SKU:</span> <span className="text-[#1B4332]">{product.sku || "—"}</span></p>
-                        <p><span className="text-[#8C9A8F]">Category:</span> <span className="text-[#1B4332]">{product.categoryId || "—"}</span></p>
-                        <p><span className="text-[#8C9A8F]">Created:</span> <span className="text-[#1B4332]">{new Date(product.createdAt).toLocaleDateString()}</span></p>
+                  <div className="ml-[100px] space-y-4">
+                    <div className="grid grid-cols-3 gap-6">
+                      <div>
+                        <h4 className="text-xs font-medium text-[#8C9A8F] uppercase mb-2">Description</h4>
+                        <p className="text-sm text-[#1B4332]">{product.description || "No description"}</p>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-medium text-[#8C9A8F] uppercase mb-2">Details</h4>
+                        <div className="space-y-1 text-sm">
+                          <p><span className="text-[#8C9A8F]">SKU:</span> <span className="text-[#1B4332]">{product.sku || "—"}</span></p>
+                          <p><span className="text-[#8C9A8F]">Category:</span> <span className="text-[#1B4332]">{product.categoryId || "—"}</span></p>
+                          <p><span className="text-[#8C9A8F]">Created:</span> <span className="text-[#1B4332]">{new Date(product.createdAt).toLocaleDateString()}</span></p>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-medium text-[#8C9A8F] uppercase mb-2">Actions</h4>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm">
+                            <Edit className="h-3.5 w-3.5 mr-1" />
+                            Edit
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <Copy className="h-3.5 w-3.5 mr-1" />
+                            Duplicate
+                          </Button>
+                          <Button variant="outline" size="sm" className="text-[#991B1B] hover:bg-[#FEE2E2]">
+                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <h4 className="text-xs font-medium text-[#8C9A8F] uppercase mb-2">Actions</h4>
-                      <div className="flex space-x-2">
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-3.5 w-3.5 mr-1" />
-                          Edit
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Copy className="h-3.5 w-3.5 mr-1" />
-                          Duplicate
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-[#991B1B] hover:bg-[#FEE2E2]">
-                          <Trash2 className="h-3.5 w-3.5 mr-1" />
-                          Delete
-                        </Button>
+                    
+                    {/* Product Specifications */}
+                    {DUMMY_PRODUCT_SPECS[product.productId] && (
+                      <div className="pt-4 border-t border-[#E8E0D5]">
+                        <h4 className="text-xs font-medium text-[#8C9A8F] uppercase mb-3">Specifications</h4>
+                        <div className="grid grid-cols-4 gap-3">
+                          {DUMMY_PRODUCT_SPECS[product.productId].specs.map((spec, idx) => (
+                            <div key={idx} className="bg-white rounded-lg p-2 border border-[#E8E0D5]">
+                              <p className="text-[10px] text-[#8C9A8F] uppercase">{spec.label}</p>
+                              <p className="text-xs font-medium text-[#1B4332]">{spec.value}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               )}

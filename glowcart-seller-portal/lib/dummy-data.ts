@@ -473,3 +473,678 @@ export const DUMMY_USERS: import("@/types").User[] = [
     createdAt: "2024-01-08T10:00:00Z",
   },
 ]
+
+
+// Dummy Social Posts
+export const DUMMY_SOCIAL_POSTS: import("@/types").SocialPost[] = [
+  {
+    postId: "post-1",
+    vendorId: "vendor-123",
+    content: "🎉 Flash Sale Alert! Get 20% off all wireless headphones this weekend only. Use code GLOW20 at checkout!",
+    mediaType: "text",
+    likes: 245,
+    comments: 32,
+    shares: 18,
+    views: 1250,
+    expiresAt: new Date(Date.now() + 20 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    postId: "post-2",
+    vendorId: "vendor-123",
+    content: "Just restocked our best-selling Smart Watch Ultra! Limited quantities available. Don't miss out! ⌚",
+    mediaUrl: "/images/smartwatch.jpg",
+    mediaType: "image",
+    likes: 189,
+    comments: 24,
+    shares: 12,
+    views: 890,
+    expiresAt: new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    postId: "post-3",
+    vendorId: "vendor-123",
+    content: "Thank you for 1000+ followers! 🙏 As a thank you, we're giving away a free Bluetooth Speaker to one lucky follower. Like this post to enter!",
+    mediaType: "text",
+    likes: 523,
+    comments: 156,
+    shares: 89,
+    views: 2340,
+    expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+  },
+]
+
+// Dummy Followers
+export const DUMMY_FOLLOWERS: import("@/types").Follower[] = [
+  { id: "f-1", name: "Alice Johnson", email: "alice@example.com", followedAt: "2 hours ago" },
+  { id: "f-2", name: "Bob Smith", email: "bob@example.com", followedAt: "5 hours ago" },
+  { id: "f-3", name: "Carol Williams", email: "carol@example.com", followedAt: "Yesterday" },
+  { id: "f-4", name: "David Brown", email: "david@example.com", followedAt: "Yesterday" },
+  { id: "f-5", name: "Eva Martinez", email: "eva@example.com", followedAt: "2 days ago" },
+  { id: "f-6", name: "Frank Lee", email: "frank@example.com", followedAt: "2 days ago" },
+  { id: "f-7", name: "Grace Kim", email: "grace@example.com", followedAt: "3 days ago" },
+  { id: "f-8", name: "Henry Chen", email: "henry@example.com", followedAt: "3 days ago" },
+  { id: "f-9", name: "Ivy Taylor", email: "ivy@example.com", followedAt: "4 days ago" },
+  { id: "f-10", name: "Jack Wilson", email: "jack@example.com", followedAt: "5 days ago" },
+]
+
+// Product Specifications - Comprehensive specs for all product types
+export const DUMMY_PRODUCT_SPECS: Record<string, import("@/types").ProductSpecification> = {
+  // Electronics - Headphones
+  "prod-1": {
+    category: "electronics",
+    specs: [
+      { label: "Brand", value: "GlowAudio" },
+      { label: "Model", value: "WHP-001 Pro" },
+      { label: "Type", value: "Over-ear" },
+      { label: "Driver Size", value: "40mm" },
+      { label: "Frequency Response", value: "20Hz - 20kHz" },
+      { label: "Impedance", value: "32 Ohm" },
+      { label: "Sensitivity", value: "105dB" },
+      { label: "Battery Life", value: "30 hours" },
+      { label: "Charging Time", value: "2 hours" },
+      { label: "Noise Cancellation", value: "Active (ANC)" },
+      { label: "Connectivity", value: "Bluetooth 5.2, 3.5mm jack" },
+      { label: "Codec Support", value: "AAC, SBC, aptX HD" },
+      { label: "Weight", value: "250g" },
+      { label: "Foldable", value: "Yes" },
+      { label: "Warranty", value: "2 years" },
+    ],
+  },
+  // Electronics - Smart Watch
+  "prod-2": {
+    category: "electronics",
+    specs: [
+      { label: "Brand", value: "GlowTech" },
+      { label: "Model", value: "SWU-002" },
+      { label: "Display Type", value: "AMOLED" },
+      { label: "Display Size", value: "1.9 inches" },
+      { label: "Resolution", value: "484 x 396 pixels" },
+      { label: "Processor", value: "Dual-core 1.8GHz" },
+      { label: "RAM", value: "1GB" },
+      { label: "Storage", value: "32GB" },
+      { label: "Battery Capacity", value: "450mAh" },
+      { label: "Battery Life", value: "Up to 7 days" },
+      { label: "Water Resistance", value: "5ATM (50m)" },
+      { label: "Sensors", value: "Heart rate, SpO2, Accelerometer, Gyroscope, GPS" },
+      { label: "Connectivity", value: "Bluetooth 5.0, Wi-Fi, NFC" },
+      { label: "Compatibility", value: "iOS 12+, Android 8+" },
+      { label: "Strap Material", value: "Silicone (interchangeable)" },
+      { label: "Case Material", value: "Aluminum alloy" },
+      { label: "Warranty", value: "1 year" },
+    ],
+  },
+  // Electronics - Bluetooth Speaker
+  "prod-3": {
+    category: "electronics",
+    specs: [
+      { label: "Brand", value: "GlowSound" },
+      { label: "Model", value: "PBS-003" },
+      { label: "Speaker Type", value: "Portable" },
+      { label: "Driver Size", value: "2 x 45mm" },
+      { label: "Power Output", value: "20W RMS" },
+      { label: "Frequency Response", value: "60Hz - 20kHz" },
+      { label: "Battery Life", value: "12 hours" },
+      { label: "Charging Time", value: "3 hours" },
+      { label: "Connectivity", value: "Bluetooth 5.0, AUX 3.5mm" },
+      { label: "Water Resistance", value: "IPX7" },
+      { label: "Dimensions", value: "180 x 70 x 70mm" },
+      { label: "Weight", value: "540g" },
+      { label: "Warranty", value: "1 year" },
+    ],
+  },
+  // Accessories - USB-C Charger
+  "prod-4": {
+    category: "electronics",
+    specs: [
+      { label: "Brand", value: "GlowPower" },
+      { label: "Model", value: "UFC-004" },
+      { label: "Output Power", value: "65W" },
+      { label: "Input", value: "100-240V AC, 50/60Hz" },
+      { label: "USB-C Output", value: "5V/3A, 9V/3A, 15V/3A, 20V/3.25A" },
+      { label: "Protocol Support", value: "PD 3.0, QC 4.0, PPS" },
+      { label: "Ports", value: "1x USB-C" },
+      { label: "Protection", value: "Over-voltage, Over-current, Short-circuit" },
+      { label: "Dimensions", value: "55 x 55 x 30mm" },
+      { label: "Weight", value: "120g" },
+      { label: "Certification", value: "CE, FCC, UL" },
+      { label: "Warranty", value: "18 months" },
+    ],
+  },
+  // Accessories - Laptop Stand
+  "prod-5": {
+    category: "accessories",
+    specs: [
+      { label: "Brand", value: "GlowDesk" },
+      { label: "Model", value: "LS-005" },
+      { label: "Material", value: "Aluminum alloy" },
+      { label: "Compatible Sizes", value: "10-17 inch laptops" },
+      { label: "Height Adjustment", value: "6 levels (15-45°)" },
+      { label: "Max Load", value: "20kg / 44lbs" },
+      { label: "Ventilation", value: "Open design for airflow" },
+      { label: "Anti-slip", value: "Silicone pads" },
+      { label: "Foldable", value: "Yes" },
+      { label: "Dimensions (Open)", value: "260 x 230 x 150mm" },
+      { label: "Dimensions (Folded)", value: "260 x 45 x 35mm" },
+      { label: "Weight", value: "280g" },
+      { label: "Color", value: "Space Gray" },
+      { label: "Warranty", value: "2 years" },
+    ],
+  },
+  // Accessories - Wireless Mouse
+  "prod-6": {
+    category: "electronics",
+    specs: [
+      { label: "Brand", value: "GlowInput" },
+      { label: "Model", value: "WM-006" },
+      { label: "Sensor Type", value: "Optical" },
+      { label: "DPI", value: "800/1200/1600/2400" },
+      { label: "Buttons", value: "6 (programmable)" },
+      { label: "Connectivity", value: "2.4GHz wireless, Bluetooth 5.0" },
+      { label: "Battery", value: "1x AA (included)" },
+      { label: "Battery Life", value: "12 months" },
+      { label: "Click Sound", value: "Silent" },
+      { label: "Ergonomic Design", value: "Right-handed" },
+      { label: "Dimensions", value: "105 x 65 x 38mm" },
+      { label: "Weight", value: "85g (without battery)" },
+      { label: "Compatibility", value: "Windows, macOS, Linux" },
+      { label: "Warranty", value: "1 year" },
+    ],
+  },
+  // Electronics - Mechanical Keyboard
+  "prod-7": {
+    category: "electronics",
+    specs: [
+      { label: "Brand", value: "GlowKeys" },
+      { label: "Model", value: "MK-007" },
+      { label: "Layout", value: "Full-size (104 keys)" },
+      { label: "Switch Type", value: "Mechanical (Blue)" },
+      { label: "Actuation Force", value: "50g" },
+      { label: "Key Travel", value: "4mm" },
+      { label: "Backlighting", value: "RGB (16.8M colors)" },
+      { label: "Anti-ghosting", value: "N-key rollover" },
+      { label: "Connectivity", value: "USB-C (detachable)" },
+      { label: "Keycap Material", value: "Double-shot PBT" },
+      { label: "Frame Material", value: "Aluminum top plate" },
+      { label: "Dimensions", value: "440 x 135 x 40mm" },
+      { label: "Weight", value: "1.1kg" },
+      { label: "Software", value: "GlowHub (customization)" },
+      { label: "Warranty", value: "2 years" },
+    ],
+  },
+  // Electronics - Webcam
+  "prod-8": {
+    category: "electronics",
+    specs: [
+      { label: "Brand", value: "GlowCam" },
+      { label: "Model", value: "WC-008" },
+      { label: "Resolution", value: "1080p Full HD" },
+      { label: "Frame Rate", value: "30fps (1080p), 60fps (720p)" },
+      { label: "Sensor", value: "2MP CMOS" },
+      { label: "Field of View", value: "78°" },
+      { label: "Focus", value: "Auto-focus" },
+      { label: "Microphone", value: "Dual stereo with noise reduction" },
+      { label: "Low Light", value: "Auto light correction" },
+      { label: "Mount Type", value: "Clip/Tripod (1/4\" thread)" },
+      { label: "Connection", value: "USB 2.0" },
+      { label: "Cable Length", value: "1.5m" },
+      { label: "Compatibility", value: "Windows, macOS, Chrome OS" },
+      { label: "Privacy", value: "Built-in lens cover" },
+      { label: "Warranty", value: "1 year" },
+    ],
+  },
+  // Accessories - USB Hub
+  "prod-9": {
+    category: "electronics",
+    specs: [
+      { label: "Brand", value: "GlowConnect" },
+      { label: "Model", value: "UH-009" },
+      { label: "Ports", value: "7x USB 3.0" },
+      { label: "Data Transfer", value: "5Gbps per port" },
+      { label: "Power Delivery", value: "BC 1.2 (1.5A per port)" },
+      { label: "Power Adapter", value: "12V/3A (included)" },
+      { label: "LED Indicators", value: "Per-port status" },
+      { label: "Cable Length", value: "1m USB-A" },
+      { label: "Dimensions", value: "165 x 45 x 25mm" },
+      { label: "Weight", value: "180g" },
+      { label: "Compatibility", value: "Windows, macOS, Linux" },
+      { label: "Warranty", value: "2 years" },
+    ],
+  },
+  // Accessories - Monitor Light Bar
+  "prod-10": {
+    category: "electronics",
+    specs: [
+      { label: "Brand", value: "GlowLight" },
+      { label: "Model", value: "MLB-010" },
+      { label: "Light Source", value: "80 LEDs" },
+      { label: "Color Temperature", value: "2700K - 6500K" },
+      { label: "Brightness", value: "300-1000 lux" },
+      { label: "CRI", value: ">95" },
+      { label: "Power", value: "USB (5V/1A)" },
+      { label: "Controls", value: "Touch sensor" },
+      { label: "Auto-dimming", value: "Ambient light sensor" },
+      { label: "Monitor Compatibility", value: "1-32mm thick" },
+      { label: "Length", value: "45cm" },
+      { label: "Weight", value: "530g" },
+      { label: "Warranty", value: "1 year" },
+    ],
+  },
+  // Accessories - Desk Mat
+  "prod-11": {
+    category: "accessories",
+    specs: [
+      { label: "Brand", value: "GlowDesk" },
+      { label: "Model", value: "DM-011" },
+      { label: "Size", value: "900 x 400 x 3mm" },
+      { label: "Surface Material", value: "Micro-woven cloth" },
+      { label: "Base Material", value: "Natural rubber" },
+      { label: "Surface Texture", value: "Speed/Control balanced" },
+      { label: "Edge", value: "Stitched anti-fray" },
+      { label: "Water Resistant", value: "Splash-proof surface" },
+      { label: "Mouse Compatibility", value: "All sensor types" },
+      { label: "Washable", value: "Yes (hand wash)" },
+      { label: "Color", value: "Charcoal Gray" },
+      { label: "Warranty", value: "1 year" },
+    ],
+  },
+  // Accessories - Cable Organizer
+  "prod-12": {
+    category: "accessories",
+    specs: [
+      { label: "Brand", value: "GlowOrganize" },
+      { label: "Model", value: "CO-012" },
+      { label: "Type", value: "Magnetic cable clips" },
+      { label: "Quantity", value: "6 clips per pack" },
+      { label: "Cable Slots", value: "3 per clip" },
+      { label: "Compatible Cables", value: "Up to 5mm diameter" },
+      { label: "Material", value: "Silicone + Magnet" },
+      { label: "Magnet Strength", value: "Strong N52" },
+      { label: "Adhesive", value: "3M VHB tape" },
+      { label: "Surface Compatible", value: "Wood, metal, glass, plastic" },
+      { label: "Colors", value: "Black, White, Gray" },
+      { label: "Warranty", value: "6 months" },
+    ],
+  },
+  // Electronics - Wireless Earbuds
+  "prod-13": {
+    category: "electronics",
+    specs: [
+      { label: "Brand", value: "GlowAudio" },
+      { label: "Model", value: "WE-013" },
+      { label: "Driver Size", value: "11mm dynamic" },
+      { label: "Frequency Response", value: "20Hz - 20kHz" },
+      { label: "ANC", value: "Hybrid Active Noise Cancellation" },
+      { label: "Transparency Mode", value: "Yes" },
+      { label: "Battery (Earbuds)", value: "6 hours (ANC on)" },
+      { label: "Battery (Case)", value: "24 hours total" },
+      { label: "Charging", value: "USB-C, Wireless Qi" },
+      { label: "Quick Charge", value: "10min = 1hr playback" },
+      { label: "Connectivity", value: "Bluetooth 5.2" },
+      { label: "Codec Support", value: "AAC, SBC, LDAC" },
+      { label: "Water Resistance", value: "IPX4" },
+      { label: "Touch Controls", value: "Yes" },
+      { label: "Microphones", value: "3 per earbud" },
+      { label: "Weight (Each)", value: "5.5g" },
+      { label: "Warranty", value: "1 year" },
+    ],
+  },
+  // Accessories - Power Bank
+  "prod-14": {
+    category: "electronics",
+    specs: [
+      { label: "Brand", value: "GlowPower" },
+      { label: "Model", value: "PB-014" },
+      { label: "Capacity", value: "20000mAh / 74Wh" },
+      { label: "Cell Type", value: "Li-Polymer" },
+      { label: "USB-C Input", value: "5V/3A, 9V/2A, 12V/1.5A" },
+      { label: "USB-C Output", value: "5V/3A, 9V/2.22A, 12V/1.67A (20W)" },
+      { label: "USB-A Output", value: "5V/3A, 9V/2A, 12V/1.5A (22.5W)" },
+      { label: "Total Output", value: "22.5W max" },
+      { label: "Ports", value: "1x USB-C, 2x USB-A" },
+      { label: "Pass-through", value: "Yes" },
+      { label: "LED Indicator", value: "4-level battery display" },
+      { label: "Dimensions", value: "150 x 70 x 25mm" },
+      { label: "Weight", value: "350g" },
+      { label: "Safety", value: "Over-charge, Over-discharge, Short-circuit protection" },
+      { label: "Warranty", value: "18 months" },
+    ],
+  },
+  // Accessories - Phone Stand
+  "prod-15": {
+    category: "accessories",
+    specs: [
+      { label: "Brand", value: "GlowStand" },
+      { label: "Model", value: "PS-015" },
+      { label: "Material", value: "Aluminum alloy + Silicone" },
+      { label: "Angle Adjustment", value: "0-100°" },
+      { label: "Height Adjustment", value: "Fixed" },
+      { label: "Compatible Devices", value: "4-13 inch phones/tablets" },
+      { label: "Max Device Thickness", value: "13mm (with case)" },
+      { label: "Foldable", value: "Yes" },
+      { label: "Anti-slip", value: "Silicone pads" },
+      { label: "Charging Compatible", value: "Yes (port accessible)" },
+      { label: "Dimensions (Open)", value: "80 x 75 x 110mm" },
+      { label: "Weight", value: "150g" },
+      { label: "Color Options", value: "Silver, Space Gray, Rose Gold" },
+      { label: "Warranty", value: "1 year" },
+    ],
+  },
+  // Accessories - HDMI Cable
+  "prod-16": {
+    category: "accessories",
+    specs: [
+      { label: "Brand", value: "GlowCable" },
+      { label: "Model", value: "HC-016" },
+      { label: "Version", value: "HDMI 2.1" },
+      { label: "Length", value: "2 meters" },
+      { label: "Max Resolution", value: "8K@60Hz, 4K@120Hz" },
+      { label: "Bandwidth", value: "48Gbps" },
+      { label: "HDR Support", value: "HDR10, Dolby Vision" },
+      { label: "Audio", value: "eARC, Dolby Atmos, DTS:X" },
+      { label: "VRR Support", value: "Yes (AMD FreeSync, NVIDIA G-Sync)" },
+      { label: "ALLM", value: "Yes" },
+      { label: "Cable Type", value: "Braided nylon" },
+      { label: "Connector", value: "Gold-plated" },
+      { label: "Shielding", value: "Triple-layer" },
+      { label: "Warranty", value: "Lifetime" },
+    ],
+  },
+  // Accessories - Screen Protector
+  "prod-17": {
+    category: "accessories",
+    specs: [
+      { label: "Brand", value: "GlowShield" },
+      { label: "Model", value: "SP-017" },
+      { label: "Material", value: "Tempered Glass" },
+      { label: "Hardness", value: "9H" },
+      { label: "Thickness", value: "0.33mm" },
+      { label: "Transparency", value: "99.9%" },
+      { label: "Coating", value: "Oleophobic (anti-fingerprint)" },
+      { label: "Edge", value: "2.5D rounded" },
+      { label: "Touch Sensitivity", value: "Full" },
+      { label: "Compatibility", value: "iPhone 15 Pro Max" },
+      { label: "Coverage", value: "Full screen" },
+      { label: "Installation", value: "Alignment frame included" },
+      { label: "Quantity", value: "2 pack" },
+      { label: "Warranty", value: "Lifetime replacement" },
+    ],
+  },
+  // Accessories - Laptop Sleeve
+  "prod-18": {
+    category: "accessories",
+    specs: [
+      { label: "Brand", value: "GlowCarry" },
+      { label: "Model", value: "LSL-018" },
+      { label: "Compatible Size", value: "15-15.6 inch laptops" },
+      { label: "Outer Material", value: "Water-resistant neoprene" },
+      { label: "Inner Material", value: "Soft fleece lining" },
+      { label: "Closure", value: "YKK zipper" },
+      { label: "Pockets", value: "1 front accessory pocket" },
+      { label: "Padding", value: "5mm shock-absorbing foam" },
+      { label: "Dimensions (Outer)", value: "390 x 280 x 25mm" },
+      { label: "Dimensions (Inner)", value: "380 x 265 x 20mm" },
+      { label: "Weight", value: "220g" },
+      { label: "Color Options", value: "Black, Navy, Gray" },
+      { label: "Warranty", value: "1 year" },
+    ],
+  },
+}
+
+// ============================================
+// SIZE CHARTS FOR VARIOUS PRODUCT CATEGORIES
+// ============================================
+
+// Clothing Size Charts
+export const CLOTHING_SIZE_CHART = {
+  // Men's Tops (inches)
+  mensTops: [
+    { size: "XS", chest: "32-34", waist: "26-28", neck: "13-13.5", sleeve: "32", length: "26" },
+    { size: "S", chest: "34-36", waist: "28-30", neck: "14-14.5", sleeve: "33", length: "27" },
+    { size: "M", chest: "38-40", waist: "32-34", neck: "15-15.5", sleeve: "34", length: "28" },
+    { size: "L", chest: "42-44", waist: "36-38", neck: "16-16.5", sleeve: "35", length: "29" },
+    { size: "XL", chest: "46-48", waist: "40-42", neck: "17-17.5", sleeve: "35.5", length: "30" },
+    { size: "XXL", chest: "50-52", waist: "44-46", neck: "18-18.5", sleeve: "36", length: "31" },
+    { size: "3XL", chest: "54-56", waist: "48-50", neck: "19-19.5", sleeve: "36.5", length: "32" },
+  ],
+  // Women's Tops (inches)
+  womensTops: [
+    { size: "XS", usSize: "0-2", bust: "31-32", waist: "24-25", hip: "34-35" },
+    { size: "S", usSize: "4-6", bust: "33-34", waist: "26-27", hip: "36-37" },
+    { size: "M", usSize: "8-10", bust: "35-36", waist: "28-29", hip: "38-39" },
+    { size: "L", usSize: "12-14", bust: "37-39", waist: "30-32", hip: "40-42" },
+    { size: "XL", usSize: "16-18", bust: "40-42", waist: "33-35", hip: "43-45" },
+    { size: "XXL", usSize: "20-22", bust: "43-45", waist: "36-38", hip: "46-48" },
+  ],
+  // Men's Bottoms (inches)
+  mensBottoms: [
+    { size: "28", waist: "28", hip: "34", inseam: "30", thigh: "21" },
+    { size: "30", waist: "30", hip: "36", inseam: "30", thigh: "22" },
+    { size: "32", waist: "32", hip: "38", inseam: "32", thigh: "23" },
+    { size: "34", waist: "34", hip: "40", inseam: "32", thigh: "24" },
+    { size: "36", waist: "36", hip: "42", inseam: "32", thigh: "25" },
+    { size: "38", waist: "38", hip: "44", inseam: "32", thigh: "26" },
+    { size: "40", waist: "40", hip: "46", inseam: "32", thigh: "27" },
+    { size: "42", waist: "42", hip: "48", inseam: "32", thigh: "28" },
+  ],
+  // Women's Bottoms (inches)
+  womensBottoms: [
+    { size: "XS", usSize: "0-2", waist: "24-25", hip: "34-35", inseam: "30" },
+    { size: "S", usSize: "4-6", waist: "26-27", hip: "36-37", inseam: "30" },
+    { size: "M", usSize: "8-10", waist: "28-29", hip: "38-39", inseam: "31" },
+    { size: "L", usSize: "12-14", waist: "30-32", hip: "40-42", inseam: "31" },
+    { size: "XL", usSize: "16-18", waist: "33-35", hip: "43-45", inseam: "32" },
+    { size: "XXL", usSize: "20-22", waist: "36-38", hip: "46-48", inseam: "32" },
+  ],
+  // Kids Sizes (ages)
+  kids: [
+    { size: "2T", age: "2", height: "33-35", weight: "26-29 lbs", chest: "21", waist: "20" },
+    { size: "3T", age: "3", height: "36-38", weight: "30-33 lbs", chest: "22", waist: "20.5" },
+    { size: "4T", age: "4", height: "39-41", weight: "34-37 lbs", chest: "23", waist: "21" },
+    { size: "5", age: "5", height: "42-44", weight: "38-42 lbs", chest: "24", waist: "21.5" },
+    { size: "6", age: "6", height: "45-47", weight: "43-48 lbs", chest: "25", waist: "22" },
+    { size: "7", age: "7", height: "48-50", weight: "49-57 lbs", chest: "26", waist: "22.5" },
+    { size: "8", age: "8", height: "51-53", weight: "58-68 lbs", chest: "27", waist: "23" },
+    { size: "10", age: "9-10", height: "54-57", weight: "69-87 lbs", chest: "28.5", waist: "24" },
+    { size: "12", age: "11-12", height: "58-60", weight: "88-100 lbs", chest: "30", waist: "25" },
+    { size: "14", age: "13-14", height: "61-63", weight: "101-115 lbs", chest: "32", waist: "26" },
+  ],
+}
+
+// Footwear Size Charts
+export const FOOTWEAR_SIZE_CHART = {
+  // Men's Shoes (US, UK, EU, CM)
+  mens: [
+    { us: "6", uk: "5.5", eu: "39", cm: "24" },
+    { us: "6.5", uk: "6", eu: "39.5", cm: "24.5" },
+    { us: "7", uk: "6.5", eu: "40", cm: "25" },
+    { us: "7.5", uk: "7", eu: "40.5", cm: "25.5" },
+    { us: "8", uk: "7.5", eu: "41", cm: "26" },
+    { us: "8.5", uk: "8", eu: "42", cm: "26.5" },
+    { us: "9", uk: "8.5", eu: "42.5", cm: "27" },
+    { us: "9.5", uk: "9", eu: "43", cm: "27.5" },
+    { us: "10", uk: "9.5", eu: "44", cm: "28" },
+    { us: "10.5", uk: "10", eu: "44.5", cm: "28.5" },
+    { us: "11", uk: "10.5", eu: "45", cm: "29" },
+    { us: "11.5", uk: "11", eu: "45.5", cm: "29.5" },
+    { us: "12", uk: "11.5", eu: "46", cm: "30" },
+    { us: "13", uk: "12.5", eu: "47", cm: "31" },
+    { us: "14", uk: "13.5", eu: "48", cm: "32" },
+  ],
+  // Women's Shoes (US, UK, EU, CM)
+  womens: [
+    { us: "5", uk: "2.5", eu: "35", cm: "22" },
+    { us: "5.5", uk: "3", eu: "35.5", cm: "22.5" },
+    { us: "6", uk: "3.5", eu: "36", cm: "23" },
+    { us: "6.5", uk: "4", eu: "36.5", cm: "23.5" },
+    { us: "7", uk: "4.5", eu: "37", cm: "24" },
+    { us: "7.5", uk: "5", eu: "37.5", cm: "24.5" },
+    { us: "8", uk: "5.5", eu: "38", cm: "25" },
+    { us: "8.5", uk: "6", eu: "38.5", cm: "25.5" },
+    { us: "9", uk: "6.5", eu: "39", cm: "26" },
+    { us: "9.5", uk: "7", eu: "39.5", cm: "26.5" },
+    { us: "10", uk: "7.5", eu: "40", cm: "27" },
+    { us: "10.5", uk: "8", eu: "41", cm: "27.5" },
+    { us: "11", uk: "8.5", eu: "42", cm: "28" },
+  ],
+  // Kids Shoes (US, UK, EU, CM, Age)
+  kids: [
+    { us: "1C", uk: "0.5", eu: "16", cm: "8.3", age: "0-3 mo" },
+    { us: "2C", uk: "1", eu: "17", cm: "9.1", age: "3-6 mo" },
+    { us: "3C", uk: "2", eu: "18", cm: "10", age: "6-9 mo" },
+    { us: "4C", uk: "3", eu: "19", cm: "10.8", age: "9-12 mo" },
+    { us: "5C", uk: "4", eu: "20", cm: "11.6", age: "12-18 mo" },
+    { us: "6C", uk: "5", eu: "22", cm: "12.5", age: "18-24 mo" },
+    { us: "7C", uk: "6", eu: "23", cm: "13.3", age: "2 yrs" },
+    { us: "8C", uk: "7", eu: "24", cm: "14.1", age: "2-3 yrs" },
+    { us: "9C", uk: "8", eu: "25", cm: "15", age: "3-4 yrs" },
+    { us: "10C", uk: "9", eu: "27", cm: "15.8", age: "4-5 yrs" },
+    { us: "11C", uk: "10", eu: "28", cm: "16.6", age: "5-6 yrs" },
+    { us: "12C", uk: "11", eu: "30", cm: "17.5", age: "6-7 yrs" },
+    { us: "13C", uk: "12", eu: "31", cm: "18.3", age: "7-8 yrs" },
+    { us: "1Y", uk: "13", eu: "32", cm: "19.1", age: "8-9 yrs" },
+    { us: "2Y", uk: "1", eu: "33", cm: "20", age: "9-10 yrs" },
+    { us: "3Y", uk: "2", eu: "34", cm: "20.8", age: "10-11 yrs" },
+  ],
+}
+
+// Ring Size Chart
+export const RING_SIZE_CHART = [
+  { us: "4", uk: "H", eu: "46.8", diameter: "14.9mm", circumference: "46.8mm" },
+  { us: "4.5", uk: "I", eu: "47.8", diameter: "15.2mm", circumference: "47.8mm" },
+  { us: "5", uk: "J", eu: "49", diameter: "15.6mm", circumference: "49mm" },
+  { us: "5.5", uk: "K", eu: "50", diameter: "15.9mm", circumference: "50mm" },
+  { us: "6", uk: "L", eu: "51.2", diameter: "16.3mm", circumference: "51.2mm" },
+  { us: "6.5", uk: "M", eu: "52.4", diameter: "16.7mm", circumference: "52.4mm" },
+  { us: "7", uk: "N", eu: "53.8", diameter: "17.1mm", circumference: "53.8mm" },
+  { us: "7.5", uk: "O", eu: "54.8", diameter: "17.5mm", circumference: "54.8mm" },
+  { us: "8", uk: "P", eu: "56", diameter: "17.8mm", circumference: "56mm" },
+  { us: "8.5", uk: "Q", eu: "57.2", diameter: "18.2mm", circumference: "57.2mm" },
+  { us: "9", uk: "R", eu: "58.4", diameter: "18.6mm", circumference: "58.4mm" },
+  { us: "9.5", uk: "S", eu: "59.6", diameter: "19mm", circumference: "59.6mm" },
+  { us: "10", uk: "T", eu: "60.8", diameter: "19.4mm", circumference: "60.8mm" },
+  { us: "10.5", uk: "U", eu: "62", diameter: "19.7mm", circumference: "62mm" },
+  { us: "11", uk: "V", eu: "63.2", diameter: "20.1mm", circumference: "63.2mm" },
+  { us: "11.5", uk: "W", eu: "64.4", diameter: "20.5mm", circumference: "64.4mm" },
+  { us: "12", uk: "X", eu: "65.6", diameter: "20.9mm", circumference: "65.6mm" },
+]
+
+// Bra Size Chart
+export const BRA_SIZE_CHART = {
+  bandSizes: [
+    { us: "30", uk: "30", eu: "65", fr: "80" },
+    { us: "32", uk: "32", eu: "70", fr: "85" },
+    { us: "34", uk: "34", eu: "75", fr: "90" },
+    { us: "36", uk: "36", eu: "80", fr: "95" },
+    { us: "38", uk: "38", eu: "85", fr: "100" },
+    { us: "40", uk: "40", eu: "90", fr: "105" },
+    { us: "42", uk: "42", eu: "95", fr: "110" },
+    { us: "44", uk: "44", eu: "100", fr: "115" },
+  ],
+  cupSizes: [
+    { us: "AA", uk: "AA", difference: "0-1 inch" },
+    { us: "A", uk: "A", difference: "1 inch" },
+    { us: "B", uk: "B", difference: "2 inches" },
+    { us: "C", uk: "C", difference: "3 inches" },
+    { us: "D", uk: "D", difference: "4 inches" },
+    { us: "DD/E", uk: "DD", difference: "5 inches" },
+    { us: "DDD/F", uk: "E", difference: "6 inches" },
+    { us: "G", uk: "F", difference: "7 inches" },
+    { us: "H", uk: "FF", difference: "8 inches" },
+    { us: "I", uk: "G", difference: "9 inches" },
+  ],
+}
+
+// TV Size Guide (viewing distance recommendations)
+export const TV_SIZE_GUIDE = [
+  { screenSize: "32\"", resolution: "1080p", minDistance: "4 ft", maxDistance: "6.5 ft", roomSize: "Small bedroom" },
+  { screenSize: "40\"", resolution: "1080p", minDistance: "5 ft", maxDistance: "8.5 ft", roomSize: "Bedroom" },
+  { screenSize: "43\"", resolution: "4K", minDistance: "3.5 ft", maxDistance: "9 ft", roomSize: "Bedroom/Small living" },
+  { screenSize: "50\"", resolution: "4K", minDistance: "4 ft", maxDistance: "10.5 ft", roomSize: "Living room" },
+  { screenSize: "55\"", resolution: "4K", minDistance: "4.5 ft", maxDistance: "11.5 ft", roomSize: "Living room" },
+  { screenSize: "65\"", resolution: "4K", minDistance: "5.5 ft", maxDistance: "13.5 ft", roomSize: "Large living room" },
+  { screenSize: "75\"", resolution: "4K", minDistance: "6.5 ft", maxDistance: "15.5 ft", roomSize: "Large living room" },
+  { screenSize: "85\"", resolution: "4K", minDistance: "7 ft", maxDistance: "18 ft", roomSize: "Home theater" },
+]
+
+// Mattress Size Chart
+export const MATTRESS_SIZE_CHART = [
+  { size: "Twin", dimensions: "38\" x 75\"", cm: "97 x 191 cm", bestFor: "Kids, single adults, small rooms" },
+  { size: "Twin XL", dimensions: "38\" x 80\"", cm: "97 x 203 cm", bestFor: "Taller individuals, dorm rooms" },
+  { size: "Full/Double", dimensions: "54\" x 75\"", cm: "137 x 191 cm", bestFor: "Single adults, guest rooms" },
+  { size: "Queen", dimensions: "60\" x 80\"", cm: "152 x 203 cm", bestFor: "Couples, master bedrooms" },
+  { size: "King", dimensions: "76\" x 80\"", cm: "193 x 203 cm", bestFor: "Couples wanting space, large rooms" },
+  { size: "Cal King", dimensions: "72\" x 84\"", cm: "183 x 213 cm", bestFor: "Taller couples, large rooms" },
+]
+
+// Bicycle Size Chart
+export const BICYCLE_SIZE_CHART = {
+  road: [
+    { riderHeight: "4'10\" - 5'1\"", frameSize: "47-49 cm", size: "XXS" },
+    { riderHeight: "5'1\" - 5'5\"", frameSize: "50-52 cm", size: "XS" },
+    { riderHeight: "5'5\" - 5'9\"", frameSize: "53-55 cm", size: "S" },
+    { riderHeight: "5'9\" - 6'0\"", frameSize: "56-58 cm", size: "M" },
+    { riderHeight: "6'0\" - 6'3\"", frameSize: "58-60 cm", size: "L" },
+    { riderHeight: "6'3\" - 6'6\"", frameSize: "61-63 cm", size: "XL" },
+  ],
+  mountain: [
+    { riderHeight: "4'10\" - 5'2\"", frameSize: "13-14\"", size: "XS" },
+    { riderHeight: "5'2\" - 5'6\"", frameSize: "15-16\"", size: "S" },
+    { riderHeight: "5'6\" - 5'10\"", frameSize: "17-18\"", size: "M" },
+    { riderHeight: "5'10\" - 6'1\"", frameSize: "19-20\"", size: "L" },
+    { riderHeight: "6'1\" - 6'4\"", frameSize: "21-22\"", size: "XL" },
+    { riderHeight: "6'4\"+", frameSize: "23\"+", size: "XXL" },
+  ],
+}
+
+// Product Category Templates (for adding new products)
+export const PRODUCT_SPEC_TEMPLATES = {
+  electronics: {
+    audio: ["Brand", "Model", "Type", "Driver Size", "Frequency Response", "Impedance", "Sensitivity", "Battery Life", "Connectivity", "Weight", "Warranty"],
+    tv: ["Brand", "Model", "Screen Size", "Resolution", "Display Type", "Refresh Rate", "HDR", "Smart TV", "OS", "HDMI Ports", "Speakers", "Dimensions", "Weight", "Warranty"],
+    smartphone: ["Brand", "Model", "Screen Size", "Resolution", "Display Type", "Processor", "RAM", "Storage", "Rear Camera", "Front Camera", "Battery", "OS", "5G", "Water Resistance", "Warranty"],
+    laptop: ["Brand", "Model", "Screen Size", "Resolution", "Processor", "RAM", "Storage", "Graphics", "OS", "Battery Life", "Ports", "Weight", "Warranty"],
+    camera: ["Brand", "Model", "Sensor Type", "Megapixels", "ISO Range", "Video Resolution", "Lens Mount", "Viewfinder", "Screen", "Storage", "Battery", "Weight", "Warranty"],
+  },
+  clothing: {
+    tops: ["Brand", "Size", "Color", "Material", "Fit", "Neckline", "Sleeve Length", "Pattern", "Care Instructions", "Country of Origin"],
+    bottoms: ["Brand", "Size", "Color", "Material", "Fit", "Rise", "Inseam", "Closure", "Pockets", "Care Instructions"],
+    dresses: ["Brand", "Size", "Color", "Material", "Fit", "Length", "Neckline", "Sleeve", "Occasion", "Care Instructions"],
+    outerwear: ["Brand", "Size", "Color", "Material", "Fill", "Insulation", "Water Resistant", "Hood", "Pockets", "Care Instructions"],
+  },
+  footwear: {
+    sneakers: ["Brand", "Size", "Color", "Upper Material", "Sole Material", "Closure", "Cushioning", "Arch Support", "Weight"],
+    boots: ["Brand", "Size", "Color", "Material", "Sole", "Heel Height", "Shaft Height", "Closure", "Waterproof", "Insulated"],
+    sandals: ["Brand", "Size", "Color", "Material", "Sole", "Strap Type", "Heel Height", "Arch Support"],
+    formal: ["Brand", "Size", "Color", "Material", "Sole", "Heel Height", "Toe Shape", "Closure"],
+  },
+  furniture: {
+    seating: ["Brand", "Type", "Style", "Material", "Frame Material", "Dimensions", "Weight Capacity", "Assembly", "Indoor/Outdoor", "Warranty"],
+    tables: ["Brand", "Type", "Style", "Material", "Top Material", "Dimensions", "Weight", "Assembly", "Warranty"],
+    storage: ["Brand", "Type", "Style", "Material", "Dimensions", "Shelves/Drawers", "Weight Capacity", "Assembly", "Warranty"],
+    beds: ["Brand", "Size", "Style", "Material", "Headboard", "Footboard", "Slats Included", "Weight Capacity", "Assembly", "Warranty"],
+  },
+  beauty: {
+    skincare: ["Brand", "Product Type", "Skin Type", "Key Ingredients", "Size", "Texture", "SPF", "Cruelty Free", "Vegan", "Usage"],
+    makeup: ["Brand", "Product Type", "Shade", "Coverage", "Finish", "Size", "Key Ingredients", "Cruelty Free", "Vegan"],
+    haircare: ["Brand", "Product Type", "Hair Type", "Key Ingredients", "Size", "Scent", "Sulfate Free", "Paraben Free"],
+    fragrance: ["Brand", "Name", "Type", "Top Notes", "Heart Notes", "Base Notes", "Size", "Concentration", "Longevity"],
+  },
+  vehicles: {
+    car: ["Make", "Model", "Year", "Trim", "Body Type", "Engine", "Horsepower", "Transmission", "Drivetrain", "Fuel Type", "MPG", "Seating", "Color", "Mileage", "VIN"],
+    motorcycle: ["Make", "Model", "Year", "Type", "Engine", "Displacement", "Horsepower", "Transmission", "Fuel Capacity", "Seat Height", "Weight", "Color"],
+    bicycle: ["Brand", "Type", "Frame Size", "Frame Material", "Wheel Size", "Gears", "Brakes", "Suspension", "Weight", "Color"],
+  },
+  appliances: {
+    kitchen: ["Brand", "Model", "Type", "Capacity", "Power", "Voltage", "Dimensions", "Weight", "Color", "Features", "Energy Rating", "Warranty"],
+    laundry: ["Brand", "Model", "Type", "Capacity", "Spin Speed", "Programs", "Energy Rating", "Noise Level", "Dimensions", "Warranty"],
+    climate: ["Brand", "Model", "Type", "BTU/Capacity", "Coverage Area", "Energy Rating", "Noise Level", "Features", "Dimensions", "Warranty"],
+  },
+  sports: {
+    equipment: ["Brand", "Sport", "Type", "Material", "Size", "Weight", "Skill Level", "Certifications", "Warranty"],
+    fitness: ["Brand", "Type", "Max User Weight", "Dimensions", "Resistance Levels", "Programs", "Display", "Foldable", "Warranty"],
+    outdoor: ["Brand", "Type", "Material", "Capacity", "Dimensions", "Weight", "Weather Resistant", "Warranty"],
+  },
+}
