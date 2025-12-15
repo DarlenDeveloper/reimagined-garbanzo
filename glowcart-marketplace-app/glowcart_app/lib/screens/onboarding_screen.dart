@@ -14,26 +14,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
 
   static const darkGreen = Color(0xFF1B4332);
-  static const beige = Color(0xFFF5F0E8);
+  static const accentGreen = Color(0xFFA8D5A2);
 
   final List<_SlideData> _slides = [
     _SlideData(
-      titleLight: 'Discover',
-      titleBold: 'Local Stores',
-      subtitle: 'Near You',
-      image: 'assets/images/IMG_9498.JPG',
+      header: 'Buy & Sell',
+      body: 'Connect with sellers or resellers and access the products you need.',
+      image: 'assets/images/Onboardingslide1.png',
     ),
     _SlideData(
-      titleLight: 'Shop With',
-      titleBold: 'Confidence',
-      subtitle: 'Every Time',
-      image: 'assets/images/IMG_9499.JPG',
+      header: 'Payments & Delivery',
+      body: 'Seamless payments and fast delivery, all handled in one app.',
+      image: 'assets/images/Onboardingslide2.png',
     ),
     _SlideData(
-      titleLight: 'Follow Your',
-      titleBold: 'Favorite',
-      subtitle: 'Vendors',
-      image: 'assets/images/IMG_9500.PNG',
+      header: 'Buy Now, Pay Later',
+      body: 'Get what you want today and pay in easy installments.',
+      image: 'assets/images/Onboardingslide3.png',
     ),
   ];
 
@@ -61,22 +58,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              beige,
-              beige.withAlpha(240),
-              Colors.white,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Stack(
-            children: [
-              PageView.builder(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: (index) => setState(() => _currentPage = index),
                 itemCount: _slides.length,
@@ -84,55 +71,66 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   return _SlideContent(slide: _slides[index]);
                 },
               ),
-              Positioned(
-                left: 28,
-                right: 28,
-                bottom: 40,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    GestureDetector(
-                      onTap: _skip,
-                      child: Text(
-                        'Skip',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          color: darkGreen.withAlpha(150),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    _buildPageIndicator(),
-                    GestureDetector(
-                      onTap: _nextPage,
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: darkGreen,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: darkGreen.withAlpha(60),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.arrow_forward,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+            _buildBottomSection(),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBottomSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Skip button
+          TextButton(
+            onPressed: _skip,
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.grey[100],
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+            ),
+            child: Text(
+              'Skip',
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                color: Colors.black87,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          // Page indicator
+          _buildPageIndicator(),
+          // Next button
+          GestureDetector(
+            onTap: _nextPage,
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: accentGreen,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: accentGreen.withAlpha(80),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.chevron_right,
+                color: Colors.black87,
+                size: 28,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -144,12 +142,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         final isActive = index == _currentPage;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
           width: isActive ? 24 : 8,
-          height: 4,
+          height: 8,
           decoration: BoxDecoration(
-            color: isActive ? darkGreen : darkGreen.withAlpha(50),
-            borderRadius: BorderRadius.circular(2),
+            color: isActive ? darkGreen : Colors.grey[300],
+            borderRadius: BorderRadius.circular(4),
           ),
         );
       }),
@@ -158,15 +156,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class _SlideData {
-  final String titleLight;
-  final String titleBold;
-  final String subtitle;
+  final String header;
+  final String body;
   final String image;
 
   _SlideData({
-    required this.titleLight,
-    required this.titleBold,
-    required this.subtitle,
+    required this.header,
+    required this.body,
     required this.image,
   });
 }
@@ -176,72 +172,65 @@ class _SlideContent extends StatelessWidget {
 
   const _SlideContent({required this.slide});
 
-  static const darkGreen = Color(0xFF1B4332);
+  static const lightGreen = Color(0xFFE8F5E3);
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 48),
-          Text(
-            slide.titleLight,
-            style: GoogleFonts.poppins(
-              fontSize: 42,
-              fontWeight: FontWeight.w300,
-              color: darkGreen,
-              height: 1.1,
+    return Column(
+      children: [
+        // Image collage area
+        Expanded(
+          flex: 5,
+          child: Container(
+            width: double.infinity,
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: lightGreen,
+              borderRadius: BorderRadius.circular(32),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: Image.asset(
+                slide.image,
+                fit: BoxFit.cover,
+              ),
             ),
           ),
-          Text(
-            slide.titleBold,
-            style: GoogleFonts.poppins(
-              fontSize: 42,
-              fontWeight: FontWeight.w700,
-              color: darkGreen,
-              height: 1.1,
-            ),
-          ),
-          Text(
-            slide.subtitle,
-            style: GoogleFonts.poppins(
-              fontSize: 42,
-              fontWeight: FontWeight.w300,
-              color: darkGreen.withAlpha(120),
-              height: 1.1,
-            ),
-          ),
-          const Spacer(),
-          Center(
-            child: Container(
-              height: screenHeight * 0.45,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: darkGreen.withAlpha(30),
-                    blurRadius: 40,
-                    offset: const Offset(0, 20),
+        ),
+        // Text content
+        Expanded(
+          flex: 3,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  slide.header,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                    height: 1.2,
                   ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Image.asset(
-                  slide.image,
-                  fit: BoxFit.cover,
                 ),
-              ),
+                const SizedBox(height: 16),
+                Text(
+                  slide.body,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
           ),
-          const Spacer(flex: 2),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
