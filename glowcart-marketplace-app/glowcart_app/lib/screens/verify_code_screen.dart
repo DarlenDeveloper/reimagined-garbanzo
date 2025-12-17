@@ -195,7 +195,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
                     if (widget.isPasswordReset) {
                       context.push('/reset-password');
                     } else {
-                      context.go('/home');
+                      context.go('/interests');
                     }
                   },
                   style: ElevatedButton.styleFrom(

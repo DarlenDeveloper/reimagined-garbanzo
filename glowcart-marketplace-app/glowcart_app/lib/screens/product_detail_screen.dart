@@ -1,203 +1,542 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:iconsax/iconsax.dart';
 import '../theme/colors.dart';
-import '../data/dummy_data.dart';
+import 'chat_detail_screen.dart';
+import 'store_profile_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
-  final String productId;
-  const ProductDetailScreen({super.key, required this.productId});
+  final String? productId;
+  final String? productName;
+  final String? storeName;
+  final String? storeId;
+
+  const ProductDetailScreen({
+    super.key,
+    this.productId,
+    this.productName,
+    this.storeName,
+    this.storeId,
+  });
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
 }
 
-class _ProductDetailScreenState extends State<ProductDetailScreen> {
-  bool isFavorite = false;
-  int quantity = 1;
+class _ProductDetailScreenState extends State<ProductDetailScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  int _selectedColorIndex = 0;
+  int _selectedSizeIndex = 1;
+  bool _isFavorite = false;
+
+  final List<Color> _colors = [
+    const Color(0xFF1E3A5F),
+    const Color(0xFFE5E5E5),
+    const Color(0xFF2D2D2D),
+  ];
+
+  final List<String> _sizes = ['6.5', '7', '7.5', '8', '8.5'];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final product = DummyData.products.firstWhere((p) => p.id == widget.productId);
-
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Product Details'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Iconsax.arrow_left, color: AppColors.textPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Details',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: Icon(
-              isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: isFavorite ? AppColors.favoriteActive : null,
+              _isFavorite ? Iconsax.heart5 : Iconsax.heart,
+              color: _isFavorite ? AppColors.darkGreen : AppColors.textPrimary,
             ),
-            onPressed: () => setState(() => isFavorite = !isFavorite),
-          ),
-          IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined),
-            onPressed: () => context.push('/cart'),
+            onPressed: () => setState(() => _isFavorite = !_isFavorite),
           ),
         ],
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
+      body: Column(
+        children: [
+          // Tabs
+          Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade200),
+              ),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              labelColor: AppColors.textPrimary,
+              unselectedLabelColor: AppColors.textSecondary,
+              indicatorColor: AppColors.darkGreen,
+              indicatorWeight: 2,
+              labelStyle: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              tabs: const [
+                Tab(text: 'Details'),
+                Tab(text: 'Reviews 84'),
+                Tab(text: 'Questions 6'),
+              ],
+            ),
+          ),
+
+          // Content
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildDetailsTab(),
+                _buildReviewsTab(),
+                _buildQuestionsTab(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailsTab() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Product Image
+          Stack(
+            children: [
+              Container(
+                height: 280,
+                width: double.infinity,
+                color: const Color(0xFFF5F5F5),
+                child: Center(
+                  child: Icon(
+                    Iconsax.box,
+                    size: 100,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+              ),
+              // Top Item Badge
+              Positioned(
+                top: 16,
+                left: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.darkGreen,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Top Item',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              // Checkmark
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    color: AppColors.darkGreen,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 18),
+                ),
+              ),
+            ],
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Store Info with Message Icon
+                _buildStoreInfo(),
+                const SizedBox(height: 12),
+                // Product Name
+                Text(
+                  widget.productName ?? "Men's Sneakers AeroStep",
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Description
+                Text(
+                  'Lightweight and stylish sneakers for everyday wear. Available in three colors: white, red, and black.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Color Selection
+                Text(
+                  'Color',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'White',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: List.generate(
+                    _colors.length,
+                    (index) => GestureDetector(
+                      onTap: () => setState(() => _selectedColorIndex = index),
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F0E8),
+                          borderRadius: BorderRadius.circular(12),
+                          border: _selectedColorIndex == index
+                              ? Border.all(color: AppColors.darkGreen, width: 2)
+                              : null,
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: _colors[index],
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Size Selection
+                Row(
+                  children: [
+                    Text(
+                      'Size',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _sizes[_selectedSizeIndex],
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: List.generate(
+                    _sizes.length,
+                    (index) => GestureDetector(
+                      onTap: () => setState(() => _selectedSizeIndex = index),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        margin: const EdgeInsets.only(right: 10),
+                        decoration: BoxDecoration(
+                          color: _selectedSizeIndex == index
+                              ? AppColors.darkGreen
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _selectedSizeIndex == index
+                                ? AppColors.darkGreen
+                                : AppColors.border,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _sizes[index],
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: _selectedSizeIndex == index
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Reviews Preview
+                Text(
+                  'Reviews',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    // User Avatar
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: AppColors.darkGreen,
+                      child: Text(
+                        'J',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Jan',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '\$139.99',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Price Button
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkGreen,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Iconsax.shopping_bag, size: 16, color: Colors.white),
+                          const SizedBox(width: 6),
+                          Text(
+                            '\$119.99',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '5/5',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const Icon(Iconsax.star1, size: 14, color: Color(0xFFFFD700)),
+                  ],
+                ),
+
+                const SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStoreInfo() {
+    final storeName = widget.storeName ?? 'TechZone';
+    final storeId = widget.storeId ?? 'store-1';
+    return GestureDetector(
+      onTap: () => _openStoreProfile(storeId, storeName),
+      child: Container(
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))],
+          color: const Color(0xFFF5F0E8),
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
           children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Total', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                Text(
-                  '\$${(product.price * quantity).toStringAsFixed(2)}',
-                  style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 20),
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: AppColors.darkGreen,
+              child: Text(
+                storeName[0],
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
                 ),
-              ],
+              ),
             ),
-            const Spacer(),
-            ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.shopping_cart_outlined),
-              label: const Text('Add to Cart'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        storeName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark ? AppColors.limeAccent : AppColors.darkGreen,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.check, size: 8, color: Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white),
+                      ),
+                      const Spacer(),
+                      const Icon(Iconsax.arrow_right_3, size: 16, color: AppColors.textSecondary),
+                    ],
+                  ),
+                  Text(
+                    'Verified Seller • Tap to view store',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => _messageStore(storeName),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.darkGreen,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Iconsax.message, size: 20, color: Colors.white),
               ),
             ),
           ],
         ),
       ),
-      body: ListView(
-        children: [
-          // Image
-          AspectRatio(
-            aspectRatio: 1,
-            child: Stack(
-              children: [
-                Container(
-                  color: AppColors.surfaceVariant,
-                  child: Center(
-                    child: Text(
-                      product.name.substring(0, 2).toUpperCase(),
-                      style: TextStyle(fontSize: 64, color: AppColors.primary.withOpacity(0.2)),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.accent,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(product.category, style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Info
-          Container(
-            color: AppColors.surface,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(product.vendorName, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                const SizedBox(height: 4),
-                Text(product.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.star, color: AppColors.warning, size: 18),
-                    const SizedBox(width: 4),
-                    Text('${product.rating}', style: const TextStyle(fontWeight: FontWeight.w500)),
-                    Text(' (${product.reviewCount} reviews)', style: TextStyle(color: AppColors.textSecondary)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '\$${product.price.toStringAsFixed(2)}',
-                  style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 24),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Quantity
-          Container(
-            color: AppColors.surface,
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Quantity', style: TextStyle(fontWeight: FontWeight.w500)),
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => setState(() { if (quantity > 1) quantity--; }),
-                      icon: const Icon(Icons.remove),
-                      style: IconButton.styleFrom(backgroundColor: AppColors.surfaceVariant),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text('$quantity', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    ),
-                    IconButton(
-                      onPressed: () => setState(() => quantity++),
-                      icon: const Icon(Icons.add),
-                      style: IconButton.styleFrom(backgroundColor: AppColors.accent),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Description
-          Container(
-            color: AppColors.surface,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('About this product', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Text(product.description, style: TextStyle(color: AppColors.textSecondary)),
-              ],
-            ),
-          ),
-          // Specs
-          if (product.specs.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Container(
-              color: AppColors.surface,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Specifications', style: TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 12),
-                  ...product.specs.entries.map((e) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(e.key, style: TextStyle(color: AppColors.textSecondary)),
-                        Text(e.value, style: const TextStyle(fontWeight: FontWeight.w500)),
-                      ],
-                    ),
-                  )),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-        ],
+    );
+  }
+
+  void _messageStore(String storeName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatDetailScreen(
+          userName: storeName,
+          userAvatar: storeName[0],
+        ),
+      ),
+    );
+  }
+
+  void _openStoreProfile(String storeId, String storeName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StoreProfileScreen(
+          storeId: storeId,
+          storeName: storeName,
+          storeAvatar: storeName[0],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewsTab() {
+    return Center(
+      child: Text(
+        '84 Reviews',
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuestionsTab() {
+    return Center(
+      child: Text(
+        '6 Questions',
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          color: AppColors.textSecondary,
+        ),
       ),
     );
   }

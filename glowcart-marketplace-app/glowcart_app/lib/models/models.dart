@@ -111,6 +111,11 @@ class SocialPost {
   final bool isLiked;
   final DateTime createdAt;
   final DateTime expiresAt;
+  // Discount/Promo fields
+  final bool hasDiscount;
+  final int? discountPercent;
+  final String? promoCode;
+  final String? postType; // 'promo', 'announcement', 'restock', 'new_arrival'
 
   SocialPost({
     required this.id,
@@ -124,6 +129,10 @@ class SocialPost {
     this.isLiked = false,
     required this.createdAt,
     required this.expiresAt,
+    this.hasDiscount = false,
+    this.discountPercent,
+    this.promoCode,
+    this.postType,
   });
 }
 

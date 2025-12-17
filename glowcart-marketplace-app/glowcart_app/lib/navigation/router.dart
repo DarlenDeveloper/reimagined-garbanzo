@@ -8,6 +8,7 @@ import '../screens/signup_screen.dart';
 import '../screens/verify_code_screen.dart';
 import '../screens/forgot_password_screen.dart';
 import '../screens/reset_password_screen.dart';
+import '../screens/interests_screen.dart';
 import '../screens/main_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -51,6 +52,10 @@ final router = GoRouter(
     GoRoute(
       path: '/reset-password',
       builder: (context, state) => const ResetPasswordScreen(),
+    ),
+    GoRoute(
+      path: '/interests',
+      builder: (context, state) => const InterestsScreen(isOnboarding: true),
     ),
     GoRoute(
       path: '/home',

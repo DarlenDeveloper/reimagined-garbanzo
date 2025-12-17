@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:iconsax/iconsax.dart';
+import '../theme/colors.dart';
 import 'home_screen.dart';
 import 'discover_screen.dart';
 import 'order_screen.dart';
-import 'delivery_screen.dart';
+import 'my_orders_screen.dart';
 import 'profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -16,38 +18,51 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    DiscoverScreen(),
-    OrderScreen(),
-    DeliveryScreen(),
-    ProfileScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundBeige,
+      extendBody: true,
+      extendBodyBehindAppBar: true,
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: const [
+          HomeScreen(),
+          DiscoverScreen(),
+          OrderScreen(),
+          MyOrdersScreen(),
+          ProfileScreen(),
+        ],
       ),
-      extendBody: true,
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
   Widget _buildBottomNavBar() {
-    return Container(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Container(
-        height: 70,
+        height: 72,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(35),
+          borderRadius: BorderRadius.circular(36),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(20),
-              blurRadius: 20,
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 24,
               offset: const Offset(0, 4),
             ),
           ],
@@ -55,36 +70,11 @@ class _MainScreenState extends State<MainScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _NavItem(
-              icon: Iconsax.home_2,
-              activeIcon: Iconsax.home_25,
-              isActive: _currentIndex == 0,
-              onTap: () => setState(() => _currentIndex = 0),
-            ),
-            _NavItem(
-              icon: Iconsax.category,
-              activeIcon: Iconsax.category5,
-              isActive: _currentIndex == 1,
-              onTap: () => setState(() => _currentIndex = 1),
-            ),
-            _NavItem(
-              icon: Iconsax.shopping_bag,
-              activeIcon: Iconsax.shopping_bag5,
-              isActive: _currentIndex == 2,
-              onTap: () => setState(() => _currentIndex = 2),
-            ),
-            _NavItem(
-              icon: Iconsax.truck_fast,
-              activeIcon: Iconsax.truck_fast,
-              isActive: _currentIndex == 3,
-              onTap: () => setState(() => _currentIndex = 3),
-            ),
-            _NavItem(
-              icon: Iconsax.user,
-              activeIcon: Iconsax.user,
-              isActive: _currentIndex == 4,
-              onTap: () => setState(() => _currentIndex = 4),
-            ),
+            _NavItem(icon: Iconsax.home_2, activeIcon: Iconsax.home_25, label: 'Home', isActive: _currentIndex == 0, onTap: () => setState(() => _currentIndex = 0)),
+            _NavItem(icon: Iconsax.discover_1, activeIcon: Iconsax.discover, label: 'Discover', isActive: _currentIndex == 1, onTap: () => setState(() => _currentIndex = 1)),
+            _NavItem(icon: Iconsax.shopping_bag, activeIcon: Iconsax.shopping_bag, label: 'Cart', isActive: _currentIndex == 2, onTap: () => setState(() => _currentIndex = 2)),
+            _NavItem(icon: Iconsax.truck_fast, activeIcon: Iconsax.truck_fast, label: 'Deliveries', isActive: _currentIndex == 3, onTap: () => setState(() => _currentIndex = 3)),
+            _NavItem(icon: Iconsax.profile_circle, activeIcon: Iconsax.profile_circle, label: 'Profile', isActive: _currentIndex == 4, onTap: () => setState(() => _currentIndex = 4)),
           ],
         ),
       ),
@@ -95,17 +85,11 @@ class _MainScreenState extends State<MainScreen> {
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final IconData activeIcon;
+  final String label;
   final bool isActive;
   final VoidCallback onTap;
 
-  const _NavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  static const darkGreen = Color(0xFF1B4332);
+  const _NavItem({required this.icon, required this.activeIcon, required this.label, required this.isActive, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -114,16 +98,20 @@ class _NavItem extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: 52,
-        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? darkGreen : Colors.transparent,
-          shape: BoxShape.circle,
+          color: isActive ? AppColors.darkGreen : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
         ),
-        child: Icon(
-          isActive ? activeIcon : icon,
-          size: 24,
-          color: isActive ? Colors.white : Colors.grey[400],
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(isActive ? activeIcon : icon, size: 22, color: isActive ? Colors.white : Colors.grey[400]),
+            if (isActive) ...[
+              const SizedBox(width: 6),
+              Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+            ],
+          ],
         ),
       ),
     );
