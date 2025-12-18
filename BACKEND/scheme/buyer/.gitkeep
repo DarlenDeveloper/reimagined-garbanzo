@@ -1,0 +1,21 @@
+# Buyer Service Schema
+# Manages buyer accounts and profiles
+# 🔐 ALL DATA FILTERED BY: auth.user_id → buyer_id
+
+## Tables:
+# - buyers (buyer_id [FK: auth.users.user_id], name, email, avatar_url, phone, membership_tier[bronze/silver/gold/platinum], reward_points, status[active/inactive/suspended], created_at, updated_at)
+# - buyer_preferences (buyer_id [FK], language, currency, notification_prefs, privacy_settings)
+
+## Auth Relationship:
+# - buyer_id = auth.users.user_id (1:1 relationship)
+# - All buyer queries filtered by authenticated user's ID
+# - JWT token contains user_id, used to fetch buyer profile
+
+## Features:
+# - Profile management
+# - Avatar upload
+# - Membership tiers (Bronze, Silver, Gold, Platinum)
+# - Reward points balance
+# - Account settings
+# - Privacy controls
+# - Linked to: addresses, payment_methods, wishlists, orders, reviews, cart

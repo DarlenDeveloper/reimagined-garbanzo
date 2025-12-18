@@ -1,0 +1,15 @@
+# FAQ & Help Service Schema
+# Manages FAQs, help articles, and support content
+
+## Tables:
+# - faq_categories (category_id, name, slug, sort_order, status)
+# - faqs (faq_id, category_id, question, answer, sort_order, views, helpful_count, status, created_at, updated_at)
+# - help_articles (article_id, category_id, title, slug, content, tags[], views, status, created_at)
+
+## Features:
+# - Categorized FAQs
+# - Searchable help content
+# - View tracking
+# - Helpful/not helpful feedback
+# - BNPL FAQs (shown in subscription screen)
+# - General platform FAQs

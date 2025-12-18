@@ -1,0 +1,16 @@
+# Vendor Service Schema
+# Manages vendor profiles, store settings, and team members
+
+## Tables:
+# - vendors (vendor_id, email, store_name, description, logo_url, banner_url, contact_email, phone_number, business_type, subscription_tier[free/premium], status[active/inactive/suspended], rating, review_count, follower_count, product_count, is_verified, created_at, updated_at)
+# - vendor_users (user_id, vendor_id, email, name, role[owner/admin/manager/staff], permissions[], status[active/inactive], last_login, created_at)
+# - vendor_verification (verification_id, vendor_id, document_type, document_url, status[pending/approved/rejected], reviewed_by, reviewed_at, created_at)
+
+## Features:
+# - Store profile management
+# - Logo/banner uploads
+# - Business information
+# - Team member management (RBAC)
+# - Verification process
+# - Subscription management (free/premium)
+# - Store statistics

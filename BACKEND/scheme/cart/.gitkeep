@@ -1,0 +1,21 @@
+# Cart Service Schema
+# Manages shopping cart functionality
+# 🔐 ALL DATA FILTERED BY: auth.user_id → buyer_id
+
+## Tables:
+# - carts (cart_id, buyer_id [FK: buyers.buyer_id], status[active/abandoned/converted], item_count, subtotal, currency, created_at, updated_at)
+# - cart_items (item_id, cart_id, product_id, variant_id, quantity, unit_price, created_at)
+# - abandoned_cart_reminders (id, cart_id, reminder_count, last_sent_at, next_send_at)
+
+## Auth Filtering:
+# - GET /cart → WHERE buyer_id = auth.user_id
+# - POST /cart/items → INSERT with buyer_id = auth.user_id
+# - All cart operations scoped to authenticated buyer
+
+## Features:
+# - Persistent cart across sessions
+# - Guest cart (merge on login)
+# - Quantity management
+# - Price updates on product changes
+# - Abandoned cart recovery
+# - Cart expiration

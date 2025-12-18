@@ -1,0 +1,23 @@
+# Search Service Schema
+# Manages product search, filtering, and discovery
+# 🔐 SEARCH HISTORY FILTERED BY: auth.user_id → buyer_id
+
+## Tables:
+# - search_history (id, buyer_id [FK: buyers.buyer_id], query, results_count, created_at)
+# - search_suggestions (id, term, frequency, category_id)
+# - product_index (indexed in Elasticsearch/Algolia)
+
+## Auth Filtering:
+# - GET /search/history → WHERE buyer_id = auth.user_id
+# - DELETE /search/history → DELETE WHERE buyer_id = auth.user_id
+# - Search queries logged with buyer_id = auth.user_id
+
+## Features:
+# - Full-text product search
+# - Search by name, category, vendor
+# - Recent searches (per user)
+# - Popular search terms
+# - Auto-suggestions
+# - Filters (price, category, rating, vendor)
+# - Search analytics
+# - Elasticsearch/Algolia integration

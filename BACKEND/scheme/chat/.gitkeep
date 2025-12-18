@@ -1,0 +1,24 @@
+# Chat Service Schema
+# Manages buyer-vendor messaging
+# 🔐 BUYER DATA FILTERED BY: auth.user_id → buyer_id
+# 🔐 VENDOR DATA FILTERED BY: auth.user_id → vendor_user → vendor_id
+
+## Tables:
+# - conversations (conversation_id, buyer_id [FK: buyers.buyer_id], vendor_id, last_message_id, last_message_at, buyer_unread_count, vendor_unread_count, status[active/archived], created_at)
+# - messages (message_id, conversation_id, sender_id, sender_type[buyer/vendor], content, message_type[text/image/product], attachment_url, product_id, read_at, created_at)
+# - message_attachments (attachment_id, message_id, file_url, file_type, file_size)
+
+## Auth Filtering:
+# - Buyer: GET /conversations → WHERE buyer_id = auth.user_id
+# - Vendor: GET /conversations → WHERE vendor_id = auth.vendor_id
+# - Messages: Only accessible if user is participant in conversation
+
+## Features:
+# - Real-time messaging (WebSocket)
+# - Text messages
+# - Image attachments
+# - Product sharing in chat
+# - Read receipts
+# - Unread count
+# - Conversation history
+# - Message search

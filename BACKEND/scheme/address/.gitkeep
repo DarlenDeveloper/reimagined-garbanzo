@@ -1,0 +1,21 @@
+# Address Service Schema
+# Manages delivery addresses for buyers and pickup addresses for vendors
+# 🔐 BUYER DATA FILTERED BY: auth.user_id → buyer_id
+# 🔐 VENDOR DATA FILTERED BY: auth.user_id → vendor_user → vendor_id
+
+## Tables:
+# - addresses (address_id, owner_id [FK: buyer_id OR vendor_id], owner_type[buyer/vendor], label[Home/Office/Other], street_address, city, state, postal_code, country, latitude, longitude, is_default, created_at, updated_at)
+# - address_validation_cache (id, address_hash, validated_address, validation_source, created_at)
+
+## Auth Filtering:
+# - Buyer: GET /addresses → WHERE owner_id = auth.user_id AND owner_type = 'buyer'
+# - Vendor: GET /addresses → WHERE owner_id = auth.vendor_id AND owner_type = 'vendor'
+# - All address operations scoped to authenticated user
+
+## Features:
+# - Multiple addresses per user
+# - Default address selection
+# - Address labels (Home, Office, Other)
+# - Geolocation support
+# - Address validation
+# - Used for delivery dropoff and vendor pickup

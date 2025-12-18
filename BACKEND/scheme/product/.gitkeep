@@ -1,0 +1,27 @@
+# Product Service Schema
+# Manages products, variants, and specifications
+
+## Tables:
+# - products (product_id, vendor_id, name, description, price, currency, category_id, images[], sku, status[active/inactive/out_of_stock], rating, review_count, view_count, created_at, updated_at)
+# - product_variants (variant_id, product_id, name, sku, price_adjustment, stock_quantity, attributes)
+# - product_specifications (spec_id, product_id, category_type, specs_json)
+# - product_images (image_id, product_id, url, thumbnail_url, sort_order, is_primary)
+
+## Specification Types (30+ templates):
+# - ClothingSpecs, FootwearSpecs
+# - ElectronicsSpecs, TVSpecs, SmartphoneSpecs, LaptopSpecs
+# - VehicleSpecs, MotorcycleSpecs
+# - FurnitureSpecs, MattressSpecs
+# - BeautyProductSpecs, FoodProductSpecs
+# - SportsEquipmentSpecs, FitnessEquipmentSpecs
+# - ApplianceSpecs, JewelrySpecs, WatchSpecs
+# - BookSpecs, ToySpecs, PetProductSpecs
+# - GardenProductSpecs, ToolSpecs
+
+## Features:
+# - Multi-image support
+# - Variant management (size, color, etc.)
+# - Category-specific specifications
+# - Size charts
+# - Stock status
+# - SEO metadata

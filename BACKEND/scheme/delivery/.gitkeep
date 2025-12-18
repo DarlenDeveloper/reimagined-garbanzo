@@ -1,0 +1,168 @@
+# Delivery Service Schema
+# Manages local deliveries via Uber Direct API
+# 🔐 INITIATED BY: Vendor (seller)
+# 🔐 BUYER DATA FILTERED BY: auth.user_id → buyer_id (via order)
+# 🔐 VENDOR DATA FILTERED BY: auth.user_id → vendor_user → vendor_id
+
+## Tables:
+# - deliveries (delivery_id, order_id, vendor_id, uber_delivery_id, uber_quote_id, status, pickup_address, dropoff_address, dropoff_notes, estimated_pickup_time, actual_pickup_time, estimated_delivery_time, actual_delivery_time, tracking_url, courier_name, courier_phone, courier_photo_url, courier_vehicle_type, courier_vehicle_make, courier_vehicle_model, courier_location_lat, courier_location_lng, delivery_fee, tip_amount, currency, created_at, updated_at)
+# - delivery_tracking (tracking_id, delivery_id, status, courier_lat, courier_lng, eta_minutes, updated_at)
+# - delivery_events (event_id, delivery_id, event_type, description, location_lat, location_lng, occurred_at)
+
+## Delivery Statuses (Uber Direct):
+# - pending: Quote requested, awaiting vendor confirmation
+# - scheduled: Delivery scheduled for future pickup
+# - pickup_ready: Vendor marked order ready for pickup
+# - courier_assigned: Courier accepted the delivery
+# - courier_en_route_to_pickup: Courier heading to vendor
+# - courier_at_pickup: Courier arrived at vendor location
+# - picked_up: Courier picked up the package
+# - en_route_to_dropoff: Courier heading to buyer
+# - courier_at_dropoff: Courier arrived at buyer location
+# - delivered: Successfully delivered
+# - cancelled: Cancelled by vendor/buyer/system
+# - failed: Delivery attempt failed
+# - returned: Package returned to vendor
+
+## ═══════════════════════════════════════════════════════════════
+## UBER DIRECT API INTEGRATION
+## Documentation: https://developer.uber.com/docs/deliveries/overview
+## 
+## NOTE: Use Uber Direct (Delivery API), NOT Uber Rides API
+## - Uber Direct = Package/order delivery by couriers
+## - Uber Rides = Passenger ride-hailing (NOT for deliveries)
+## ═══════════════════════════════════════════════════════════════
+
+## Authentication:
+# - OAuth 2.0 Client Credentials Flow
+# - POST https://login.uber.com/oauth/v2/token
+# - Scopes: eats.deliveries
+
+## API Endpoints Used:
+
+### 1. Get Delivery Quote (Before creating delivery)
+# POST https://api.uber.com/v1/customers/{customer_id}/delivery_quotes
+# Request:
+#   {
+#     "pickup_address": "123 Store St, City, Country",
+#     "dropoff_address": "456 Buyer Ave, City, Country",
+#     "pickup_ready_dt": "2024-01-15T14:00:00Z",  // When order will be ready
+#     "pickup_deadline_dt": "2024-01-15T15:00:00Z",
+#     "dropoff_deadline_dt": "2024-01-15T16:00:00Z",
+#     "manifest_items": [
+#       { "name": "Order #12345", "quantity": 1, "size": "medium" }
+#     ]
+#   }
+# Response: quote_id, fee, currency, estimated_pickup_time, estimated_dropoff_time
+
+### 2. Create Delivery (Vendor initiates after accepting order)
+# POST https://api.uber.com/v1/customers/{customer_id}/deliveries
+# Request:
+#   {
+#     "quote_id": "dqt_xxx",  // From quote response
+#     "pickup_name": "GlowCart Store",
+#     "pickup_address": "123 Store St, City, Country",
+#     "pickup_phone_number": "+1234567890",
+#     "pickup_instructions": "Ring bell, ask for order #12345",
+#     "dropoff_name": "John Doe",
+#     "dropoff_address": "456 Buyer Ave, City, Country", 
+#     "dropoff_phone_number": "+0987654321",
+#     "dropoff_instructions": "Leave at door",
+#     "manifest_items": [
+#       { "name": "Electronics Order", "quantity": 1, "size": "medium", "price": 9999 }
+#     ],
+#     "external_id": "order_12345",  // Our order ID
+#     "external_store_id": "vendor_abc"  // Our vendor ID
+#   }
+# Response: delivery_id, tracking_url, status, courier info (when assigned)
+
+### 3. Get Delivery Status
+# GET https://api.uber.com/v1/customers/{customer_id}/deliveries/{delivery_id}
+# Response: Full delivery object with current status, courier info, ETAs
+
+### 4. Cancel Delivery
+# POST https://api.uber.com/v1/customers/{customer_id}/deliveries/{delivery_id}/cancel
+# Note: May incur cancellation fee if courier already assigned
+
+### 5. Update Delivery (e.g., mark ready for pickup)
+# PATCH https://api.uber.com/v1/customers/{customer_id}/deliveries/{delivery_id}
+# Request: { "pickup_ready": true }
+
+## Webhooks (Uber → Our Server):
+# POST /webhooks/uber/delivery
+# Events:
+#   - delivery.status_changed
+#   - delivery.courier_update (location updates)
+#   - delivery.completed
+#   - delivery.cancelled
+#   - delivery.failed
+
+## ═══════════════════════════════════════════════════════════════
+## VENDOR WORKFLOW (Seller Initiates)
+## ═══════════════════════════════════════════════════════════════
+
+## Step 1: Order Received
+# - Buyer places order
+# - Vendor receives notification
+# - Order status: pending
+
+## Step 2: Vendor Accepts Order
+# - Vendor clicks "Accept Order"
+# - System calls Uber Quote API
+# - Shows delivery fee and ETA to vendor
+# - Order status: processing
+
+## Step 3: Vendor Confirms Delivery
+# - Vendor confirms delivery quote
+# - System calls Uber Create Delivery API
+# - Delivery created, waiting for courier
+# - Order status: accepted
+
+## Step 4: Preparing Order
+# - Vendor prepares the order
+# - When ready, vendor clicks "Ready for Pickup"
+# - System calls Uber Update API (pickup_ready: true)
+# - Courier gets notified
+
+## Step 5: Courier Assigned
+# - Uber assigns courier
+# - Webhook updates our system
+# - Buyer can see courier info and track
+
+## Step 6: Pickup & Delivery
+# - Courier picks up from vendor
+# - Real-time tracking for buyer
+# - Courier delivers to buyer
+# - Order status: delivered
+
+## ═══════════════════════════════════════════════════════════════
+## REAL-TIME TRACKING
+## ═══════════════════════════════════════════════════════════════
+
+## Buyer Tracking Features:
+# - Live courier location on map
+# - ETA updates
+# - Courier name, photo, vehicle info
+# - Direct call/message to courier
+# - Delivery status timeline
+
+## Tracking Data (from Uber webhooks):
+# - courier.location.lat, courier.location.lng
+# - courier.name, courier.phone, courier.photo_url
+# - courier.vehicle.make, courier.vehicle.model, courier.vehicle.license_plate
+# - dropoff.eta (estimated time of arrival)
+
+## Auth Filtering:
+# - Vendor: POST /deliveries → Creates delivery for their order
+# - Vendor: GET /deliveries → WHERE vendor_id = auth.vendor_id
+# - Buyer: GET /buyer/deliveries → WHERE order.buyer_id = auth.user_id
+# - Buyer: GET /deliveries/:id/track → Real-time tracking data
+
+## API Endpoints (Our Backend):
+# - POST /api/v1/orders/:id/delivery/quote → Get Uber quote
+# - POST /api/v1/orders/:id/delivery → Create delivery (vendor)
+# - PATCH /api/v1/deliveries/:id/ready → Mark ready for pickup
+# - POST /api/v1/deliveries/:id/cancel → Cancel delivery
+# - GET /api/v1/deliveries/:id → Get delivery details
+# - GET /api/v1/deliveries/:id/track → Get real-time tracking
+# - POST /api/v1/webhooks/uber → Receive Uber webhooks

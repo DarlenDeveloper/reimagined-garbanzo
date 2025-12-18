@@ -1,0 +1,14 @@
+# OAuth & Social Login Service Schema
+# Manages third-party authentication providers
+
+## Tables:
+# - oauth_providers (provider_id, name[google/facebook/apple], client_id, client_secret, scopes, status)
+# - oauth_connections (connection_id, user_id, user_type[buyer/vendor], provider, provider_user_id, access_token, refresh_token, token_expires_at, profile_data, created_at)
+
+## Features:
+# - Google Sign-In
+# - Facebook Login
+# - Apple Sign-In
+# - Token management
+# - Account linking
+# - Profile data sync

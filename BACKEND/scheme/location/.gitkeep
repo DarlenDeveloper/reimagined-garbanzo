@@ -1,0 +1,15 @@
+# Location Service Schema
+# Manages geolocation, store locations, and location-based features
+
+## Tables:
+# - vendor_locations (location_id, vendor_id, name, address, city, country, latitude, longitude, is_primary, created_at)
+# - buyer_locations (id, buyer_id, latitude, longitude, city, country, updated_at)
+# - delivery_zones (zone_id, vendor_id, zone_name, polygon_coords, delivery_fee, min_order, status)
+
+## Features:
+# - Store map display
+# - Nearby stores discovery
+# - Delivery zone management
+# - Location-based search
+# - Current location detection
+# - Distance calculation

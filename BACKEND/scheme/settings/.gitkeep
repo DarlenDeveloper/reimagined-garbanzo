@@ -1,0 +1,30 @@
+# Settings Service Schema
+# Manages user and vendor settings/preferences
+# 🔐 BUYER DATA FILTERED BY: auth.user_id → buyer_id
+# 🔐 VENDOR DATA FILTERED BY: auth.user_id → vendor_user → vendor_id
+
+## Tables:
+# - vendor_settings (vendor_id, business_hours, timezone, currency, tax_settings, checkout_settings, return_policy, privacy_policy, terms_of_service, updated_at)
+# - buyer_settings (buyer_id [FK: buyers.buyer_id], language, currency, notification_prefs, privacy_settings, updated_at)
+# - notification_preferences (id, user_id [FK: auth.users.user_id], user_type, channel[email/push/sms], event_type, enabled)
+
+## Auth Filtering:
+# - Buyer: GET /settings → WHERE buyer_id = auth.user_id
+# - Buyer: PUT /settings → UPDATE WHERE buyer_id = auth.user_id
+# - Vendor: GET /settings → WHERE vendor_id = auth.vendor_id
+
+## Vendor Settings:
+# - Business hours
+# - Currency preferences
+# - Tax configuration
+# - Checkout settings
+# - Store policies
+# - Location settings
+# - Language settings
+# - App integrations
+
+## Buyer Settings:
+# - Language preference
+# - Notification preferences
+# - Privacy settings
+# - 2FA settings

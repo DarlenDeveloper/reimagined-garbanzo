@@ -1,0 +1,22 @@
+# Push Notification Service Schema
+# Manages mobile push notifications via FCM/APNs
+# 🔐 USER DATA FILTERED BY: auth.user_id
+
+## Tables:
+# - device_tokens (token_id, user_id [FK: auth.users.user_id], user_type, device_token, platform[ios/android], device_info, status[active/inactive], created_at, updated_at)
+# - push_notifications (push_id, user_id [FK], title, body, data, platform, status[pending/sent/delivered/failed], sent_at, delivered_at)
+# - push_campaigns (campaign_id, name, target_audience, title, body, data, scheduled_at, sent_count, status)
+
+## Auth Filtering:
+# - POST /device-token → INSERT with user_id = auth.user_id
+# - DELETE /device-token → DELETE WHERE user_id = auth.user_id
+# - Device tokens scoped to authenticated user
+
+## Features:
+# - FCM (Firebase Cloud Messaging) for Android
+# - APNs (Apple Push Notification service) for iOS
+# - Device token management
+# - Targeted push campaigns
+# - Delivery tracking
+# - Silent notifications
+# - Rich notifications (images, actions)

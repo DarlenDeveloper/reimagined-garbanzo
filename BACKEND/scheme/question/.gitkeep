@@ -1,0 +1,21 @@
+# Product Q&A Service Schema
+# Manages product questions and answers
+# 🔐 BUYER DATA FILTERED BY: auth.user_id → buyer_id
+
+## Tables:
+# - questions (question_id, product_id, buyer_id [FK: buyers.buyer_id], question_text, status[pending/answered/rejected], created_at)
+# - answers (answer_id, question_id, vendor_id, answer_text, is_official, helpful_count, created_at)
+# - answer_votes (vote_id, answer_id, buyer_id [FK], is_helpful, created_at)
+
+## Auth Filtering:
+# - GET /my-questions → WHERE buyer_id = auth.user_id
+# - POST /questions → INSERT with buyer_id = auth.user_id
+# - POST /answers/:id/vote → INSERT with buyer_id = auth.user_id
+
+## Features:
+# - Buyer questions on products
+# - Vendor answers
+# - Community answers
+# - Helpful votes
+# - Question moderation
+# - Notification on answer

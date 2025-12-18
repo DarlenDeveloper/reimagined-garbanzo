@@ -1,0 +1,21 @@
+# User Interests & Personalization Service Schema
+# Manages buyer interests for personalized feed and recommendations
+# 🔐 ALL DATA FILTERED BY: auth.user_id → buyer_id
+
+## Tables:
+# - user_interests (id, buyer_id [FK: buyers.buyer_id], category_id, interest_level, source[onboarding/behavior/explicit], created_at, updated_at)
+# - interest_categories (id, name, icon, parent_id)
+# - behavior_signals (id, buyer_id [FK], signal_type[view/purchase/search/wishlist], product_id, category_id, created_at)
+
+## Auth Filtering:
+# - GET /interests → WHERE buyer_id = auth.user_id
+# - PUT /interests → UPDATE WHERE buyer_id = auth.user_id
+# - Behavior tracking: INSERT with buyer_id = auth.user_id
+
+## Features:
+# - Onboarding interest selection
+# - Behavior-based interest inference
+# - Personalized product feed
+# - Personalized social feed
+# - Category affinity scoring
+# - Recommendation engine input

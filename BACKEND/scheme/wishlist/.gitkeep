@@ -1,0 +1,21 @@
+# Wishlist & Favorites Service Schema
+# Manages buyer wishlists and favorite products
+# 🔐 ALL DATA FILTERED BY: auth.user_id → buyer_id
+
+## Tables:
+# - wishlists (wishlist_id, buyer_id [FK: buyers.buyer_id], name, is_default, item_count, created_at)
+# - wishlist_items (item_id, wishlist_id, product_id, variant_id, added_at, price_at_add)
+# - price_alerts (alert_id, buyer_id [FK], product_id, target_price, current_price, status, created_at)
+
+## Auth Filtering:
+# - GET /wishlists → WHERE buyer_id = auth.user_id
+# - POST /wishlists → INSERT with buyer_id = auth.user_id
+# - All wishlist operations scoped to authenticated buyer
+
+## Features:
+# - Multiple wishlists per buyer
+# - Add/remove products
+# - Price drop alerts
+# - Share wishlists
+# - Move to cart functionality
+# - Track price changes

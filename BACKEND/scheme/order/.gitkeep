@@ -1,0 +1,33 @@
+# Order Service Schema
+# Manages orders, order items, and order lifecycle
+# 🔐 BUYER DATA FILTERED BY: auth.user_id → buyer_id
+# 🔐 VENDOR DATA FILTERED BY: auth.user_id → vendor_user → vendor_id
+
+## Tables:
+# - orders (order_id, vendor_id, buyer_id [FK: buyers.buyer_id], order_number, items_count, subtotal, tax, delivery_fee, discount, total_amount, currency, status[pending/processing/accepted/rejected/shipped/in_transit/delivered/cancelled], delivery_address, payment_method, payment_status, notes, created_at, updated_at)
+# - order_items (item_id, order_id, product_id, product_name, variant_id, quantity, unit_price, total_price)
+# - order_events (event_id, order_id, event_type, description, actor_id, actor_type, metadata, created_at)
+# - order_cancellations (id, order_id, reason, cancelled_by, refund_status, created_at)
+
+## Auth Filtering:
+# - Buyer: GET /buyer/orders → WHERE buyer_id = auth.user_id
+# - Vendor: GET /orders → WHERE vendor_id = auth.vendor_id
+# - Order creation: INSERT with buyer_id = auth.user_id
+
+## Order Statuses:
+# - pending: Awaiting vendor action
+# - processing: Vendor preparing order
+# - accepted: Vendor accepted
+# - rejected: Vendor rejected
+# - shipped: Handed to delivery/shipping
+# - in_transit: On the way
+# - delivered: Completed
+# - cancelled: Cancelled by buyer/vendor
+
+## Features:
+# - Order creation from cart
+# - Accept/reject workflow
+# - Status tracking
+# - Order history
+# - Order events timeline
+# - Cancellation handling

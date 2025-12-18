@@ -1,0 +1,26 @@
+# BNPL (Buy Now Pay Later) Service Schema
+# Manages buyer BNPL plans and installment payments
+# 🔐 ALL DATA FILTERED BY: auth.user_id → buyer_id
+
+## Tables:
+# - bnpl_subscriptions (subscription_id, buyer_id [FK: buyers.buyer_id], plan_tier[starter/premium/elite/scaling], monthly_fee, max_quota, status[active/cancelled/suspended], started_at, cancelled_at, elite_start_date)
+# - bnpl_plans (plan_id, buyer_id [FK], order_id, product_name, total_amount, installment_amount, installments_total, installments_paid, status[on_progress/overdue/completed/cancelled], next_due_date, created_at)
+# - bnpl_payments (payment_id, plan_id, installment_number, amount, status[pending/paid/overdue/failed], due_date, paid_at)
+
+## Auth Filtering:
+# - GET /bnpl/subscription → WHERE buyer_id = auth.user_id
+# - GET /bnpl/plans → WHERE buyer_id = auth.user_id
+# - POST /bnpl/subscribe → INSERT with buyer_id = auth.user_id
+
+## Subscription Tiers:
+# - Starter: $4.99/mo, $24.95 max quota
+# - Premium: $14.99/mo, $74.95 max quota
+# - Elite: $29.99/mo, $149.95 max quota
+# - Scaling: $49.99/mo, $299.95 max quota (requires 1yr Elite)
+
+## Features:
+# - 5 installments per purchase
+# - 0% interest
+# - Auto-deduct on cancellation
+# - Overdue tracking
+# - Tier upgrades

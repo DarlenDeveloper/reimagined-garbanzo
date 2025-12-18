@@ -1,0 +1,14 @@
+# Category Service Schema
+# Manages product categories, subcategories, and category-specific specifications
+
+## Tables:
+# - categories (category_id, name, slug, icon, parent_id, level, sort_order, product_count, status, created_at)
+# - category_specs (spec_id, category_id, spec_template, required_fields, optional_fields)
+
+## Features:
+# - Hierarchical categories (parent/child)
+# - Category icons
+# - Product count per category
+# - Category-specific specification templates (30+ templates defined in types)
+# - Electronics, Fashion, Home, Beauty, Sports, Books, etc.
+# - Size charts per category (clothing, footwear, rings, mattress, etc.)

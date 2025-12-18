@@ -1,0 +1,24 @@
+# AI Customer Service Schema
+# Manages AI-powered customer support features (Premium)
+# 🔐 BUYER DATA FILTERED BY: auth.user_id → buyer_id
+
+## Tables:
+# - ai_conversations (conversation_id, vendor_id, buyer_id [FK: buyers.buyer_id], status[active/resolved/escalated], started_at, ended_at)
+# - ai_messages (message_id, conversation_id, role[user/assistant], content, tokens_used, created_at)
+# - ai_knowledge_base (kb_id, vendor_id, content_type[faq/product/policy], content, embedding, created_at)
+# - ai_escalations (escalation_id, conversation_id, reason, assigned_to, status, created_at)
+
+## Auth Filtering:
+# - Buyer: GET /ai/conversations → WHERE buyer_id = auth.user_id
+# - Buyer: POST /ai/message → INSERT with buyer_id = auth.user_id
+# - AI conversations scoped to authenticated buyer
+
+## Features:
+# - AI chatbot for customer queries
+# - Product information lookup
+# - Order status inquiries
+# - FAQ responses
+# - Human escalation
+# - Vendor knowledge base
+# - Response suggestions
+# - Premium feature only
