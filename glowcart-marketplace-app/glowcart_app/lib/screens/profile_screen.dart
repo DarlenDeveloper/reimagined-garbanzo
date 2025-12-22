@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
-import '../theme/colors.dart';
 import 'bnpl_plans_screen.dart';
 import 'bnpl_subscription_screen.dart';
 import 'wishlist_screen.dart';
@@ -26,12 +25,12 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _hasBnplAccount = true;
+  final bool _hasBnplAccount = true;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundBeige,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
@@ -61,14 +60,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildHeader() {
     return Row(
       children: [
-        Text('Profile', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        Text('Profile', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.black)),
         const Spacer(),
         GestureDetector(
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReceiptsScreen())),
           child: Container(
             width: 40, height: 40,
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Iconsax.receipt_2, size: 20, color: AppColors.textPrimary),
+            decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Iconsax.receipt_2, size: 20, color: Colors.black),
           ),
         ),
       ],
@@ -80,15 +79,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen())),
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(20)),
         child: Row(
           children: [
             Container(
               width: 70, height: 70,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [AppColors.darkGreen, Color(0xFF2D5A45)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                shape: BoxShape.circle,
-              ),
+              decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
               child: Center(child: Text('JD', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white))),
             ),
             const SizedBox(width: 16),
@@ -96,19 +92,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('John Doe', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                  Text('John Doe', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
                   const SizedBox(height: 2),
-                  Text('john.doe@email.com', style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textSecondary)),
+                  Text('john.doe@email.com', style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: const Color(0xFFFFB800).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(12)),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Iconsax.medal_star, size: 14, color: Color(0xFFFFB800)),
+                        const Icon(Iconsax.medal_star, size: 14, color: Colors.black),
                         const SizedBox(width: 4),
-                        Text('Gold Member', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFFD4A000))),
+                        Text('Gold Member', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black)),
                       ],
                     ),
                   ),
@@ -117,8 +113,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             Container(
               width: 36, height: 36,
-              decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Iconsax.edit_2, size: 18, color: AppColors.darkGreen),
+              decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Iconsax.edit_2, size: 18, color: Colors.black),
             ),
           ],
         ),
@@ -131,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BnplPlansScreen())),
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: AppColors.darkGreen, borderRadius: BorderRadius.circular(24)),
+        decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(24)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -142,7 +138,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                  child: Text('Active', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.darkGreen)),
+                  child: Text('Active', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black)),
                 ),
               ],
             ),
@@ -236,13 +232,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildBnplApplyCard() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: AppColors.darkGreen, borderRadius: BorderRadius.circular(24)),
+      decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(24)),
       child: Column(
         children: [
           Container(
             width: 64, height: 64,
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-            child: const Icon(Iconsax.calendar_tick, size: 32, color: AppColors.darkGreen),
+            child: const Icon(Iconsax.calendar_tick, size: 32, color: Colors.black),
           ),
           const SizedBox(height: 16),
           Text('Buy Now Pay Later', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
@@ -253,7 +249,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: double.infinity, height: 50,
             child: ElevatedButton(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BnplSubscriptionScreen())),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.darkGreen, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
               child: Text('View Plans', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
             ),
           ),
@@ -280,13 +276,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
           child: Column(
             children: [
-              Icon(icon, size: 24, color: AppColors.darkGreen),
+              Icon(icon, size: 24, color: Colors.black),
               const SizedBox(height: 8),
-              Text(value, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-              Text(label, style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textSecondary)),
+              Text(value, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black)),
+              Text(label, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
             ],
           ),
         ),
@@ -298,10 +294,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('My Account', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+        Text('My Account', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black)),
         const SizedBox(height: 12),
         Container(
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
           child: Column(
             children: [
               _buildMenuItem(Iconsax.location, 'My Addresses', 'Manage delivery addresses', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressesScreen()))),
@@ -322,10 +318,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Settings', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+        Text('Settings', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black)),
         const SizedBox(height: 12),
         Container(
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
           child: Column(
             children: [
               _buildMenuItem(Iconsax.notification, 'Notifications', 'Manage alerts', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsSettingsScreen()))),
@@ -354,20 +350,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Container(
               width: 40, height: 40,
-              decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-              child: Icon(icon, size: 20, color: AppColors.darkGreen),
+              decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, size: 20, color: Colors.black),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
-                  Text(subtitle, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                  Text(title, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
+                  Text(subtitle, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
                 ],
               ),
             ),
-            const Icon(Iconsax.arrow_right_3, size: 18, color: AppColors.textSecondary),
+            Icon(Iconsax.arrow_right_3, size: 18, color: Colors.grey[500]),
           ],
         ),
       ),
@@ -375,7 +371,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildMenuDivider() {
-    return Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 16), color: AppColors.surfaceVariant);
+    return Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 16), color: Colors.grey[200]);
   }
 
   Widget _buildLogoutButton() {
@@ -383,13 +379,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onTap: _showLogoutDialog,
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(16)),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.logout, size: 20, color: AppColors.error),
+            const Icon(Iconsax.logout, size: 20, color: Colors.black),
             const SizedBox(width: 10),
-            Text('Log Out', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.error)),
+            Text('Log Out', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black)),
           ],
         ),
       ),
@@ -401,19 +397,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Log Out', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-        content: Text('Are you sure you want to log out?', style: GoogleFonts.poppins(color: AppColors.textSecondary)),
+        title: Text('Log Out', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.black)),
+        content: Text('Are you sure you want to log out?', style: GoogleFonts.poppins(color: Colors.grey[600])),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.poppins(color: AppColors.textSecondary)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey[600]))),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               GoRouter.of(context).go('/login');
             },
-            child: Text('Log Out', style: GoogleFonts.poppins(color: AppColors.error, fontWeight: FontWeight.w600)),
+            child: Text('Log Out', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
           ),
         ],
       ),

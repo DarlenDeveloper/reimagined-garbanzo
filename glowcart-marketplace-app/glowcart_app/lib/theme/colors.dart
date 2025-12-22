@@ -1,61 +1,72 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Light Mode Colors
-  static const Color primary = Color(0xFF1B4332);
-  static const Color darkGreen = Color(0xFF1B4332);
-  static const Color primaryLight = Color(0xFF2D5A45);
-  static const Color primaryDark = Color(0xFF0D2818);
+  // Primary - Black & White
+  static const Color primary = Color(0xFF000000);
+  static const Color primaryLight = Color(0xFF333333);
+  static const Color primaryDark = Color(0xFF000000);
 
-  // Dark Mode Accent (lime green from BNPL)
-  static const Color limeAccent = Color(0xFFD4E157);
-  
-  // Accent
-  static const Color accent = Color(0xFFF5E642);
-  static const Color accentLight = Color(0xFFFFF9C4);
+  // Backward compatibility aliases (all map to black/grey)
+  static const Color darkGreen = Color(0xFF000000);
+  static const Color limeAccent = Color(0xFF000000);
+  static const Color accent = Color(0xFFF5F5F5); // grey100 for accent areas
 
-  // Light Mode Backgrounds
-  static const Color background = Color(0xFFFAFAFA);
-  static const Color backgroundBeige = Color(0xFFFAF8F5);
+  // Backgrounds
+  static const Color background = Color(0xFFFFFFFF);
+  static const Color backgroundBeige = Color(0xFFFFFFFF);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceVariant = Color(0xFFF5F0E8);
+  static const Color surfaceVariant = Color(0xFFF5F5F5);
+  static const Color cardBackground = Color(0xFFF5F5F5);
 
-  // Dark Mode Backgrounds
-  static const Color darkBackground = Color(0xFF1C1C1E);
-  static const Color darkSurface = Color(0xFF2C2C2E);
-  static const Color darkSurfaceVariant = Color(0xFF3C3C3E);
+  // Dark mode backgrounds (map to light for consistency)
+  static const Color darkBackground = Color(0xFFFFFFFF);
+  static const Color darkSurface = Color(0xFFF5F5F5);
+  static const Color darkSurfaceVariant = Color(0xFFEEEEEE);
 
-  // Text - Light Mode
-  static const Color textPrimary = Color(0xFF1B4332);
-  static const Color textSecondary = Color(0xFF8C9A8F);
+  // Text
+  static const Color textPrimary = Color(0xFF000000);
+  static const Color textSecondary = Color(0xFF757575);
   static const Color textOnPrimary = Color(0xFFFFFFFF);
+  static const Color darkTextPrimary = Color(0xFF000000);
+  static const Color darkTextSecondary = Color(0xFF757575);
 
-  // Text - Dark Mode
-  static const Color darkTextPrimary = Color(0xFFFFFFFF);
-  static const Color darkTextSecondary = Color(0xFFAAAAAA);
+  // Borders & Dividers
+  static const Color divider = Color(0xFFE0E0E0);
+  static const Color border = Color(0xFFE0E0E0);
+  static const Color darkBorder = Color(0xFFE0E0E0);
 
-  // Status
-  static const Color success = Color(0xFF22C55E);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color error = Color(0xFFEF4444);
-  static const Color info = Color(0xFF3B82F6);
+  // Input Fields
+  static const Color inputFill = Color(0xFFF5F5F5);
+  static const Color inputBorder = Color(0xFFE0E0E0);
+
+  // Status (all black for consistency)
+  static const Color success = Color(0xFF000000);
+  static const Color warning = Color(0xFF000000);
+  static const Color error = Color(0xFF000000);
+  static const Color info = Color(0xFF000000);
 
   // Other
-  static const Color divider = Color(0xFFE5E7EB);
-  static const Color border = Color(0xFFE8E0D5);
-  static const Color darkBorder = Color(0xFF3C3C3E);
-  static const Color favoriteActive = Color(0xFFEF4444);
+  static const Color favoriteActive = Color(0xFF000000);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF000000);
+  static const Color grey100 = Color(0xFFF5F5F5);
+  static const Color grey200 = Color(0xFFEEEEEE);
+  static const Color grey300 = Color(0xFFE0E0E0);
+  static const Color grey400 = Color(0xFFBDBDBD);
+  static const Color grey500 = Color(0xFF9E9E9E);
+  static const Color grey600 = Color(0xFF757575);
+  static const Color grey700 = Color(0xFF616161);
 }
 
 // Extension for easy theme-aware color access
 extension ThemeColors on BuildContext {
-  bool get isDark => Theme.of(this).brightness == Brightness.dark;
+  bool get isDark => false; // Always light mode
   
-  Color get primaryColor => isDark ? AppColors.limeAccent : AppColors.darkGreen;
-  Color get backgroundColor => isDark ? AppColors.darkBackground : AppColors.backgroundBeige;
-  Color get surfaceColor => isDark ? AppColors.darkSurface : AppColors.surface;
-  Color get surfaceVariantColor => isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant;
-  Color get textPrimaryColor => isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
-  Color get textSecondaryColor => isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
-  Color get borderColor => isDark ? AppColors.darkBorder : AppColors.border;
+  Color get primaryColor => AppColors.primary;
+  Color get backgroundColor => AppColors.background;
+  Color get surfaceColor => AppColors.surface;
+  Color get surfaceVariantColor => AppColors.surfaceVariant;
+  Color get textPrimaryColor => AppColors.textPrimary;
+  Color get textSecondaryColor => AppColors.textSecondary;
+  Color get borderColor => AppColors.border;
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
-import '../theme/colors.dart';
 
 class BnplPlansScreen extends StatefulWidget {
   const BnplPlansScreen({super.key});
@@ -22,14 +21,14 @@ class _BnplPlansScreenState extends State<BnplPlansScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundBeige,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundBeige,
+        backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: AppColors.textPrimary), onPressed: () => Navigator.pop(context)),
-        title: Text('My Plans', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+        leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: Colors.black), onPressed: () => Navigator.pop(context)),
+        title: Text('My Plans', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
         centerTitle: true,
-        actions: [IconButton(icon: const Icon(Iconsax.setting_2, color: AppColors.textPrimary), onPressed: () {})],
+        actions: [IconButton(icon: const Icon(Iconsax.setting_2, color: Colors.black), onPressed: () {})],
       ),
       body: Column(
         children: [
@@ -46,7 +45,7 @@ class _BnplPlansScreenState extends State<BnplPlansScreen> {
       padding: const EdgeInsets.all(20),
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: AppColors.darkGreen, borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -101,11 +100,8 @@ class _BnplPlansScreenState extends State<BnplPlansScreen> {
             child: Container(
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.darkGreen : Colors.white,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Center(child: Text(tabs[index], style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: isSelected ? Colors.white : AppColors.textSecondary))),
+              decoration: BoxDecoration(color: isSelected ? Colors.black : Colors.grey[100], borderRadius: BorderRadius.circular(22)),
+              child: Center(child: Text(tabs[index], style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: isSelected ? Colors.white : Colors.grey[600]))),
             ),
           );
         },
@@ -127,18 +123,18 @@ class _BnplPlansScreenState extends State<BnplPlansScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
         child: Column(
           children: [
             Row(
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
                   child: Column(
                     children: [
-                      Text(plan.date.split(' ')[0], style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                      Text(plan.date.split(' ')[1], style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textSecondary)),
+                      Text(plan.date.split(' ')[0], style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
+                      Text(plan.date.split(' ')[1], style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
                     ],
                   ),
                 ),
@@ -147,19 +143,19 @@ class _BnplPlansScreenState extends State<BnplPlansScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(plan.name, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Text('${plan.installment} installment', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                      Text(plan.name, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text('${plan.installment} installment', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
                     ],
                   ),
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('\$${plan.amount.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                    Text('\$${plan.amount.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                      child: Text('On Progress', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.darkGreen)),
+                      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(8)),
+                      child: Text('On Progress', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w500, color: Colors.black)),
                     ),
                   ],
                 ),
@@ -171,7 +167,7 @@ class _BnplPlansScreenState extends State<BnplPlansScreen> {
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(color: AppColors.darkGreen, borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(10)),
                     child: Center(child: Text('Pay \$${plan.payAmount.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white))),
                   ),
                 ),
@@ -179,8 +175,8 @@ class _BnplPlansScreenState extends State<BnplPlansScreen> {
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(10)),
-                    child: Center(child: Text('Details', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary))),
+                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(10)),
+                    child: Center(child: Text('Details', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.black))),
                   ),
                 ),
               ],
@@ -212,14 +208,14 @@ class BnplPlanDetailScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundBeige,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundBeige,
+        backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: AppColors.textPrimary), onPressed: () => Navigator.pop(context)),
-        title: Text('Plan Details', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+        leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: Colors.black), onPressed: () => Navigator.pop(context)),
+        title: Text('Plan Details', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
         centerTitle: true,
-        actions: [IconButton(icon: const Icon(Iconsax.share, color: AppColors.textPrimary), onPressed: () {})],
+        actions: [IconButton(icon: const Icon(Iconsax.share, color: Colors.black), onPressed: () {})],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
@@ -228,7 +224,7 @@ class BnplPlanDetailScreen extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: AppColors.darkGreen, borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -250,23 +246,23 @@ class BnplPlanDetailScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
               child: Row(
                 children: [
                   Container(
                     width: 60, height: 60,
-                    decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Iconsax.mobile, size: 28, color: AppColors.textSecondary),
+                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
+                    child: Icon(Iconsax.mobile, size: 28, color: Colors.grey[600]),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('iPhone 13 - features a sleek desi...', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        Text('Olive Green', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                        Text('iPhone 13 - features a sleek desi...', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text('Olive Green', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
                         const SizedBox(height: 4),
-                        Text('Next Installment: 15 April 2025', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.darkGreen)),
+                        Text('Next Installment: 15 April 2025', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black)),
                       ],
                     ),
                   ),
@@ -274,7 +270,7 @@ class BnplPlanDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text('Your Payment Schedule', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            Text('Your Payment Schedule', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black)),
             const SizedBox(height: 16),
             ...payments.map((p) => _buildPaymentRow(p, payments.indexOf(p) == payments.length - 1)),
             const SizedBox(height: 24),
@@ -283,13 +279,13 @@ class BnplPlanDetailScreen extends StatelessWidget {
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(14)),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Iconsax.document_download, size: 20, color: AppColors.darkGreen),
+                    const Icon(Iconsax.document_download, size: 20, color: Colors.black),
                     const SizedBox(width: 10),
-                    Text('Download Receipt', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.darkGreen)),
+                    Text('Download Receipt', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
                   ],
                 ),
               ),
@@ -318,10 +314,10 @@ class BnplPlanDetailScreen extends StatelessWidget {
           children: [
             Container(
               width: 24, height: 24,
-              decoration: BoxDecoration(color: payment.isPaid ? AppColors.darkGreen : AppColors.surfaceVariant, shape: BoxShape.circle),
+              decoration: BoxDecoration(color: payment.isPaid ? Colors.black : Colors.grey[200], shape: BoxShape.circle),
               child: payment.isPaid ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
             ),
-            if (!isLast) Container(width: 2, height: 40, color: payment.isPaid ? AppColors.darkGreen : AppColors.surfaceVariant),
+            if (!isLast) Container(width: 2, height: 40, color: payment.isPaid ? Colors.black : Colors.grey[200]),
           ],
         ),
         const SizedBox(width: 14),
@@ -330,16 +326,16 @@ class BnplPlanDetailScreen extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 24),
             child: Row(
               children: [
-                Text(payment.date, style: GoogleFonts.poppins(fontSize: 14, color: payment.isPaid ? AppColors.textPrimary : AppColors.textSecondary)),
+                Text(payment.date, style: GoogleFonts.poppins(fontSize: 14, color: payment.isPaid ? Colors.black : Colors.grey[500])),
                 const Spacer(),
                 if (!payment.isPaid)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(color: AppColors.darkGreen, borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(16)),
                     child: Text('Pay Early', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white)),
                   ),
-                Text('\$${payment.amount.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                Text('\$${payment.amount.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
               ],
             ),
           ),

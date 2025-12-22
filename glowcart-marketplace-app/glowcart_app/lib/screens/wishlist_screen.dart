@@ -12,11 +12,11 @@ class WishlistScreen extends StatefulWidget {
 
 class _WishlistScreenState extends State<WishlistScreen> {
   final List<_WishlistItem> _items = [
-    _WishlistItem(id: '1', name: 'Smart Watch Ultra', store: 'TechHub Store', price: 299.99, originalPrice: 399.99, image: '⌚', inStock: true),
-    _WishlistItem(id: '2', name: 'Wireless Earbuds Pro', store: 'AudioMax', price: 149.99, originalPrice: 199.99, image: '🎧', inStock: true),
-    _WishlistItem(id: '3', name: 'Leather Crossbody Bag', store: 'Urban Style Co', price: 89.99, originalPrice: 129.99, image: '👜', inStock: false),
-    _WishlistItem(id: '4', name: 'Running Shoes X1', store: 'SportZone', price: 159.99, originalPrice: 199.99, image: '👟', inStock: true),
-    _WishlistItem(id: '5', name: 'Minimalist Desk Lamp', store: 'Home Essentials', price: 49.99, originalPrice: 69.99, image: '💡', inStock: true),
+    _WishlistItem(id: '1', name: 'Smart Watch Ultra', store: 'TechHub Store', price: 299.99, originalPrice: 399.99, image: '', inStock: true),
+    _WishlistItem(id: '2', name: 'Wireless Earbuds Pro', store: 'AudioMax', price: 149.99, originalPrice: 199.99, image: '', inStock: true),
+    _WishlistItem(id: '3', name: 'Leather Crossbody Bag', store: 'Urban Style Co', price: 89.99, originalPrice: 129.99, image: '', inStock: false),
+    _WishlistItem(id: '4', name: 'Running Shoes X1', store: 'SportZone', price: 159.99, originalPrice: 199.99, image: '', inStock: true),
+    _WishlistItem(id: '5', name: 'Minimalist Desk Lamp', store: 'Home Essentials', price: 49.99, originalPrice: 69.99, image: '', inStock: true),
   ];
 
   @override

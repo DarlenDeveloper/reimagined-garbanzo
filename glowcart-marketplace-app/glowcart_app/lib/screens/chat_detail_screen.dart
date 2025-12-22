@@ -24,7 +24,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   final List<_ChatMessage> _messages = [
     _ChatMessage(
-      text: 'Hi Niki! 👋',
+      text: 'Hi Niki!',
       isMe: true,
       time: '9:32 PM',
     ),
@@ -34,7 +34,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       time: '9:32 PM',
     ),
     _ChatMessage(
-      text: "Hi Brian! 👋 Yeah, I'll be there around 5 PM. Do you want to join me?",
+      text: "Hi Brian! Yeah, I'll be there around 5 PM. Do you want to join me?",
       isMe: false,
       time: '9:32 PM',
     ),
@@ -49,7 +49,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       time: '9:33 PM',
     ),
     _ChatMessage(
-      text: 'Perfect! We can start with cardio and then move on to legs 🔥',
+      text: 'Perfect! We can start with cardio and then move on to legs',
       isMe: true,
       time: '9:34 PM',
     ),

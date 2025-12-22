@@ -72,7 +72,7 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            Text('Made with ❤️ by GlowCart Team', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+            Text('Made with love by GlowCart Team', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
             const SizedBox(height: 8),
             Text('© 2024 GlowCart. All rights reserved.', style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textSecondary)),
           ],

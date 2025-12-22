@@ -6,18 +6,11 @@ import 'navigation/router.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Enable edge-to-edge display with fully transparent navigation bar
-  SystemChrome.setEnabledSystemUIMode(
-    SystemUiMode.edgeToEdge,
-    overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
-  );
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-    systemNavigationBarColor: Colors.transparent,
-    systemNavigationBarDividerColor: Colors.transparent,
-    systemNavigationBarIconBrightness: Brightness.dark,
-    systemNavigationBarContrastEnforced: false,
+    statusBarIconBrightness: Brightness.light,
+    systemNavigationBarColor: Colors.black,
+    systemNavigationBarIconBrightness: Brightness.light,
   ));
   
   runApp(const GlowCartApp());
