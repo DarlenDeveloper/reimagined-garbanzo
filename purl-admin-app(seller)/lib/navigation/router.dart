@@ -11,6 +11,7 @@ import '../screens/access_screen.dart';
 import '../screens/ads_screen.dart';
 import '../screens/runner_code_screen.dart';
 import '../screens/account_type_screen.dart';
+import '../screens/loading_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/',
@@ -18,6 +19,10 @@ final router = GoRouter(
     GoRoute(
       path: '/',
       builder: (context, state) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: '/loading',
+      builder: (context, state) => const LoadingScreen(),
     ),
     GoRoute(
       path: '/auth',

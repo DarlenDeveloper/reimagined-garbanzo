@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,10 +13,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _authService = AuthService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _emailValid = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -27,6 +31,67 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _emailValid = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
     });
+  }
+
+  Future<void> _signInWithEmail() async {
+    if (_isLoading) return;
+    if (!_emailValid || _passwordController.text.isEmpty) {
+      _showError('Please enter valid email and password');
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await _authService.signInWithEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      if (mounted) context.go('/dashboard');
+    } on FirebaseAuthException catch (e) {
+      _showError(_getErrorMessage(e.code));
+    } catch (e) {
+      _showError('An error occurred. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      final result = await _authService.signInWithGoogle();
+      if (result != null && mounted) context.go('/dashboard');
+    } on FirebaseAuthException catch (e) {
+      _showError(_getErrorMessage(e.code));
+    } catch (e) {
+      _showError('Google sign in failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _getErrorMessage(String code) {
+    switch (code) {
+      case 'user-not-found': return 'No account found with this email';
+      case 'wrong-password': return 'Incorrect password';
+      case 'invalid-email': return 'Invalid email address';
+      case 'user-disabled': return 'This account has been disabled';
+      case 'too-many-requests': return 'Too many attempts. Please try again later';
+      case 'invalid-credential': return 'Invalid email or password';
+      default: return 'An error occurred. Please try again';
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GoogleFonts.poppins()),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   @override
@@ -55,7 +120,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: 70,
                       height: 70,
                       decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(18)),
-                      child: Center(child: Text('G', style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white))),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: Image.asset('assets/images/mainlogo.png', fit: BoxFit.cover),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text('Welcome Back', style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.black)),
@@ -66,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 40),
               // Social Buttons
-              _SocialButton(icon: Icons.g_mobiledata, label: 'Continue with Google', onTap: () => context.go('/dashboard')),
+              _SocialButton(icon: Icons.g_mobiledata, label: 'Continue with Google', onTap: _signInWithGoogle),
               const SizedBox(height: 12),
               _SocialButton(icon: Icons.apple, label: 'Continue with Apple', onTap: () => context.go('/dashboard')),
               const SizedBox(height: 24),
@@ -133,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 28),
               // Login Button
               GestureDetector(
-                onTap: () => context.go('/dashboard'),
+                onTap: _signInWithEmail,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 16),

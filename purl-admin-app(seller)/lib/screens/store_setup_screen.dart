@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
+import '../services/store_service.dart';
 
 class StoreSetupScreen extends StatefulWidget {
   const StoreSetupScreen({super.key});
@@ -11,9 +15,14 @@ class StoreSetupScreen extends StatefulWidget {
 }
 
 class _StoreSetupScreenState extends State<StoreSetupScreen> {
+  final _storeService = StoreService();
+  final _imagePicker = ImagePicker();
   final PageController _pageController = PageController();
   int _currentStep = 0;
   final int _totalSteps = 6;
+  bool _isCreating = false;
+  File? _logoFile;
+  String? _logoUrl;
 
   // Step 1: Store Info
   final _storeNameController = TextEditingController();
@@ -97,7 +106,70 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
       _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       setState(() => _currentStep++);
     } else {
-      context.go('/dashboard');
+      _createStore();
+    }
+  }
+
+  Future<void> _createStore() async {
+    if (_isCreating) return;
+    setState(() => _isCreating = true);
+    try {
+      // First create store to get ID
+      final storeId = await _storeService.createStore(
+        name: _storeNameController.text.trim(),
+        category: _selectedCategory,
+        description: _storeDescController.text.trim(),
+        address: {
+          'country': _selectedCountry,
+          'street': _streetController.text.trim(),
+          'city': _cityController.text.trim(),
+          'state': _stateController.text.trim(),
+          'postalCode': _postalController.text.trim(),
+        },
+        contact: {
+          'phone': _phoneController.text.trim(),
+          'email': _emailController.text.trim(),
+          'website': _websiteController.text.trim(),
+        },
+        businessHours: _businessHours.map((day, hours) => MapEntry(day, {
+          'isOpen': hours.isOpen,
+          'open': hours.open,
+          'close': hours.close,
+        })),
+        paymentMethods: {
+          'cashOnDelivery': _enableCashOnDelivery,
+          'mobileMoney': _enableMobileMoney,
+          'momoNumber': _momoNumberController.text.trim(),
+          'bankTransfer': _enableBankTransfer,
+          'bankName': _bankNameController.text.trim(),
+          'accountName': _accountNameController.text.trim(),
+          'accountNumber': _accountNumberController.text.trim(),
+          'cardPayments': _enableCardPayments,
+        },
+        shipping: {
+          'localDelivery': _enableLocalDelivery,
+          'localDeliveryFee': _localDeliveryFeeController.text.trim(),
+          'nationwide': _enableNationwide,
+          'nationwideFee': _nationwideFeeController.text.trim(),
+          'storePickup': _enablePickup,
+        },
+      );
+
+      // Upload logo with store ID in path
+      if (_logoFile != null) {
+        final ref = FirebaseStorage.instance.ref().child('store_logos/$storeId/logo.jpg');
+        await ref.putFile(_logoFile!);
+        _logoUrl = await ref.getDownloadURL();
+        await _storeService.updateStoreLogo(storeId, _logoUrl!);
+      }
+
+      if (mounted) context.go('/dashboard');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create store: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isCreating = false);
     }
   }
 
@@ -163,10 +235,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
               ],
             ),
           ),
-          GestureDetector(
-            onTap: () => context.go('/dashboard'),
-            child: Text('Skip', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[500])),
-          ),
+          const SizedBox(width: 36),
         ],
       ),
     );
@@ -198,16 +267,25 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: GestureDetector(
-        onTap: _nextStep,
+        onTap: _isCreating ? null : _nextStep,
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+            color: _isCreating ? Colors.grey : Colors.black,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Center(
-            child: Text(
-              _currentStep == _totalSteps - 1 ? 'Finish Setup' : 'Continue',
-              style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-            ),
+            child: _isCreating
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : Text(
+                    _currentStep == _totalSteps - 1 ? 'Finish Setup' : 'Continue',
+                    style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
           ),
         ),
       ),
@@ -322,23 +400,32 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
             child: Column(
               children: [
                 GestureDetector(
-                  onTap: () {},
+                  onTap: _pickLogo,
                   child: Container(
                     width: 100,
                     height: 100,
-                    decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid)),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Iconsax.camera, color: Colors.grey[400], size: 28),
-                        const SizedBox(height: 4),
-                        Text('Add Logo', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
-                      ],
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
+                      image: _logoFile != null
+                          ? DecorationImage(image: FileImage(_logoFile!), fit: BoxFit.cover)
+                          : null,
                     ),
+                    child: _logoFile == null
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Iconsax.camera, color: Colors.grey[400], size: 28),
+                              const SizedBox(height: 4),
+                              Text('Add Logo', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
+                            ],
+                          )
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text('Tap to upload', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500])),
+                Text(_logoFile != null ? 'Tap to change' : 'Tap to upload', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500])),
               ],
             ),
           ),
@@ -349,6 +436,13 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _pickLogo() async {
+    final picked = await _imagePicker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512, imageQuality: 80);
+    if (picked != null) {
+      setState(() => _logoFile = File(picked.path));
+    }
   }
 
   // STEP 2: Address

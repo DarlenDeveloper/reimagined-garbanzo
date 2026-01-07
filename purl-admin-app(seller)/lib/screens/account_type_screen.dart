@@ -24,15 +24,9 @@ class AccountTypeScreen extends StatelessWidget {
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(18),
                 ),
-                child: Center(
-                  child: Text(
-                    'P',
-                    style: GoogleFonts.poppins(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Image.asset('assets/images/mainlogo.png', fit: BoxFit.cover),
                 ),
               ),
               const SizedBox(height: 24),

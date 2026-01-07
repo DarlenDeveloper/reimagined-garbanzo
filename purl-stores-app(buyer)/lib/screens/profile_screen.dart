@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 import 'bnpl_plans_screen.dart';
 import 'bnpl_subscription_screen.dart';
 import 'wishlist_screen.dart';
@@ -26,6 +28,21 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final bool _hasBnplAccount = true;
+  final _authService = AuthService();
+
+  User? get _user => _authService.currentUser;
+  
+  String get _userName => _user?.displayName ?? 'User';
+  String get _userEmail => _user?.email ?? '';
+  String get _userInitials {
+    final name = _userName;
+    if (name.isEmpty || name == 'User') return 'U';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,16 +102,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               width: 70, height: 70,
               decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-              child: Center(child: Text('JD', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white))),
+              child: Center(child: Text(_userInitials, style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white))),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('John Doe', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
+                  Text(_userName, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
                   const SizedBox(height: 2),
-                  Text('john.doe@email.com', style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
+                  Text(_userEmail, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -104,7 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         const Icon(Iconsax.medal_star, size: 14, color: Colors.black),
                         const SizedBox(width: 4),
-                        Text('Gold Member', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black)),
+                        Text('Member', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black)),
                       ],
                     ),
                   ),
@@ -393,6 +410,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showLogoutDialog() {
+    final authService = AuthService();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -402,9 +420,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey[600]))),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              GoRouter.of(context).go('/login');
+              await authService.signOut();
+              if (mounted) GoRouter.of(context).go('/');
             },
             child: Text('Log Out', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
           ),

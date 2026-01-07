@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -11,10 +13,84 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  final _authService = AuthService();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
+
+  Future<void> _signUpWithEmail() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      _showError('Please fill in all fields');
+      return;
+    }
+    if (password.length < 6) {
+      _showError('Password must be at least 6 characters');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await _authService.signUpWithEmail(email: email, password: password);
+      await _authService.updateDisplayName(name);
+      await _authService.sendEmailVerification();
+      if (mounted) context.go('/verify-email');
+    } on FirebaseAuthException catch (e) {
+      _showError(_getErrorMessage(e.code));
+    } catch (e) {
+      _showError('An error occurred. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signUpWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await _authService.signInWithGoogle();
+      if (result != null && mounted) {
+        context.go('/account-type');
+      }
+    } on FirebaseAuthException catch (e) {
+      _showError(_getErrorMessage(e.code));
+    } catch (e) {
+      _showError('Google sign in failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _getErrorMessage(String code) {
+    switch (code) {
+      case 'email-already-in-use':
+        return 'An account already exists with this email';
+      case 'invalid-email':
+        return 'Invalid email address';
+      case 'weak-password':
+        return 'Password is too weak';
+      case 'operation-not-allowed':
+        return 'Email/password accounts are not enabled';
+      default:
+        return 'An error occurred. Please try again';
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GoogleFonts.poppins()),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -35,7 +111,6 @@ class _SignupScreenState extends State<SignupScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 40),
-              // Logo
               Center(
                 child: Column(
                   children: [
@@ -43,7 +118,10 @@ class _SignupScreenState extends State<SignupScreen> {
                       width: 70,
                       height: 70,
                       decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(18)),
-                      child: Center(child: Text('G', style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white))),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: Image.asset('assets/images/mainlogo.png', fit: BoxFit.cover),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text('Create Account', style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.black)),
@@ -53,12 +131,12 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
               const SizedBox(height: 40),
-              // Social Buttons
-              _SocialButton(icon: Icons.g_mobiledata, label: 'Continue with Google', onTap: () => context.go('/account-type')),
-              const SizedBox(height: 12),
-              _SocialButton(icon: Icons.apple, label: 'Continue with Apple', onTap: () => context.go('/account-type')),
+              _SocialButton(
+                icon: Icons.g_mobiledata,
+                label: 'Continue with Google',
+                onTap: _isLoading ? null : _signUpWithGoogle,
+              ),
               const SizedBox(height: 24),
-              // Divider
               Row(
                 children: [
                   Expanded(child: Divider(color: Colors.grey[300])),
@@ -67,12 +145,12 @@ class _SignupScreenState extends State<SignupScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-              // Full Name Field
               Text('Full Name', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
               const SizedBox(height: 8),
               TextField(
                 controller: _nameController,
                 textCapitalization: TextCapitalization.words,
+                enabled: !_isLoading,
                 style: GoogleFonts.poppins(fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'Enter your full name',
@@ -85,12 +163,12 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              // Email Field
               Text('Email', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
               const SizedBox(height: 8),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
+                enabled: !_isLoading,
                 style: GoogleFonts.poppins(fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'Enter your email',
@@ -103,12 +181,12 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              // Password Field
               Text('Password', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
               const SizedBox(height: 8),
               TextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
+                enabled: !_isLoading,
                 style: GoogleFonts.poppins(fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'Create a password',
@@ -125,18 +203,23 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
               const SizedBox(height: 28),
-              // Create Store Button
               GestureDetector(
-                onTap: () => context.push('/verify-email'),
+                onTap: _isLoading ? null : _signUpWithEmail,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
-                  child: Center(child: Text('Create Account', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600))),
+                  decoration: BoxDecoration(
+                    color: _isLoading ? Colors.grey : Colors.black,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: _isLoading
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text('Create Account', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
-              // Login Link
               Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -161,7 +244,7 @@ class _SignupScreenState extends State<SignupScreen> {
 class _SocialButton extends StatelessWidget {
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _SocialButton({required this.icon, required this.label, required this.onTap});
 

@@ -1,3 +1,8 @@
+# Firebase config files (contain API keys)
+**/google-services.json
+**/GoogleService-Info.plist
+**/firebase_options.dart
+
 # Dependencies
 node_modules/
 .pnp/

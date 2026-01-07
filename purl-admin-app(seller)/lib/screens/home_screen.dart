@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'notifications_screen.dart';
 import 'analytics_screen.dart';
 import 'discounts_screen.dart';
 import 'request_delivery_screen.dart';
 import 'main_screen.dart';
 import 'messages_screen.dart';
+import '../services/store_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +21,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  final _storeService = StoreService();
+  String _storeName = '';
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -26,6 +31,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _controller = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _loadStoreData();
+  }
+
+  Future<void> _loadStoreData() async {
+    try {
+      // Get user's first name
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        setState(() {
+          _storeName = user.displayName?.split(' ').first ?? 'there';
+        });
+      }
+    } catch (e) {
+      setState(() => _storeName = 'there');
+    }
+    setState(() => _isLoading = false);
     _controller.forward();
   }
 
@@ -63,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(_getGreeting(), style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600])),
-                          Text('My Store', style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.black)),
+                          Text(_storeName, style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.black)),
                         ],
                       ),
                       Row(

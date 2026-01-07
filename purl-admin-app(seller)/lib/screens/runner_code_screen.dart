@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:go_router/go_router.dart';
+import '../services/store_service.dart';
 
 class RunnerCodeScreen extends StatefulWidget {
   const RunnerCodeScreen({super.key});
@@ -12,6 +13,7 @@ class RunnerCodeScreen extends StatefulWidget {
 }
 
 class _RunnerCodeScreenState extends State<RunnerCodeScreen> {
+  final _storeService = StoreService();
   final List<TextEditingController> _codeControllers = List.generate(4, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
   bool _isLoading = false;
@@ -62,31 +64,35 @@ class _RunnerCodeScreenState extends State<RunnerCodeScreen> {
       _hasError = false;
     });
 
-    await Future.delayed(const Duration(seconds: 2));
-
-    // Dummy validation - accept "1234" as valid
-    if (_code == '1234') {
-      if (mounted) {
+    try {
+      final success = await _storeService.joinStoreWithCode(_code);
+      if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Welcome! You now have access to "My Awesome Store"', style: GoogleFonts.poppins()),
+            content: Text('Welcome! You have joined the store.', style: GoogleFonts.poppins()),
             backgroundColor: Colors.green[700],
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
         context.go('/dashboard');
+      } else {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+          _errorMessage = 'Invalid or expired code. Please ask your admin for a new code.';
+        });
+        for (var controller in _codeControllers) {
+          controller.clear();
+        }
+        _focusNodes[0].requestFocus();
       }
-    } else {
+    } catch (e) {
       setState(() {
         _isLoading = false;
         _hasError = true;
-        _errorMessage = 'Invalid or expired code. Please ask your admin for a new code.';
+        _errorMessage = 'Error verifying code. Please try again.';
       });
-      for (var controller in _codeControllers) {
-        controller.clear();
-      }
-      _focusNodes[0].requestFocus();
     }
   }
 

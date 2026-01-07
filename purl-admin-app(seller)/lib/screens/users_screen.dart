@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
-import 'dart:math';
+import '../services/store_service.dart';
 
 class UsersScreen extends StatefulWidget {
   const UsersScreen({super.key});
@@ -12,22 +12,55 @@ class UsersScreen extends StatefulWidget {
 }
 
 class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStateMixin {
+  final _storeService = StoreService();
   late TabController _tabController;
   
-  final List<Map<String, dynamic>> _teamMembers = [
-    {'name': 'John Doe', 'email': 'john@store.com', 'role': 'Owner', 'status': 'active', 'joinedAt': '2024-01-15'},
-    {'name': 'Jane Smith', 'email': 'jane@store.com', 'role': 'Admin', 'status': 'active', 'joinedAt': '2024-02-20'},
-    {'name': 'Mike Johnson', 'email': 'mike@store.com', 'role': 'Runner', 'status': 'active', 'joinedAt': '2024-03-10'},
-  ];
-
-  final List<Map<String, dynamic>> _pendingInvites = [
-    {'email': 'sarah@example.com', 'role': 'Runner', 'code': '4829', 'expiresAt': DateTime.now().add(const Duration(minutes: 12))},
-  ];
+  List<Map<String, dynamic>> _teamMembers = [];
+  final List<Map<String, dynamic>> _pendingInvites = [];
+  bool _isLoading = true;
+  String? _currentUserId;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadTeamMembers();
+  }
+
+  Future<void> _loadTeamMembers() async {
+    try {
+      final storeId = await _storeService.getUserStoreId();
+      if (storeId != null) {
+        final storeData = await _storeService.getStore(storeId);
+        if (storeData != null) {
+          final authorizedUsers = List<String>.from(storeData['authorizedUsers'] ?? []);
+          final ownerId = storeData['ownerId'] as String?;
+          _currentUserId = ownerId;
+          
+          List<Map<String, dynamic>> members = [];
+          for (final uid in authorizedUsers) {
+            // For now, show basic info - in production you'd fetch from a users collection
+            final isOwner = uid == ownerId;
+            members.add({
+              'uid': uid,
+              'name': isOwner ? 'You (Owner)' : 'Team Member',
+              'email': uid.substring(0, 8) + '...',
+              'role': isOwner ? 'Owner' : 'Runner',
+              'status': 'active',
+            });
+          }
+          
+          if (mounted) {
+            setState(() {
+              _teamMembers = members;
+              _isLoading = false;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -36,16 +69,11 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
     super.dispose();
   }
 
-  String _generateCode() {
-    final random = Random();
-    return List.generate(4, (_) => random.nextInt(10)).join();
-  }
-
   void _showInviteRunnerSheet() {
     final emailController = TextEditingController();
     String? generatedCode;
-    DateTime? expiresAt;
     bool codeGenerated = false;
+    bool isGenerating = false;
 
     showModalBottomSheet(
       context: context,
@@ -86,7 +114,7 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                   padding: const EdgeInsets.all(20),
                   children: [
                     // Email field
-                    Text('Runner Email', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
+                    Text('Runner Email (Optional)', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -109,17 +137,23 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                     if (!codeGenerated) ...[
                       // Generate code button
                       GestureDetector(
-                        onTap: () {
-                          if (emailController.text.isNotEmpty && emailController.text.contains('@')) {
-                            setSheetState(() {
-                              generatedCode = _generateCode();
-                              expiresAt = DateTime.now().add(const Duration(minutes: 15));
-                              codeGenerated = true;
-                            });
-                          } else {
+                        onTap: isGenerating ? null : () async {
+                          setSheetState(() => isGenerating = true);
+                          try {
+                            final storeId = await _storeService.getUserStoreId();
+                            if (storeId != null) {
+                              final code = await _storeService.generateInviteCode(storeId);
+                              setSheetState(() {
+                                generatedCode = code;
+                                codeGenerated = true;
+                                isGenerating = false;
+                              });
+                            }
+                          } catch (e) {
+                            setSheetState(() => isGenerating = false);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Please enter a valid email', style: GoogleFonts.poppins()),
+                                content: Text('Failed to generate code', style: GoogleFonts.poppins()),
                                 backgroundColor: Colors.red[700],
                               ),
                             );
@@ -128,9 +162,14 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                         child: Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
+                          decoration: BoxDecoration(
+                            color: isGenerating ? Colors.grey : Colors.black,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: Center(
-                            child: Text('Generate Access Code', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                            child: isGenerating
+                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : Text('Generate Access Code', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
                           ),
                         ),
                       ),
@@ -173,9 +212,9 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Iconsax.timer_1, color: Colors.orange[700], size: 18),
+                                Icon(Iconsax.timer_1, color: Colors.green[700], size: 18),
                                 const SizedBox(width: 6),
-                                Text('Expires in 15 minutes', style: GoogleFonts.poppins(fontSize: 13, color: Colors.orange[700], fontWeight: FontWeight.w500)),
+                                Text('Expires in 15 minutes', style: GoogleFonts.poppins(fontSize: 13, color: Colors.green[700], fontWeight: FontWeight.w500)),
                               ],
                             ),
                           ],
@@ -214,18 +253,20 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                       // Done button
                       GestureDetector(
                         onTap: () {
-                          setState(() {
-                            _pendingInvites.add({
-                              'email': emailController.text,
-                              'role': 'Runner',
-                              'code': generatedCode,
-                              'expiresAt': expiresAt,
+                          if (emailController.text.isNotEmpty) {
+                            setState(() {
+                              _pendingInvites.add({
+                                'email': emailController.text,
+                                'role': 'Runner',
+                                'code': generatedCode,
+                                'expiresAt': DateTime.now().add(const Duration(minutes: 15)),
+                              });
                             });
-                          });
+                          }
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Invite created for ${emailController.text}', style: GoogleFonts.poppins()),
+                              content: Text('Invite code generated successfully', style: GoogleFonts.poppins()),
                               backgroundColor: Colors.black,
                             ),
                           );
@@ -331,16 +372,25 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
               _OptionTile(
                 icon: Iconsax.refresh,
                 label: 'Generate New Code',
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
-                  final newCode = _generateCode();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('New code: $newCode (expires in 15 min)', style: GoogleFonts.poppins()),
-                      backgroundColor: Colors.black,
-                      duration: const Duration(seconds: 5),
-                    ),
-                  );
+                  try {
+                    final storeId = await _storeService.getUserStoreId();
+                    if (storeId != null) {
+                      final newCode = await _storeService.generateInviteCode(storeId);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('New code: $newCode (expires in 15 min)', style: GoogleFonts.poppins()),
+                          backgroundColor: Colors.black,
+                          duration: const Duration(seconds: 5),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to generate code'), backgroundColor: Colors.red),
+                    );
+                  }
                 },
               ),
               _OptionTile(
@@ -451,15 +501,15 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: Colors.orange[50], borderRadius: BorderRadius.circular(12)),
+                      decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(12)),
                       child: Row(
                         children: [
-                          Icon(Iconsax.lock, color: Colors.orange[700], size: 20),
+                          Icon(Iconsax.lock, color: Colors.green[700], size: 20),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Payment access always requires admin approval for each transaction',
-                              style: GoogleFonts.poppins(fontSize: 12, color: Colors.orange[800]),
+                              style: GoogleFonts.poppins(fontSize: 12, color: Colors.green[800]),
                             ),
                           ),
                         ],
@@ -503,12 +553,28 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
             child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey[600])),
           ),
           TextButton(
-            onPressed: () {
-              setState(() => _teamMembers.remove(member));
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${member['name']} removed from team', style: GoogleFonts.poppins()), backgroundColor: Colors.black),
-              );
+              try {
+                final storeId = await _storeService.getUserStoreId();
+                if (storeId != null && member['uid'] != null) {
+                  final success = await _storeService.removeUserFromStore(storeId, member['uid']);
+                  if (success) {
+                    setState(() => _teamMembers.remove(member));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('${member['name']} removed from team', style: GoogleFonts.poppins()), backgroundColor: Colors.black),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to remove member', style: GoogleFonts.poppins()), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error removing member', style: GoogleFonts.poppins()), backgroundColor: Colors.red),
+                );
+              }
             },
             child: Text('Remove', style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.w600)),
           ),
@@ -556,7 +622,9 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
         icon: const Icon(Iconsax.user_add, color: Colors.white, size: 20),
         label: Text('Add Runner', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
       ),
-      body: TabBarView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.black))
+          : TabBarView(
         controller: _tabController,
         children: [
           // Members tab
@@ -596,9 +664,7 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
         ],
       ),
     );
-  }
-
-  Widget _buildEmptyState(String title, String subtitle) {
+  }  Widget _buildEmptyState(String title, String subtitle) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -781,14 +847,14 @@ class _PendingInviteCard extends StatelessWidget {
                         Icon(
                           isExpired ? Iconsax.close_circle : Iconsax.timer_1,
                           size: 14,
-                          color: isExpired ? Colors.red : Colors.orange[700],
+                          color: isExpired ? Colors.red : Colors.green[700],
                         ),
                         const SizedBox(width: 4),
                         Text(
                           _getTimeRemaining(),
                           style: GoogleFonts.poppins(
                             fontSize: 12,
-                            color: isExpired ? Colors.red : Colors.orange[700],
+                            color: isExpired ? Colors.red : Colors.green[700],
                             fontWeight: FontWeight.w500,
                           ),
                         ),

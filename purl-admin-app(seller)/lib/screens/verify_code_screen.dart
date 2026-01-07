@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 
 class VerifyCodeScreen extends StatefulWidget {
   const VerifyCodeScreen({super.key});
@@ -12,29 +13,48 @@ class VerifyCodeScreen extends StatefulWidget {
 }
 
 class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
-  final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
+  final _authService = AuthService();
+  bool _isLoading = false;
+  bool _isResending = false;
 
-  @override
-  void dispose() {
-    for (var c in _controllers) c.dispose();
-    for (var f in _focusNodes) f.dispose();
-    super.dispose();
+  Future<void> _checkVerification() async {
+    setState(() => _isLoading = true);
+    try {
+      await FirebaseAuth.instance.currentUser?.reload();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && user.emailVerified) {
+        if (mounted) context.go('/account-type');
+      } else {
+        _showMessage('Email not verified yet. Please check your inbox and click the link.');
+      }
+    } catch (e) {
+      _showMessage('Error checking verification status');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
-  void _onCodeChanged(String value, int index) {
-    if (value.length == 1 && index < 3) {
-      _focusNodes[index + 1].requestFocus();
-    } else if (value.isEmpty && index > 0) {
-      _focusNodes[index - 1].requestFocus();
+  Future<void> _resendEmail() async {
+    setState(() => _isResending = true);
+    try {
+      await _authService.sendEmailVerification();
+      _showMessage('Verification email sent!');
+    } catch (e) {
+      _showMessage('Failed to send email. Try again.');
+    } finally {
+      if (mounted) setState(() => _isResending = false);
     }
-    if (_controllers.every((c) => c.text.isNotEmpty)) {
-      context.go('/account-type');
-    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message, style: GoogleFonts.poppins()), behavior: SnackBarBehavior.floating),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final email = FirebaseAuth.instance.currentUser?.email ?? '';
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -58,40 +78,33 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
               const SizedBox(height: 24),
               Text('Verify Email', style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.black)),
               const SizedBox(height: 8),
-              Text('We sent a code to your email address', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600])),
-              const SizedBox(height: 40),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(4, (index) => SizedBox(
-                  width: 64,
-                  height: 64,
-                  child: TextField(
-                    controller: _controllers[index],
-                    focusNode: _focusNodes[index],
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.number,
-                    maxLength: 1,
-                    style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700),
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(
-                      counterText: '',
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.black, width: 2)),
-                    ),
-                    onChanged: (value) => _onCodeChanged(value, index),
-                  ),
-                )),
+              Text('We sent a verification link to:', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600])),
+              const SizedBox(height: 4),
+              Text(email, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
+                child: Row(
+                  children: [
+                    Icon(Iconsax.info_circle, color: Colors.grey[600], size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text('Click the link in your email, then tap the button below', style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]))),
+                  ],
+                ),
               ),
               const SizedBox(height: 32),
               GestureDetector(
-                onTap: () => context.go('/account-type'),
+                onTap: _isLoading ? null : _checkVerification,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
-                  child: Center(child: Text('Verify', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600))),
+                  decoration: BoxDecoration(color: _isLoading ? Colors.grey : Colors.black, borderRadius: BorderRadius.circular(12)),
+                  child: Center(
+                    child: _isLoading
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text("I've Verified", style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -99,10 +112,10 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Didn't receive code? ", style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 14)),
+                    Text("Didn't receive email? ", style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 14)),
                     GestureDetector(
-                      onTap: () {},
-                      child: Text('Resend', style: GoogleFonts.poppins(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w600)),
+                      onTap: _isResending ? null : _resendEmail,
+                      child: Text(_isResending ? 'Sending...' : 'Resend', style: GoogleFonts.poppins(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),

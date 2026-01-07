@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
-import '../theme/colors.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class InterestsScreen extends StatefulWidget {
   final bool isOnboarding;
@@ -14,29 +15,30 @@ class InterestsScreen extends StatefulWidget {
 
 class _InterestsScreenState extends State<InterestsScreen> {
   final Set<String> _selectedInterests = {};
+  bool _isSaving = false;
 
   final List<_Interest> _interests = [
-    _Interest(id: 'electronics', name: 'Electronics', icon: Iconsax.mobile, color: const Color(0xFF3B82F6)),
-    _Interest(id: 'fashion', name: 'Fashion', icon: Iconsax.shopping_bag, color: const Color(0xFFEC4899)),
-    _Interest(id: 'home', name: 'Home & Living', icon: Iconsax.home_2, color: const Color(0xFFF59E0B)),
-    _Interest(id: 'beauty', name: 'Beauty', icon: Iconsax.brush_1, color: const Color(0xFFEF4444)),
-    _Interest(id: 'sports', name: 'Sports & Fitness', icon: Iconsax.weight, color: const Color(0xFF22C55E)),
-    _Interest(id: 'books', name: 'Books & Stationery', icon: Iconsax.book, color: const Color(0xFF8B5CF6)),
-    _Interest(id: 'gaming', name: 'Gaming', icon: Iconsax.game, color: const Color(0xFF06B6D4)),
-    _Interest(id: 'groceries', name: 'Groceries', icon: Iconsax.shopping_cart, color: const Color(0xFF84CC16)),
-    _Interest(id: 'health', name: 'Health & Wellness', icon: Iconsax.health, color: const Color(0xFFF43F5E)),
-    _Interest(id: 'automotive', name: 'Automotive', icon: Iconsax.car, color: const Color(0xFF6366F1)),
-    _Interest(id: 'jewelry', name: 'Jewelry & Accessories', icon: Iconsax.diamonds, color: const Color(0xFFD946EF)),
-    _Interest(id: 'pets', name: 'Pet Supplies', icon: Iconsax.pet, color: const Color(0xFF14B8A6)),
-    _Interest(id: 'kids', name: 'Kids & Baby', icon: Iconsax.lovely, color: const Color(0xFFFF6B6B)),
-    _Interest(id: 'outdoor', name: 'Outdoor & Garden', icon: Iconsax.tree, color: const Color(0xFF10B981)),
-    _Interest(id: 'art', name: 'Art & Crafts', icon: Iconsax.paintbucket, color: const Color(0xFFA855F7)),
+    _Interest(id: 'electronics', name: 'Electronics', icon: Iconsax.mobile),
+    _Interest(id: 'fashion', name: 'Fashion', icon: Iconsax.shopping_bag),
+    _Interest(id: 'home', name: 'Home & Living', icon: Iconsax.home_2),
+    _Interest(id: 'beauty', name: 'Beauty', icon: Iconsax.brush_1),
+    _Interest(id: 'sports', name: 'Sports & Fitness', icon: Iconsax.weight),
+    _Interest(id: 'books', name: 'Books & Stationery', icon: Iconsax.book),
+    _Interest(id: 'gaming', name: 'Gaming', icon: Iconsax.game),
+    _Interest(id: 'groceries', name: 'Groceries', icon: Iconsax.shopping_cart),
+    _Interest(id: 'health', name: 'Health & Wellness', icon: Iconsax.health),
+    _Interest(id: 'automotive', name: 'Automotive', icon: Iconsax.car),
+    _Interest(id: 'jewelry', name: 'Jewelry & Accessories', icon: Iconsax.diamonds),
+    _Interest(id: 'pets', name: 'Pet Supplies', icon: Iconsax.pet),
+    _Interest(id: 'kids', name: 'Kids & Baby', icon: Iconsax.lovely),
+    _Interest(id: 'outdoor', name: 'Outdoor & Garden', icon: Iconsax.tree),
+    _Interest(id: 'art', name: 'Art & Crafts', icon: Iconsax.paintbucket),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundBeige,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -61,7 +63,6 @@ class _InterestsScreenState extends State<InterestsScreen> {
     );
   }
 
-
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -72,20 +73,20 @@ class _InterestsScreenState extends State<InterestsScreen> {
               onTap: () => Navigator.pop(context),
               child: Container(
                 width: 40, height: 40,
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Iconsax.arrow_left, size: 20, color: AppColors.textPrimary),
+                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Iconsax.arrow_left, size: 20, color: Colors.black),
               ),
             ),
           if (!widget.isOnboarding) const SizedBox(width: 12),
           Text(
             widget.isOnboarding ? 'Welcome!' : 'My Interests',
-            style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+            style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.black),
           ),
           const Spacer(),
           if (widget.isOnboarding)
             TextButton(
               onPressed: () => _continueToApp(),
-              child: Text('Skip', style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textSecondary)),
+              child: Text('Skip', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600])),
             ),
         ],
       ),
@@ -97,7 +98,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [AppColors.darkGreen, Color(0xFF2D5A45)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -121,7 +122,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
           const SizedBox(width: 16),
           Container(
             width: 56, height: 56,
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(16)),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(16)),
             child: const Icon(Iconsax.magic_star, size: 28, color: Colors.white),
           ),
         ],
@@ -135,12 +136,12 @@ class _InterestsScreenState extends State<InterestsScreen> {
       children: [
         Row(
           children: [
-            Text('Choose at least 3', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            Text('Choose at least 3', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black)),
             const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: _selectedInterests.length >= 3 ? AppColors.success.withValues(alpha: 0.1) : AppColors.surfaceVariant,
+                color: _selectedInterests.length >= 3 ? Colors.black : Colors.grey[100],
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -148,7 +149,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: _selectedInterests.length >= 3 ? AppColors.success : AppColors.textSecondary,
+                  color: _selectedInterests.length >= 3 ? Colors.white : Colors.grey[600],
                 ),
               ),
             ),
@@ -186,9 +187,8 @@ class _InterestsScreenState extends State<InterestsScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.darkGreen : Colors.white,
+          color: isSelected ? Colors.black : Colors.grey[100],
           borderRadius: BorderRadius.circular(16),
-          boxShadow: isSelected ? [BoxShadow(color: AppColors.darkGreen.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 2))] : null,
         ),
         child: Stack(
           children: [
@@ -199,10 +199,10 @@ class _InterestsScreenState extends State<InterestsScreen> {
                   Container(
                     width: 44, height: 44,
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.white.withValues(alpha: 0.2) : interest.color.withValues(alpha: 0.1),
+                      color: isSelected ? Colors.white.withValues(alpha: 0.15) : Colors.grey[200],
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(interest.icon, size: 22, color: isSelected ? Colors.white : interest.color),
+                    child: Icon(interest.icon, size: 22, color: isSelected ? Colors.white : Colors.black),
                   ),
                   const SizedBox(height: 8),
                   Padding(
@@ -212,7 +212,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w500, color: isSelected ? Colors.white : AppColors.textPrimary),
+                      style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w500, color: isSelected ? Colors.white : Colors.black),
                     ),
                   ),
                 ],
@@ -224,7 +224,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
                 child: Container(
                   width: 18, height: 18,
                   decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                  child: const Icon(Icons.check, size: 12, color: AppColors.darkGreen),
+                  child: const Icon(Icons.check, size: 12, color: Colors.black),
                 ),
               ),
           ],
@@ -232,7 +232,6 @@ class _InterestsScreenState extends State<InterestsScreen> {
       ),
     );
   }
-
 
   Widget _buildBottomBar() {
     final canContinue = _selectedInterests.length >= 3;
@@ -251,29 +250,35 @@ class _InterestsScreenState extends State<InterestsScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Iconsax.info_circle, size: 16, color: AppColors.textSecondary),
+                  Icon(Iconsax.info_circle, size: 16, color: Colors.grey[500]),
                   const SizedBox(width: 6),
                   Text(
                     'Select ${3 - _selectedInterests.length} more to continue',
-                    style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary),
+                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500]),
                   ),
                 ],
               ),
             ),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: canContinue ? () => _continueToApp() : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: canContinue ? AppColors.darkGreen : AppColors.surfaceVariant,
-                foregroundColor: canContinue ? Colors.white : AppColors.textSecondary,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          GestureDetector(
+            onTap: (canContinue && !_isSaving) ? () => _continueToApp() : null,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: (canContinue && !_isSaving) ? Colors.black : Colors.grey[200],
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Text(
-                widget.isOnboarding ? 'Continue' : 'Save Interests',
-                style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
+              child: Center(
+                child: _isSaving
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text(
+                        widget.isOnboarding ? 'Continue' : 'Save Interests',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: canContinue ? Colors.white : Colors.grey[500],
+                        ),
+                      ),
               ),
             ),
           ),
@@ -282,13 +287,68 @@ class _InterestsScreenState extends State<InterestsScreen> {
     );
   }
 
-  void _continueToApp() {
-    // In a real app, save interests to user profile/backend
-    // For now, just navigate to main app
-    if (widget.isOnboarding) {
-      context.go('/home');
-    } else {
-      Navigator.pop(context, _selectedInterests.toList());
+  Future<void> _continueToApp() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      // Save interests to buyerInterests collection
+      await FirebaseFirestore.instance
+          .collection('buyerInterests')
+          .doc(user.uid)
+          .set({
+        'userId': user.uid,
+        'interests': _selectedInterests.toList(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      if (mounted) {
+        if (widget.isOnboarding) {
+          context.go('/home');
+        } else {
+          Navigator.pop(context, _selectedInterests.toList());
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save interests', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingInterests();
+  }
+
+  Future<void> _loadExistingInterests() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('buyerInterests')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists && doc.data()?['interests'] != null) {
+        setState(() {
+          _selectedInterests.addAll(List<String>.from(doc.data()!['interests']));
+        });
+      }
+    } catch (e) {
+      // Ignore errors loading existing interests
     }
   }
 }
@@ -296,7 +356,6 @@ class _InterestsScreenState extends State<InterestsScreen> {
 class _Interest {
   final String id, name;
   final IconData icon;
-  final Color color;
 
-  _Interest({required this.id, required this.name, required this.icon, required this.color});
+  _Interest({required this.id, required this.name, required this.icon});
 }

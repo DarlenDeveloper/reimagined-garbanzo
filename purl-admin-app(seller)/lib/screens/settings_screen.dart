@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../services/store_service.dart';
+import '../services/auth_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,9 +15,59 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  final _storeService = StoreService();
+  final _authService = AuthService();
   bool _notificationsEnabled = true;
   String _language = 'English';
   String _currency = 'USD';
+  
+  // User data
+  String _userName = '';
+  String _userEmail = '';
+  String _subscription = 'Free';
+  String? _logoUrl;
+  Map<String, dynamic>? _storeData;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        _userName = user.displayName ?? 'User';
+        _userEmail = user.email ?? '';
+      });
+    }
+    
+    try {
+      final storeId = await _storeService.getUserStoreId();
+      if (storeId != null) {
+        final data = await _storeService.getStore(storeId);
+        if (data != null && mounted) {
+          setState(() {
+            _storeData = data;
+            _logoUrl = data['logoUrl'];
+            _subscription = (data['subscription'] ?? 'free').toString().toUpperCase();
+            if (_subscription == 'FREE') _subscription = 'Free Plan';
+            else if (_subscription == 'PRO') _subscription = 'Pro Plan';
+            else if (_subscription == 'BUSINESS') _subscription = 'Business Plan';
+          });
+          // Pre-cache the logo so it never shows loading
+          if (_logoUrl != null && _logoUrl!.isNotEmpty) {
+            await precacheImage(CachedNetworkImageProvider(_logoUrl!), context);
+          }
+        }
+      }
+    } catch (e) {
+      // Handle error
+    }
+    if (mounted) setState(() => _isLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,21 +152,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Container(
                 width: 60, height: 60,
-                decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(14)),
-                child: const Icon(Iconsax.user, color: Colors.white, size: 28),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: _logoUrl != null && _logoUrl!.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: CachedNetworkImage(
+                          imageUrl: _logoUrl!,
+                          cacheKey: 'store_logo',
+                          fit: BoxFit.cover,
+                          width: 60,
+                          height: 60,
+                          memCacheWidth: 120,
+                          fadeInDuration: Duration.zero,
+                          fadeOutDuration: Duration.zero,
+                          placeholderFadeInDuration: Duration.zero,
+                          placeholder: (context, url) => const Icon(Iconsax.user, color: Colors.white, size: 28),
+                          errorWidget: (context, url, error) => const Icon(Iconsax.user, color: Colors.white, size: 28),
+                        ),
+                      )
+                    : const Icon(Iconsax.user, color: Colors.white, size: 28),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('John Doe', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
-                    Text('john@purl.com', style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
+                    Text(_userName, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
+                    Text(_userEmail, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(6)),
-                      child: Text('Pro Plan', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w500, color: Colors.white)),
+                      child: Text(_subscription, style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w500, color: Colors.white)),
                     ),
                   ],
                 ),
@@ -201,9 +275,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey[600]))),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              context.go('/login');
+              await _authService.signOut();
+              if (mounted) context.go('/');
             },
             child: Text('Log Out', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
           ),
@@ -279,32 +354,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showEditProfileSheet(BuildContext context) {
+    final contact = _storeData?['contact'] as Map<String, dynamic>? ?? {};
     _showBottomSheet(context, 'Edit Profile', Column(
       children: [
         Center(
           child: Stack(
             children: [
-              Container(width: 80, height: 80, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)), child: const Icon(Iconsax.user, color: Colors.white, size: 36)),
+              Container(
+                width: 80, height: 80,
+                decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
+                child: _logoUrl != null && _logoUrl!.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: CachedNetworkImage(imageUrl: _logoUrl!, fit: BoxFit.cover, width: 80, height: 80),
+                      )
+                    : const Icon(Iconsax.user, color: Colors.white, size: 36),
+              ),
               Positioned(bottom: 0, right: 0, child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.grey[200], shape: BoxShape.circle), child: const Icon(Iconsax.camera, size: 16, color: Colors.black))),
             ],
           ),
         ),
         const SizedBox(height: 24),
-        _buildTextField('Full Name', 'John Doe'),
-        _buildTextField('Email', 'john@purl.com'),
-        _buildTextField('Phone', '+1 234 567 8900'),
+        _buildTextField('Full Name', _userName.isNotEmpty ? _userName : 'Enter your name'),
+        _buildTextField('Email', _userEmail.isNotEmpty ? _userEmail : 'Enter your email'),
+        _buildTextField('Phone', contact['phone']?.toString() ?? 'Enter phone number'),
         _buildSaveButton(() => Navigator.pop(context)),
       ],
     ));
   }
 
   void _showPersonalInfoSheet(BuildContext context) {
+    final contact = _storeData?['contact'] as Map<String, dynamic>? ?? {};
     _showBottomSheet(context, 'Personal Information', Column(
       children: [
-        _buildTextField('Full Name', 'John Doe'),
-        _buildTextField('Email', 'john@purl.com'),
-        _buildTextField('Phone Number', '+1 234 567 8900'),
-        _buildTextField('Date of Birth', 'January 1, 1990'),
+        _buildTextField('Full Name', _userName.isNotEmpty ? _userName : 'Enter your name'),
+        _buildTextField('Email', _userEmail.isNotEmpty ? _userEmail : 'Enter your email'),
+        _buildTextField('Phone Number', contact['phone']?.toString() ?? 'Enter phone number'),
+        _buildTextField('Date of Birth', 'Not set'),
         _buildSaveButton(() => Navigator.pop(context)),
       ],
     ));
@@ -348,10 +434,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showPaymentMethodsSheet(BuildContext context) {
+    final paymentMethods = _storeData?['paymentMethods'] as Map<String, dynamic>? ?? {};
+    final hasMomo = paymentMethods['mobileMoney'] == true;
+    final hasCard = paymentMethods['cardPayments'] == true;
+    final hasCod = paymentMethods['cashOnDelivery'] == true;
+    
     _showBottomSheet(context, 'Payment Methods', Column(
       children: [
-        _buildPaymentCard('Visa', '•••• 4242', true),
-        _buildPaymentCard('Mastercard', '•••• 8888', false),
+        if (hasCod) _buildPaymentMethodItem('Cash on Delivery', 'Enabled', Iconsax.money, true),
+        if (hasMomo) _buildPaymentMethodItem('Mobile Money', paymentMethods['momoNumber']?.toString() ?? 'Enabled', Iconsax.mobile, true),
+        if (hasCard) _buildPaymentMethodItem('Card Payments', 'Visa, Mastercard', Iconsax.card, true),
+        if (!hasCod && !hasMomo && !hasCard)
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text('No payment methods configured', style: GoogleFonts.poppins(color: Colors.grey[500])),
+          ),
         const SizedBox(height: 16),
         GestureDetector(
           onTap: () {},
@@ -372,35 +469,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ));
   }
 
-  Widget _buildPaymentCard(String type, String number, bool isDefault) {
+  Widget _buildPaymentMethodItem(String type, String detail, IconData icon, bool isEnabled) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
-          Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)), child: Icon(Iconsax.card, color: Colors.black)),
+          Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: Colors.black)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(type, style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Colors.black)),
-                Text(number, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
+                Text(detail, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
               ],
             ),
           ),
-          if (isDefault) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(6)), child: Text('Default', style: GoogleFonts.poppins(fontSize: 10, color: Colors.white))),
+          if (isEnabled) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(6)), child: Text('Active', style: GoogleFonts.poppins(fontSize: 10, color: Colors.white))),
         ],
       ),
     );
   }
 
   void _showBankAccountsSheet(BuildContext context) {
+    final paymentMethods = _storeData?['paymentMethods'] as Map<String, dynamic>? ?? {};
+    final hasBankTransfer = paymentMethods['bankTransfer'] == true;
+    final bankName = paymentMethods['bankName']?.toString() ?? '';
+    final accountName = paymentMethods['accountName']?.toString() ?? '';
+    final accountNumber = paymentMethods['accountNumber']?.toString() ?? '';
+    
     _showBottomSheet(context, 'Bank Accounts', Column(
       children: [
-        _buildBankAccount('Chase Bank', '•••• 1234', true),
-        _buildBankAccount('Bank of America', '•••• 5678', false),
+        if (hasBankTransfer && bankName.isNotEmpty)
+          _buildBankAccount(bankName, accountName.isNotEmpty ? accountName : 'Account: •••• ${accountNumber.length > 4 ? accountNumber.substring(accountNumber.length - 4) : accountNumber}', true)
+        else
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text('No bank accounts configured', style: GoogleFonts.poppins(color: Colors.grey[500])),
+          ),
         const SizedBox(height: 16),
         GestureDetector(
           onTap: () {},
@@ -446,49 +554,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showStoreProfileSheet(BuildContext context) {
+    final storeName = _storeData?['name']?.toString() ?? '';
+    final storeDesc = _storeData?['description']?.toString() ?? '';
+    final storeCategory = _storeData?['category']?.toString() ?? '';
+    
     _showBottomSheet(context, 'Store Profile', Column(
       children: [
         Center(
           child: Stack(
             children: [
-              Container(width: 80, height: 80, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)), child: const Icon(Iconsax.shop, color: Colors.white, size: 36)),
+              Container(
+                width: 80, height: 80,
+                decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
+                child: _logoUrl != null && _logoUrl!.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: CachedNetworkImage(imageUrl: _logoUrl!, fit: BoxFit.cover, width: 80, height: 80),
+                      )
+                    : const Icon(Iconsax.shop, color: Colors.white, size: 36),
+              ),
               Positioned(bottom: 0, right: 0, child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.grey[200], shape: BoxShape.circle), child: const Icon(Iconsax.camera, size: 16, color: Colors.black))),
             ],
           ),
         ),
         const SizedBox(height: 24),
-        _buildTextField('Store Name', 'My Awesome Store'),
-        _buildTextField('Store URL', 'mystore.purl.com'),
-        _buildTextField('Description', 'Tell customers about your store...', maxLines: 3),
-        _buildTextField('Category', 'Fashion & Apparel'),
+        _buildTextField('Store Name', storeName.isNotEmpty ? storeName : 'Enter store name'),
+        _buildTextField('Store URL', '${storeName.toLowerCase().replaceAll(' ', '')}.purl.com'),
+        _buildTextField('Description', storeDesc.isNotEmpty ? storeDesc : 'Tell customers about your store...', maxLines: 3),
+        _buildTextField('Category', storeCategory.isNotEmpty ? storeCategory : 'Select category'),
         _buildSaveButton(() => Navigator.pop(context)),
       ],
     ));
   }
 
   void _showStoreAddressSheet(BuildContext context) {
+    final address = _storeData?['address'] as Map<String, dynamic>? ?? {};
+    
     _showBottomSheet(context, 'Store Address', Column(
       children: [
-        _buildTextField('Street Address', '123 Main Street'),
-        _buildTextField('City', 'New York'),
-        _buildTextField('State/Province', 'NY'),
-        _buildTextField('Postal Code', '10001'),
-        _buildTextField('Country', 'United States'),
+        _buildTextField('Street Address', address['street']?.toString() ?? 'Enter street address'),
+        _buildTextField('City', address['city']?.toString() ?? 'Enter city'),
+        _buildTextField('State/Province', address['state']?.toString() ?? 'Enter state'),
+        _buildTextField('Postal Code', address['postalCode']?.toString() ?? 'Enter postal code'),
+        _buildTextField('Country', address['country']?.toString() ?? 'Select country'),
         _buildSaveButton(() => Navigator.pop(context)),
       ],
     ));
   }
 
   void _showBusinessHoursSheet(BuildContext context) {
+    final businessHours = _storeData?['businessHours'] as Map<String, dynamic>? ?? {};
+    
+    Widget buildDayRow(String day) {
+      final dayData = businessHours[day] as Map<String, dynamic>?;
+      final isOpen = dayData?['isOpen'] ?? false;
+      final open = dayData?['open']?.toString() ?? '09:00';
+      final close = dayData?['close']?.toString() ?? '18:00';
+      return _buildDayHours(day, open, close, isOpen);
+    }
+    
     _showBottomSheet(context, 'Business Hours', Column(
       children: [
-        _buildDayHours('Monday', '9:00 AM', '6:00 PM', true),
-        _buildDayHours('Tuesday', '9:00 AM', '6:00 PM', true),
-        _buildDayHours('Wednesday', '9:00 AM', '6:00 PM', true),
-        _buildDayHours('Thursday', '9:00 AM', '6:00 PM', true),
-        _buildDayHours('Friday', '9:00 AM', '6:00 PM', true),
-        _buildDayHours('Saturday', '10:00 AM', '4:00 PM', true),
-        _buildDayHours('Sunday', 'Closed', 'Closed', false),
+        buildDayRow('Monday'),
+        buildDayRow('Tuesday'),
+        buildDayRow('Wednesday'),
+        buildDayRow('Thursday'),
+        buildDayRow('Friday'),
+        buildDayRow('Saturday'),
+        buildDayRow('Sunday'),
         const SizedBox(height: 16),
         _buildSaveButton(() => Navigator.pop(context)),
       ],

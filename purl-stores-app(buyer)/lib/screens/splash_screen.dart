@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -48,16 +50,28 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 
   void _startAnimation() async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Check if user is already logged in
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Show splash like Instagram/X - logo visible for a moment
+      await Future.delayed(const Duration(milliseconds: 1200));
+      _textController.forward();
+      await Future.delayed(const Duration(milliseconds: 2000));
+      if (mounted) context.go('/home');
+      return;
+    }
+
+    // Not logged in - show splash animation and login
+    await Future.delayed(const Duration(milliseconds: 1000));
     _textController.forward();
     
-    await Future.delayed(const Duration(milliseconds: 2000));
+    await Future.delayed(const Duration(milliseconds: 2500));
     _textController.reverse();
     
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 800));
     _logoController.forward();
     
-    await Future.delayed(const Duration(milliseconds: 800));
+    await Future.delayed(const Duration(milliseconds: 1000));
     _transitionController.forward();
     
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -67,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       systemNavigationBarIconBrightness: Brightness.dark,
     ));
     
-    await Future.delayed(const Duration(milliseconds: 400));
+    await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) setState(() => _showLogin = true);
   }
 
@@ -155,9 +169,11 @@ class _LoginContent extends StatefulWidget {
 }
 
 class _LoginContentState extends State<_LoginContent> with SingleTickerProviderStateMixin {
+  final _authService = AuthService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
   late AnimationController _slideController;
   late Animation<Offset> _slideAnimation;
 
@@ -167,6 +183,65 @@ class _LoginContentState extends State<_LoginContent> with SingleTickerProviderS
     _slideController = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
     _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
     _slideController.forward();
+  }
+
+  Future<void> _signInWithEmail() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Please enter email and password');
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await _authService.signInWithEmail(email: email, password: password);
+      if (mounted) context.go('/home');
+    } on FirebaseAuthException catch (e) {
+      _showError(_getErrorMessage(e.code));
+    } catch (e) {
+      _showError('An error occurred. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await _authService.signInWithGoogle();
+      if (result != null && mounted) {
+        context.go('/home');
+      }
+    } catch (e) {
+      _showError('Google sign in failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showAppleNotAvailable() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Please use other auth methods', style: GoogleFonts.poppins()),
+        backgroundColor: Colors.black,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _getErrorMessage(String code) {
+    switch (code) {
+      case 'user-not-found': return 'No account found with this email';
+      case 'wrong-password': return 'Incorrect password';
+      case 'invalid-credential': return 'Invalid email or password';
+      default: return 'An error occurred. Please try again';
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red[600], behavior: SnackBarBehavior.floating),
+    );
   }
 
   @override
@@ -195,9 +270,9 @@ class _LoginContentState extends State<_LoginContent> with SingleTickerProviderS
                 const SizedBox(height: 4),
                 Text('Sign in to start shopping', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600])),
                 const SizedBox(height: 32),
-                _buildSocialButton(Icons.g_mobiledata, 'Continue with Google'),
+                _buildSocialButton(Icons.g_mobiledata, 'Continue with Google', onTap: _signInWithGoogle),
                 const SizedBox(height: 12),
-                _buildSocialButton(Icons.apple, 'Continue with Apple'),
+                _buildSocialButton(Icons.apple, 'Continue with Apple', onTap: _showAppleNotAvailable),
                 const SizedBox(height: 24),
                 Row(
                   children: [
@@ -224,12 +299,16 @@ class _LoginContentState extends State<_LoginContent> with SingleTickerProviderS
                 ),
                 const SizedBox(height: 28),
                 GestureDetector(
-                  onTap: () => context.go('/home'),
+                  onTap: _isLoading ? null : _signInWithEmail,
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
-                    child: Center(child: Text('Sign In', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600))),
+                    decoration: BoxDecoration(color: _isLoading ? Colors.grey : Colors.black, borderRadius: BorderRadius.circular(12)),
+                    child: Center(
+                      child: _isLoading
+                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : Text('Sign In', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -254,9 +333,9 @@ class _LoginContentState extends State<_LoginContent> with SingleTickerProviderS
     );
   }
 
-  Widget _buildSocialButton(IconData icon, String label) {
+  Widget _buildSocialButton(IconData icon, String label, {VoidCallback? onTap}) {
     return GestureDetector(
-      onTap: () => context.go('/home'),
+      onTap: _isLoading ? null : onTap,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -278,6 +357,7 @@ class _LoginContentState extends State<_LoginContent> with SingleTickerProviderS
       controller: controller,
       obscureText: isPassword ? _obscurePassword : false,
       keyboardType: type,
+      enabled: !_isLoading,
       style: GoogleFonts.poppins(fontSize: 15),
       decoration: InputDecoration(
         hintText: hint,
