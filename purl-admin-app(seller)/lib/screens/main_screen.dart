@@ -18,6 +18,8 @@ import 'marketing_screen.dart';
 import 'discounts_screen.dart';
 import 'settings_screen.dart';
 import 'messages_screen.dart';
+import 'ads_screen.dart';
+import 'access_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -214,6 +216,7 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
                     _buildMenuItem(Iconsax.wallet_2, 'Payments', () => widget.onNavigateScreen(const PaymentsScreen())),
                     _buildMenuItem(Iconsax.discount_shape, 'Discounts', () => widget.onNavigateScreen(const DiscountsScreen())),
                     _buildMenuItem(Iconsax.magicpen, 'Marketing', () => widget.onNavigateScreen(const MarketingScreen())),
+                    _buildMenuItem(Iconsax.chart_215, 'Ads', () => widget.onNavigateScreen(const AdsScreen())),
                     
                     const SizedBox(height: 16),
                     _buildSectionHeader('Social'),
@@ -227,6 +230,7 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
                     _buildSectionHeader('Settings'),
                     
                     _buildMenuItem(Iconsax.people, 'Team', () => widget.onNavigateScreen(const UsersScreen())),
+                    _buildMenuItem(Iconsax.shield_tick, 'Access Control', () => widget.onNavigateScreen(const AccessScreen())),
                     _buildMenuItem(Iconsax.shop, 'Store Profile', () => widget.onNavigateTab(4)),
                     
                     const SizedBox(height: 100),

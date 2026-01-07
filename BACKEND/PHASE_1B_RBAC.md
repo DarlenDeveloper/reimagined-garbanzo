@@ -2,7 +2,7 @@
 
 ## Overview
 
-Implement role-based access control for vendor stores, allowing store owners to invite team members with different permission levels.
+Implement role-based access control for vendor stores, allowing store owners to invite team members (store runners) with a simple 4-digit code system.
 
 ## Roles Hierarchy
 
@@ -10,8 +10,41 @@ Implement role-based access control for vendor stores, allowing store owners to 
 |------|-------------|--------------|
 | Owner | Store creator, full access | All permissions + billing |
 | Admin | Full access except billing | All except billing/ownership |
-| Manager | Products, orders, inventory | Operational access |
-| Staff | Orders only | Limited access |
+| Runner | Store employee | Orders, products, inventory (no payments) |
+
+## Access Code Flow
+
+### How It Works
+
+```
+1. ADMIN GENERATES CODE
+   └── Admin goes to Team page
+       └── Enters runner's email
+           └── System generates 4-digit code
+               └── Code valid for 15 minutes
+
+2. RUNNER JOINS STORE
+   └── Runner creates account (or logs in)
+       └── Goes to "Join as Store Runner"
+           └── Enters 4-digit code
+               └── If valid → Access granted
+               └── If expired/invalid → Error shown
+
+3. PAYMENT ACCESS
+   └── Runner requests payment action
+       └── Admin receives notification
+           └── Admin approves or denies
+               └── Action proceeds or blocked
+```
+
+### Code Generation Rules
+
+- 4 random digits (0-9)
+- Expires after 15 minutes
+- One-time use only
+- Tied to specific email address
+- Admin can cancel before use
+- Admin can regenerate new code
 
 ## Firestore Collections
 
@@ -24,31 +57,51 @@ Implement role-based access control for vendor stores, allowing store owners to 
 ├── email: string
 ├── name: string
 ├── avatarUrl: string?
-├── role: 'owner' | 'admin' | 'manager' | 'staff'
+├── role: 'owner' | 'admin' | 'runner'
 ├── status: 'active' | 'pending' | 'inactive'
 ├── invitedBy: string (userId)
 ├── invitedAt: timestamp
-├── acceptedAt: timestamp?
+├── joinedAt: timestamp?
 ├── lastActiveAt: timestamp?
 └── permissions: map (custom overrides)
+    ├── orders: boolean
+    ├── products: boolean
+    ├── inventory: boolean
+    ├── analytics: boolean
+    ├── payments: boolean (always requires approval)
+    └── settings: boolean
 ```
 
-### Invitations Collection
+### Access Codes Collection
 
 ```
-/invitations/{invitationId}
+/vendors/{vendorId}/accessCodes/{codeId}
 ├── id: string
-├── vendorId: string
-├── vendorName: string
-├── email: string
-├── role: string
-├── invitedBy: string
-├── inviterName: string
-├── status: 'pending' | 'accepted' | 'expired' | 'cancelled'
-├── token: string (secure random)
+├── code: string (4 digits)
+├── email: string (target runner email)
+├── role: 'runner'
+├── createdBy: string (admin userId)
 ├── createdAt: timestamp
-├── expiresAt: timestamp (7 days)
-└── acceptedAt: timestamp?
+├── expiresAt: timestamp (15 min from creation)
+├── status: 'pending' | 'used' | 'expired' | 'cancelled'
+└── usedAt: timestamp?
+```
+
+### Payment Approvals Collection
+
+```
+/vendors/{vendorId}/paymentApprovals/{approvalId}
+├── id: string
+├── requestedBy: string (runner userId)
+├── requestedAt: timestamp
+├── action: 'refund' | 'payout' | 'void'
+├── amount: number
+├── orderId: string?
+├── reason: string
+├── status: 'pending' | 'approved' | 'denied'
+├── reviewedBy: string? (admin userId)
+├── reviewedAt: timestamp?
+└── reviewNote: string?
 ```
 
 
@@ -57,30 +110,30 @@ Implement role-based access control for vendor stores, allowing store owners to 
 ```typescript
 const PERMISSIONS = {
   // Dashboard
-  'dashboard:view': ['owner', 'admin', 'manager', 'staff'],
+  'dashboard:view': ['owner', 'admin', 'runner'],
   
   // Products
-  'products:view': ['owner', 'admin', 'manager'],
-  'products:create': ['owner', 'admin', 'manager'],
-  'products:edit': ['owner', 'admin', 'manager'],
+  'products:view': ['owner', 'admin', 'runner'],
+  'products:create': ['owner', 'admin', 'runner'],
+  'products:edit': ['owner', 'admin', 'runner'],
   'products:delete': ['owner', 'admin'],
   
   // Inventory
-  'inventory:view': ['owner', 'admin', 'manager'],
-  'inventory:update': ['owner', 'admin', 'manager'],
+  'inventory:view': ['owner', 'admin', 'runner'],
+  'inventory:update': ['owner', 'admin', 'runner'],
   
   // Orders
-  'orders:view': ['owner', 'admin', 'manager', 'staff'],
-  'orders:process': ['owner', 'admin', 'manager', 'staff'],
-  'orders:cancel': ['owner', 'admin', 'manager'],
-  'orders:refund': ['owner', 'admin'],
+  'orders:view': ['owner', 'admin', 'runner'],
+  'orders:process': ['owner', 'admin', 'runner'],
+  'orders:cancel': ['owner', 'admin'],
+  'orders:refund': ['owner', 'admin'], // Runners need approval
   
   // Customers
-  'customers:view': ['owner', 'admin', 'manager'],
-  'customers:message': ['owner', 'admin', 'manager', 'staff'],
+  'customers:view': ['owner', 'admin', 'runner'],
+  'customers:message': ['owner', 'admin', 'runner'],
   
   // Analytics
-  'analytics:view': ['owner', 'admin', 'manager'],
+  'analytics:view': ['owner', 'admin'],
   'analytics:export': ['owner', 'admin'],
   
   // Marketing
@@ -88,7 +141,7 @@ const PERMISSIONS = {
   'marketing:create': ['owner', 'admin'],
   
   // Discounts
-  'discounts:view': ['owner', 'admin', 'manager'],
+  'discounts:view': ['owner', 'admin', 'runner'],
   'discounts:create': ['owner', 'admin'],
   'discounts:delete': ['owner', 'admin'],
   
@@ -102,9 +155,10 @@ const PERMISSIONS = {
   'team:remove': ['owner'],
   'team:edit_roles': ['owner'],
   
-  // Billing
-  'billing:view': ['owner'],
-  'billing:manage': ['owner'],
+  // Payments (ALWAYS requires admin approval for runners)
+  'payments:view': ['owner', 'admin'],
+  'payments:process': ['owner', 'admin'],
+  'payments:request': ['runner'], // Can request, admin must approve
   
   // Store
   'store:edit': ['owner', 'admin'],
@@ -114,206 +168,214 @@ const PERMISSIONS = {
 
 ## Cloud Functions
 
-### Invite Team Member
+### Generate Access Code
 
 ```typescript
-// functions/src/rbac/inviteMember.ts
-export const inviteMember = functions.https.onCall(async (data, context) => {
-  const { email, role, vendorId } = data;
-  const inviterId = context.auth?.uid;
+// functions/src/rbac/generateAccessCode.ts
+export const generateAccessCode = functions.https.onCall(async (data, context) => {
+  const { email, vendorId } = data;
+  const adminId = context.auth?.uid;
   
-  // Verify inviter has permission
-  const inviterMember = await db.collection('vendors').doc(vendorId)
-    .collection('members').where('userId', '==', inviterId).limit(1).get();
+  if (!adminId) throw new functions.https.HttpsError('unauthenticated', 'Not authenticated');
   
-  if (inviterMember.empty) throw new Error('Unauthorized');
+  // Verify admin has permission
+  const adminMember = await db.collection('vendors').doc(vendorId)
+    .collection('members').where('userId', '==', adminId).limit(1).get();
   
-  const inviterRole = inviterMember.docs[0].data().role;
-  if (!['owner', 'admin'].includes(inviterRole)) {
-    throw new Error('Insufficient permissions');
-  }
+  if (adminMember.empty) throw new functions.https.HttpsError('permission-denied', 'Not a member');
   
-  // Only owner can invite admins
-  if (role === 'admin' && inviterRole !== 'owner') {
-    throw new Error('Only owner can invite admins');
+  const adminRole = adminMember.docs[0].data().role;
+  if (!['owner', 'admin'].includes(adminRole)) {
+    throw new functions.https.HttpsError('permission-denied', 'Only admins can invite runners');
   }
   
   // Check if already a member
   const existingMember = await db.collection('vendors').doc(vendorId)
-    .collection('members').where('email', '==', email).limit(1).get();
+    .collection('members').where('email', '==', email.toLowerCase()).limit(1).get();
   
   if (!existingMember.empty) {
-    throw new Error('User is already a team member');
+    throw new functions.https.HttpsError('already-exists', 'User is already a team member');
   }
   
-  // Get vendor and inviter info
-  const vendor = await db.collection('vendors').doc(vendorId).get();
-  const inviter = await db.collection('users').doc(inviterId).get();
+  // Cancel any existing pending codes for this email
+  const existingCodes = await db.collection('vendors').doc(vendorId)
+    .collection('accessCodes')
+    .where('email', '==', email.toLowerCase())
+    .where('status', '==', 'pending')
+    .get();
   
-  // Create invitation
-  const token = generateSecureToken();
-  const invitationRef = db.collection('invitations').doc();
+  const batch = db.batch();
+  existingCodes.docs.forEach(doc => {
+    batch.update(doc.ref, { status: 'cancelled' });
+  });
   
-  await invitationRef.set({
-    id: invitationRef.id,
-    vendorId,
-    vendorName: vendor.data().storeName,
-    email,
-    role,
-    invitedBy: inviterId,
-    inviterName: inviter.data().displayName,
-    status: 'pending',
-    token,
+  // Generate 4-digit code
+  const code = Math.floor(1000 + Math.random() * 9000).toString();
+  const codeRef = db.collection('vendors').doc(vendorId).collection('accessCodes').doc();
+  
+  batch.set(codeRef, {
+    id: codeRef.id,
+    code,
+    email: email.toLowerCase(),
+    role: 'runner',
+    createdBy: adminId,
     createdAt: FieldValue.serverTimestamp(),
-    expiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
+    expiresAt: Timestamp.fromDate(new Date(Date.now() + 15 * 60 * 1000)), // 15 minutes
+    status: 'pending',
   });
   
-  // Send invitation email
-  await sendInvitationEmail(email, {
-    vendorName: vendor.data().storeName,
-    inviterName: inviter.data().displayName,
-    role,
-    inviteLink: `https://app.purl.com/invite/${invitationRef.id}?token=${token}`
-  });
+  await batch.commit();
   
-  return { invitationId: invitationRef.id };
+  return { code, expiresIn: 15 * 60 }; // Return code and expiry in seconds
 });
 ```
 
-### Accept Invitation
+### Verify Access Code
 
 ```typescript
-// functions/src/rbac/acceptInvitation.ts
-export const acceptInvitation = functions.https.onCall(async (data, context) => {
-  const { invitationId, token } = data;
+// functions/src/rbac/verifyAccessCode.ts
+export const verifyAccessCode = functions.https.onCall(async (data, context) => {
+  const { code } = data;
   const userId = context.auth?.uid;
   
-  const invitationRef = db.collection('invitations').doc(invitationId);
-  const invitation = await invitationRef.get();
+  if (!userId) throw new functions.https.HttpsError('unauthenticated', 'Not authenticated');
   
-  if (!invitation.exists) throw new Error('Invitation not found');
-  
-  const invData = invitation.data();
-  
-  // Validate
-  if (invData.token !== token) throw new Error('Invalid token');
-  if (invData.status !== 'pending') throw new Error('Invitation already processed');
-  if (invData.expiresAt.toDate() < new Date()) throw new Error('Invitation expired');
-  
-  // Verify email matches
+  // Get user email
   const user = await db.collection('users').doc(userId).get();
-  if (user.data().email !== invData.email) {
-    throw new Error('Email does not match invitation');
-  }
+  if (!user.exists) throw new functions.https.HttpsError('not-found', 'User not found');
   
-  // Add as member
-  const memberRef = db.collection('vendors').doc(invData.vendorId)
-    .collection('members').doc();
+  const userEmail = user.data()!.email.toLowerCase();
   
-  await db.runTransaction(async (transaction) => {
-    transaction.set(memberRef, {
-      id: memberRef.id,
-      userId,
-      email: invData.email,
-      name: user.data().displayName,
-      avatarUrl: user.data().avatarUrl,
-      role: invData.role,
-      status: 'active',
-      invitedBy: invData.invitedBy,
-      invitedAt: invData.createdAt,
-      acceptedAt: FieldValue.serverTimestamp(),
-      permissions: {}
-    });
-    
-    transaction.update(invitationRef, {
-      status: 'accepted',
-      acceptedAt: FieldValue.serverTimestamp()
-    });
-  });
-  
-  return { success: true, vendorId: invData.vendorId };
-});
-```
-
-### Check Permission
-
-```typescript
-// functions/src/rbac/checkPermission.ts
-export async function checkPermission(
-  userId: string,
-  vendorId: string,
-  permission: string
-): Promise<boolean> {
-  const memberSnapshot = await db.collection('vendors').doc(vendorId)
-    .collection('members')
-    .where('userId', '==', userId)
-    .where('status', '==', 'active')
+  // Find matching code across all vendors
+  const codesSnapshot = await db.collectionGroup('accessCodes')
+    .where('code', '==', code)
+    .where('email', '==', userEmail)
+    .where('status', '==', 'pending')
     .limit(1)
     .get();
   
-  if (memberSnapshot.empty) return false;
-  
-  const member = memberSnapshot.docs[0].data();
-  const role = member.role;
-  
-  // Check custom permission override first
-  if (member.permissions && member.permissions[permission] !== undefined) {
-    return member.permissions[permission];
+  if (codesSnapshot.empty) {
+    throw new functions.https.HttpsError('not-found', 'Invalid or expired code');
   }
   
-  // Check role-based permission
-  const allowedRoles = PERMISSIONS[permission] || [];
-  return allowedRoles.includes(role);
-}
-
-// Middleware for Cloud Functions
-export function requirePermission(permission: string) {
-  return async (data: any, context: functions.https.CallableContext) => {
-    const { vendorId } = data;
-    const userId = context.auth?.uid;
-    
-    if (!userId) throw new functions.https.HttpsError('unauthenticated', 'Not authenticated');
-    
-    const hasPermission = await checkPermission(userId, vendorId, permission);
-    if (!hasPermission) {
-      throw new functions.https.HttpsError('permission-denied', 'Insufficient permissions');
-    }
-  };
-}
-```
-
-### Remove Team Member
-
-```typescript
-// functions/src/rbac/removeMember.ts
-export const removeMember = functions.https.onCall(async (data, context) => {
-  const { vendorId, memberId } = data;
-  const requesterId = context.auth?.uid;
+  const codeDoc = codesSnapshot.docs[0];
+  const codeData = codeDoc.data();
   
-  // Verify requester is owner
-  const requesterMember = await db.collection('vendors').doc(vendorId)
-    .collection('members').where('userId', '==', requesterId).limit(1).get();
-  
-  if (requesterMember.empty || requesterMember.docs[0].data().role !== 'owner') {
-    throw new Error('Only owner can remove members');
+  // Check expiry
+  if (codeData.expiresAt.toDate() < new Date()) {
+    await codeDoc.ref.update({ status: 'expired' });
+    throw new functions.https.HttpsError('deadline-exceeded', 'Code has expired');
   }
   
-  // Get member to remove
-  const memberRef = db.collection('vendors').doc(vendorId)
-    .collection('members').doc(memberId);
-  const member = await memberRef.get();
+  // Extract vendorId from path
+  const vendorId = codeDoc.ref.parent.parent!.id;
   
-  if (!member.exists) throw new Error('Member not found');
-  if (member.data().role === 'owner') throw new Error('Cannot remove owner');
+  // Add user as member
+  const memberRef = db.collection('vendors').doc(vendorId).collection('members').doc();
   
-  // Soft delete - mark as inactive
-  await memberRef.update({
-    status: 'inactive',
-    removedAt: FieldValue.serverTimestamp(),
-    removedBy: requesterId
+  await db.runTransaction(async (transaction) => {
+    // Mark code as used
+    transaction.update(codeDoc.ref, {
+      status: 'used',
+      usedAt: FieldValue.serverTimestamp(),
+    });
+    
+    // Create member document
+    transaction.set(memberRef, {
+      id: memberRef.id,
+      userId,
+      email: userEmail,
+      name: user.data()!.displayName,
+      avatarUrl: user.data()!.avatarUrl || null,
+      role: codeData.role,
+      status: 'active',
+      invitedBy: codeData.createdBy,
+      invitedAt: codeData.createdAt,
+      joinedAt: FieldValue.serverTimestamp(),
+      permissions: {
+        orders: true,
+        products: true,
+        inventory: true,
+        analytics: false,
+        payments: false, // Always false for runners
+        settings: false,
+      },
+    });
   });
   
-  return { success: true };
+  // Get vendor info for response
+  const vendor = await db.collection('vendors').doc(vendorId).get();
+  
+  return {
+    success: true,
+    vendorId,
+    storeName: vendor.data()!.storeName,
+    role: codeData.role,
+  };
+});
+```
+
+### Request Payment Approval
+
+```typescript
+// functions/src/rbac/requestPaymentApproval.ts
+export const requestPaymentApproval = functions.https.onCall(async (data, context) => {
+  const { vendorId, action, amount, orderId, reason } = data;
+  const runnerId = context.auth?.uid;
+  
+  if (!runnerId) throw new functions.https.HttpsError('unauthenticated', 'Not authenticated');
+  
+  // Verify user is a runner
+  const member = await db.collection('vendors').doc(vendorId)
+    .collection('members').where('userId', '==', runnerId).limit(1).get();
+  
+  if (member.empty || member.docs[0].data().role !== 'runner') {
+    throw new functions.https.HttpsError('permission-denied', 'Only runners need approval');
+  }
+  
+  // Create approval request
+  const approvalRef = db.collection('vendors').doc(vendorId).collection('paymentApprovals').doc();
+  
+  await approvalRef.set({
+    id: approvalRef.id,
+    requestedBy: runnerId,
+    requestedAt: FieldValue.serverTimestamp(),
+    action,
+    amount,
+    orderId: orderId || null,
+    reason,
+    status: 'pending',
+  });
+  
+  // Notify admins (via FCM)
+  const admins = await db.collection('vendors').doc(vendorId)
+    .collection('members')
+    .where('role', 'in', ['owner', 'admin'])
+    .where('status', '==', 'active')
+    .get();
+  
+  // Send push notifications to admins
+  for (const admin of admins.docs) {
+    const adminUser = await db.collection('users').doc(admin.data().userId).get();
+    const fcmTokens = adminUser.data()?.fcmTokens || [];
+    
+    if (fcmTokens.length > 0) {
+      await admin.messaging().sendMulticast({
+        tokens: fcmTokens,
+        notification: {
+          title: 'Payment Approval Required',
+          body: `${member.docs[0].data().name} requested ${action} for $${amount}`,
+        },
+        data: {
+          type: 'payment_approval',
+          approvalId: approvalRef.id,
+          vendorId,
+        },
+      });
+    }
+  }
+  
+  return { approvalId: approvalRef.id };
 });
 ```
 

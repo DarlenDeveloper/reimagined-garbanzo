@@ -29,7 +29,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
       _focusNodes[index - 1].requestFocus();
     }
     if (_controllers.every((c) => c.text.isNotEmpty)) {
-      context.go('/subscription');
+      context.go('/account-type');
     }
   }
 
@@ -86,7 +86,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
               ),
               const SizedBox(height: 32),
               GestureDetector(
-                onTap: () => context.go('/subscription'),
+                onTap: () => context.go('/account-type'),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 16),

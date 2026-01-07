@@ -55,6 +55,14 @@ BACKEND/
 ├── PHASE_10_ADDITIONAL_FEATURES.md    # BNPL, Coupons, Reviews, Wishlist
 ├── PHASE_11_MARKETING_GUERRILLA.md    # Marketing campaigns (SMS, Email, AI Calls, Push)
 ├── PHASE_12_ADDITIONAL_SYSTEMS.md     # Verification, Rewards, Receipts, FAQ, Audit, Subscriptions
+├── SECURITY/                          # Security documentation
+│   ├── SECURITY_OVERVIEW.md           # Threat model & security checklist
+│   ├── RATE_LIMITING.md               # Rate limiting strategies
+│   ├── FIRESTORE_RULES.md             # Complete Firestore & Storage rules
+│   ├── AUTH_SECURITY.md               # Password policy, lockout, sessions
+│   ├── INPUT_VALIDATION.md            # Client & server validation
+│   ├── DATA_PROTECTION.md             # PII handling, encryption, GDPR
+│   └── INCIDENT_RESPONSE.md           # Security incident procedures
 └── scheme/                            # Database schema definitions
 ```
 

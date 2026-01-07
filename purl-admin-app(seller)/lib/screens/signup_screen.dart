@@ -11,25 +11,14 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  final _storeNameController = TextEditingController();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _storeNameValid = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _storeNameController.addListener(_validateStoreName);
-  }
-
-  void _validateStoreName() {
-    setState(() => _storeNameValid = _storeNameController.text.trim().length >= 2);
-  }
 
   @override
   void dispose() {
-    _storeNameController.dispose();
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -57,17 +46,17 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: Center(child: Text('G', style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white))),
                     ),
                     const SizedBox(height: 16),
-                    Text('Create Your Store', style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.black)),
+                    Text('Create Account', style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.black)),
                     const SizedBox(height: 4),
-                    Text('Start selling on Purl', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600])),
+                    Text('Join Purl today', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600])),
                   ],
                 ),
               ),
               const SizedBox(height: 40),
               // Social Buttons
-              _SocialButton(icon: Icons.g_mobiledata, label: 'Continue with Google', onTap: () => context.go('/subscription')),
+              _SocialButton(icon: Icons.g_mobiledata, label: 'Continue with Google', onTap: () => context.go('/account-type')),
               const SizedBox(height: 12),
-              _SocialButton(icon: Icons.apple, label: 'Continue with Apple', onTap: () => context.go('/subscription')),
+              _SocialButton(icon: Icons.apple, label: 'Continue with Apple', onTap: () => context.go('/account-type')),
               const SizedBox(height: 24),
               // Divider
               Row(
@@ -78,22 +67,21 @@ class _SignupScreenState extends State<SignupScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-              // Store Name Field
-              Text('Store Name', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
+              // Full Name Field
+              Text('Full Name', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
               const SizedBox(height: 8),
               TextField(
-                controller: _storeNameController,
+                controller: _nameController,
                 textCapitalization: TextCapitalization.words,
                 style: GoogleFonts.poppins(fontSize: 15),
                 decoration: InputDecoration(
-                  hintText: 'Enter your store name',
+                  hintText: 'Enter your full name',
                   hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
                   filled: true,
                   fillColor: Colors.grey[100],
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 1.5)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  suffixIcon: _storeNameValid ? const Icon(Iconsax.tick_circle, color: Colors.black, size: 20) : null,
                 ),
               ),
               const SizedBox(height: 20),
@@ -144,7 +132,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
-                  child: Center(child: Text('Create Store', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600))),
+                  child: Center(child: Text('Create Account', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600))),
                 ),
               ),
               const SizedBox(height: 24),
@@ -153,7 +141,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Already have a store? ', style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 14)),
+                    Text('Already have an account? ', style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 14)),
                     GestureDetector(
                       onTap: () => context.go('/login'),
                       child: Text('Sign In', style: GoogleFonts.poppins(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w600)),
