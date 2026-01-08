@@ -19,7 +19,9 @@ Implement product catalog management, vendor store profiles, and category organi
 | Currency Selection | ✅ Complete | `purl-admin-app(seller)/lib/screens/currency_selection_screen.dart` |
 | Inventory Screen | ✅ Complete | `purl-admin-app(seller)/lib/screens/inventory_screen.dart` |
 | UI Integration | ✅ Complete | Real-time Firestore stream connected |
-| Buyer App Products | ❌ Pending | `purl-stores-app(buyer)` |
+| Buyer App Products | ✅ Complete | `purl-stores-app(buyer)/lib/screens/discover_screen.dart` |
+| Buyer Product Service | ✅ Complete | `purl-stores-app(buyer)/lib/services/product_service.dart` |
+| Buyer Product Detail | ✅ Complete | `purl-stores-app(buyer)/lib/screens/product_detail_screen.dart` |
 | Product Reviews | ❌ Pending | - |
 | Cloud Functions | ❌ Pending | - |
 
@@ -553,7 +555,9 @@ productService.getProductsStream('store123').listen((products) {
 - [x] Add stock update functionality with quick adjust buttons
 - [x] Add iOS permissions (NSPhotoLibraryUsageDescription, NSCameraUsageDescription)
 - [x] Add Android permissions (READ_MEDIA_IMAGES, CAMERA)
-- [ ] Build buyer app product browsing
+- [x] Build buyer app product browsing (Discover screen)
+- [x] Create buyer app Product model and ProductService
+- [x] Implement collection group query for cross-store product discovery
 - [ ] Implement product search with Algolia (optional)
 - [ ] Implement product reviews
 - [ ] Deploy Firestore security rules
