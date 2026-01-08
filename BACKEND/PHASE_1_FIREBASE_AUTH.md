@@ -1,5 +1,29 @@
 # Phase 1: Core Infrastructure - Firebase & Authentication
 
+## Status: ✅ DONE (Client-Side Auth Implemented)
+
+**Completed:** January 2026
+
+### What's Done:
+- Firebase project configured (`purlstores`)
+- Both Flutter apps integrated with Firebase
+- Email/Password authentication (sign up, sign in)
+- Google Sign-In OAuth
+- Password reset via email
+- Email verification flow
+- Auth state persistence & session management
+- Sign out functionality
+- Auth screens (Login, Signup, Forgot Password, Verify Email)
+- Auth service classes in both apps
+
+### Pending (Backend/Cloud Functions):
+- Cloud Functions for user document creation
+- Firestore security rules deployment
+- Phone OTP authentication
+- Apple OAuth
+
+---
+
 ## Overview
 
 Set up Firebase project and implement authentication for both Purl Admin (vendors) and Purl Stores (buyers) applications.
@@ -255,15 +279,18 @@ service cloud.firestore {
 
 ## Implementation Checklist
 
-- [ ] Create Firebase project
-- [ ] Configure Android app (google-services.json)
-- [ ] Configure iOS app (GoogleService-Info.plist)
-- [ ] Enable authentication providers
+- [x] Create Firebase project (`purlstores`)
+- [x] Configure Android app (google-services.json)
+- [x] Configure iOS app (GoogleService-Info.plist)
+- [x] Enable authentication providers (Email, Google)
 - [ ] Create Firestore collections
 - [ ] Deploy security rules
 - [ ] Implement Cloud Functions
-- [ ] Build Flutter auth service
-- [ ] Implement login screens
-- [ ] Implement registration screens
-- [ ] Implement password reset
+- [x] Build Flutter auth service (both apps)
+- [x] Implement login screens (both apps)
+- [x] Implement registration screens (both apps)
+- [x] Implement password reset (both apps)
+- [x] Implement email verification (both apps)
+- [ ] Implement Phone OTP auth
+- [ ] Implement Apple OAuth
 - [ ] Test all auth flows

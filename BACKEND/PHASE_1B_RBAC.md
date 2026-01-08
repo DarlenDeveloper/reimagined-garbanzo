@@ -1,5 +1,47 @@
 # Phase 1B: Role-Based Access Control (RBAC)
 
+## Status: ✅ DONE (Basic Implementation)
+
+**Completed:** January 2026
+
+### What's Done:
+- 4-digit invite code generation (admin action)
+- Code verification and store joining (runner action)
+- 15-minute code expiration
+- Single-use codes (deleted after successful join)
+- Team members list on Team page
+- Remove team member functionality
+- Permissions UI (view/toggle)
+- Runner code entry screen with validation
+
+### Current Flow:
+1. Admin opens Team page → taps "Add Runner"
+2. Admin generates 4-digit code (valid 15 min)
+3. Admin shares code with runner (verbally, text, etc.)
+4. Runner opens app → "Join a Store" → enters code
+5. Code verified → runner added to authorizedUsers
+6. Runner accesses store with runner permissions
+
+### Firestore Structure:
+```
+/stores/{storeId}
+├── authorizedUsers: [uid1, uid2, ...] // All users with access
+├── ownerId: string                     // Store owner
+├── inviteCode: {                       // Temporary, deleted after use
+│   code: "1234",
+│   expiresAt: timestamp
+│ }
+```
+
+### Pending (Future Enhancements):
+- Cloud Functions for code generation (currently client-side)
+- Email-tied invite codes
+- Payment approval workflow for runners
+- Detailed permission storage per member
+- Push notifications for approval requests
+
+---
+
 ## Overview
 
 Implement role-based access control for vendor stores, allowing store owners to invite team members (store runners) with a simple 4-digit code system.
@@ -478,13 +520,16 @@ class AuthProvider extends ChangeNotifier {
 
 ## Implementation Checklist
 
-- [ ] Create Firestore collections for members and invitations
-- [ ] Implement invite member Cloud Function
-- [ ] Implement accept invitation Cloud Function
-- [ ] Implement remove member Cloud Function
-- [ ] Implement permission checking middleware
-- [ ] Build team management UI in vendor app
-- [ ] Build invitation acceptance flow
-- [ ] Implement permission gates in UI
-- [ ] Send invitation emails
+- [x] Create Firestore structure for authorized users
+- [x] Implement invite code generation (client-side)
+- [x] Implement code verification and store joining
+- [x] Implement remove member functionality
+- [x] Build team management UI in vendor app
+- [x] Build runner code entry screen
+- [x] Implement permission UI (view/toggle)
+- [ ] Create Firestore collections for detailed members/permissions
+- [ ] Implement Cloud Functions for code generation
+- [ ] Implement email-tied invite codes
+- [ ] Implement payment approval workflow
+- [ ] Send invitation emails/notifications
 - [ ] Test all RBAC flows

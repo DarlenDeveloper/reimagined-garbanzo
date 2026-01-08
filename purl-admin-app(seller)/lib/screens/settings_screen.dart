@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/store_service.dart';
 import '../services/auth_service.dart';
+import '../services/currency_service.dart';
+import 'currency_selection_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,9 +19,10 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _storeService = StoreService();
   final _authService = AuthService();
+  final _currencyService = CurrencyService();
   bool _notificationsEnabled = true;
   String _language = 'English';
-  String _currency = 'USD';
+  String _currency = 'KES';
   
   // User data
   String _userName = '';
@@ -60,6 +63,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Pre-cache the logo so it never shows loading
           if (_logoUrl != null && _logoUrl!.isNotEmpty) {
             await precacheImage(CachedNetworkImageProvider(_logoUrl!), context);
+          }
+
+          // Load currency from service
+          await _currencyService.init(storeId);
+          if (mounted) {
+            setState(() => _currency = _currencyService.currentCurrency);
           }
         }
       }
@@ -678,13 +687,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showCurrencySheet(BuildContext context) {
-    final currencies = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CNY'];
-    _showBottomSheet(context, 'Currency', Column(
-      children: currencies.map((curr) => _buildSelectionItem(curr, _currency == curr, () {
-        setState(() => _currency = curr);
-        Navigator.pop(context);
-      })).toList(),
-    ));
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CurrencySelectionSheet(
+        currentCurrency: _currency,
+        onCurrencyChanged: (newCurrency) {
+          setState(() => _currency = newCurrency);
+        },
+      ),
+    );
   }
 
   Widget _buildSelectionItem(String label, bool isSelected, VoidCallback onTap) {

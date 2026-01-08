@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/store_service.dart';
+import '../services/currency_service.dart';
+import 'currency_selection_screen.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -14,10 +16,13 @@ class LoadingScreen extends StatefulWidget {
 
 class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProviderStateMixin {
   final _storeService = StoreService();
+  final _currencyService = CurrencyService();
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   String? _storeName;
   String? _logoUrl;
+  String? _storeId;
+  bool _needsCurrencySelection = false;
 
   @override
   void initState() {
@@ -47,9 +52,9 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
     
     // Load store data in background
     try {
-      final storeId = await _storeService.getUserStoreId();
-      if (storeId != null) {
-        final storeData = await _storeService.getStore(storeId);
+      _storeId = await _storeService.getUserStoreId();
+      if (_storeId != null) {
+        final storeData = await _storeService.getStore(_storeId!);
         if (storeData != null && mounted) {
           setState(() {
             _storeName = storeData['name'];
@@ -60,6 +65,17 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
           if (_logoUrl != null && _logoUrl!.isNotEmpty) {
             await precacheImage(CachedNetworkImageProvider(_logoUrl!), context);
           }
+        }
+
+        // Initialize currency service and check if currency is set
+        await _currencyService.init(_storeId);
+        
+        if (!_currencyService.hasCurrencySet) {
+          // Store doesn't have a currency set - show selection screen
+          if (mounted) {
+            setState(() => _needsCurrencySelection = true);
+          }
+          return; // Don't navigate to dashboard yet
         }
       }
     } catch (e) {
@@ -74,6 +90,11 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
     }
   }
 
+  void _onCurrencySelected() {
+    // Currency has been selected, navigate to dashboard
+    context.go('/dashboard');
+  }
+
   @override
   void dispose() {
     _fadeController.dispose();
@@ -82,6 +103,14 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    // Show currency selection screen if needed
+    if (_needsCurrencySelection && _storeId != null) {
+      return CurrencySelectionScreen(
+        storeId: _storeId!,
+        onCurrencySelected: _onCurrencySelected,
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: FadeTransition(

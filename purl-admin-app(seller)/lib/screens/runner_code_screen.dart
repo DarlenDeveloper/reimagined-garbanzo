@@ -5,6 +5,19 @@ import 'package:iconsax/iconsax.dart';
 import 'package:go_router/go_router.dart';
 import '../services/store_service.dart';
 
+/// RunnerCodeScreen - Entry point for store runners to join a store.
+/// 
+/// RBAC FLOW (Runner Side):
+/// 1. Runner selects "Join a Store" from AccountTypeScreen
+/// 2. Runner asks admin for a 4-digit invite code
+/// 3. Admin generates code from Team page (valid 15 min)
+/// 4. Runner enters the code here
+/// 5. Code verified → runner added to store → navigates to dashboard
+/// 
+/// The code is:
+/// - 4 digits (0-9)
+/// - Single-use (deleted after successful join)
+/// - Expires after 15 minutes
 class RunnerCodeScreen extends StatefulWidget {
   const RunnerCodeScreen({super.key});
 
@@ -14,6 +27,7 @@ class RunnerCodeScreen extends StatefulWidget {
 
 class _RunnerCodeScreenState extends State<RunnerCodeScreen> {
   final _storeService = StoreService();
+  // 4 separate controllers for each digit input
   final List<TextEditingController> _codeControllers = List.generate(4, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
   bool _isLoading = false;
@@ -31,8 +45,10 @@ class _RunnerCodeScreenState extends State<RunnerCodeScreen> {
     super.dispose();
   }
 
+  /// Combines all 4 digit inputs into a single code string
   String get _code => _codeControllers.map((c) => c.text).join();
 
+  /// Handles digit input - auto-advances to next field and triggers verification when complete
   void _onCodeChanged(int index, String value) {
     setState(() {
       _hasError = false;
@@ -48,6 +64,7 @@ class _RunnerCodeScreenState extends State<RunnerCodeScreen> {
     }
   }
 
+  /// Handles backspace key - moves focus to previous field if current is empty
   void _onKeyPressed(int index, RawKeyEvent event) {
     if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
       if (_codeControllers[index].text.isEmpty && index > 0) {
@@ -56,6 +73,9 @@ class _RunnerCodeScreenState extends State<RunnerCodeScreen> {
     }
   }
 
+  /// Verifies the entered code with Firestore.
+  /// On success: shows welcome message and navigates to dashboard.
+  /// On failure: shows error and clears input for retry.
   Future<void> _verifyCode() async {
     if (_code.length != 4) return;
 
@@ -96,6 +116,7 @@ class _RunnerCodeScreenState extends State<RunnerCodeScreen> {
     }
   }
 
+  /// Clears all digit inputs and resets error state
   void _clearCode() {
     for (var controller in _codeControllers) {
       controller.clear();
