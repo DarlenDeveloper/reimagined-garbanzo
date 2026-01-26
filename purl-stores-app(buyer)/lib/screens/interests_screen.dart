@@ -307,7 +307,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
 
       if (mounted) {
         if (widget.isOnboarding) {
-          context.go('/home');
+          context.go('/complete-profile');
         } else {
           Navigator.pop(context, _selectedInterests.toList());
         }

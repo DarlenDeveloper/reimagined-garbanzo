@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/followers_service.dart';
 import '../services/messages_service.dart';
+import '../services/currency_service.dart';
 import 'product_detail_screen.dart';
 import 'chat_detail_screen.dart';
 
@@ -23,10 +24,12 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
   late TabController _tabController;
   final FollowersService _followersService = FollowersService();
   final MessagesService _messagesService = MessagesService();
+  final CurrencyService _currencyService = CurrencyService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
   bool _isFollowing = false;
   bool _isLoading = true;
+  String _userCurrency = 'UGX';
   
   Map<String, dynamic>? _storeData;
   List<Map<String, dynamic>> _products = [];
@@ -66,7 +69,15 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadUserCurrency();
     _loadStoreData();
+  }
+
+  Future<void> _loadUserCurrency() async {
+    final currency = await _currencyService.getUserCurrency();
+    if (mounted) {
+      setState(() => _userCurrency = currency);
+    }
   }
 
   Future<void> _loadStoreData() async {
@@ -497,8 +508,15 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
     final productId = product['id'] as String;
     final name = product['name'] ?? 'Product';
     final price = (product['price'] ?? 0).toDouble();
+    final productCurrency = product['currency'] as String? ?? 'USD';
     final originalPrice = product['originalPrice'] != null ? (product['originalPrice'] as num).toDouble() : null;
     final rating = (product['rating'] ?? 4.5).toDouble();
+    
+    // Convert prices to user currency
+    final convertedPrice = _currencyService.convertPrice(price, productCurrency, _userCurrency);
+    final convertedOriginalPrice = originalPrice != null 
+        ? _currencyService.convertPrice(originalPrice, productCurrency, _userCurrency)
+        : null;
     
     // Handle images array - get first image URL
     String? imageUrl;
@@ -533,13 +551,13 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
                           )
                         : Center(child: Icon(Iconsax.box, size: 40, color: Colors.grey[400])),
                   ),
-                  if (originalPrice != null && originalPrice > price)
+                  if (convertedOriginalPrice != null && convertedOriginalPrice > convertedPrice)
                     Positioned(
                       top: 8, left: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
-                        child: Text('-${((1 - price / originalPrice) * 100).toInt()}%', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
+                        child: Text('-${((1 - convertedPrice / convertedOriginalPrice) * 100).toInt()}%', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
                       ),
                     ),
                   Positioned(
@@ -572,10 +590,10 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Text('\$${price.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black)),
-                        if (originalPrice != null && originalPrice > price) ...[
+                        Text(_currencyService.formatPrice(convertedPrice, _userCurrency), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black)),
+                        if (convertedOriginalPrice != null && convertedOriginalPrice > convertedPrice) ...[
                           const SizedBox(width: 6),
-                          Text('\$${originalPrice.toStringAsFixed(0)}', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500], decoration: TextDecoration.lineThrough)),
+                          Text(_currencyService.formatPrice(convertedOriginalPrice, _userCurrency), style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500], decoration: TextDecoration.lineThrough)),
                         ],
                       ],
                     ),

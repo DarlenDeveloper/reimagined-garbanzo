@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/messages_service.dart';
 import '../theme/colors.dart';
 import 'chat_detail_screen.dart';
+import 'qr_scanner_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -73,8 +74,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Iconsax.edit, color: context.textPrimaryColor),
-            onPressed: () {},
+            icon: Icon(Iconsax.scan_barcode, color: context.textPrimaryColor),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const QRScannerScreen()),
+              );
+            },
           ),
         ],
       ),

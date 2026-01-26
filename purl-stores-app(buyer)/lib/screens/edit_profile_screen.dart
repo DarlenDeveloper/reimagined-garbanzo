@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/colors.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -12,14 +14,83 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _firstNameController = TextEditingController(text: 'John');
-  final _lastNameController = TextEditingController(text: 'Doe');
-  final _emailController = TextEditingController(text: 'john.doe@email.com');
-  final _phoneController = TextEditingController(text: '+1 234 567 8900');
-  final _bioController = TextEditingController(text: 'Shopping enthusiast');
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _bioController = TextEditingController();
   
   String _selectedGender = 'Male';
-  DateTime _selectedDate = DateTime(1995, 5, 15);
+  String _selectedCurrency = 'UGX';
+  DateTime? _selectedDate;
+  bool _isLoading = true;
+
+  final List<Map<String, String>> _currencies = [
+    {'code': 'UGX', 'name': 'Ugandan Shilling', 'symbol': 'UGX'},
+    {'code': 'KES', 'name': 'Kenyan Shilling', 'symbol': 'KES'},
+    {'code': 'TZS', 'name': 'Tanzanian Shilling', 'symbol': 'TZS'},
+    {'code': 'USD', 'name': 'US Dollar', 'symbol': '\$'},
+    {'code': 'EUR', 'name': 'Euro', 'symbol': '€'},
+    {'code': 'GBP', 'name': 'British Pound', 'symbol': '£'},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // Load from Firestore
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
+        setState(() {
+          _firstNameController.text = data['firstName'] ?? '';
+          _lastNameController.text = data['lastName'] ?? '';
+          _emailController.text = user.email ?? '';
+          _phoneController.text = data['phoneNumber'] ?? '';
+          _bioController.text = data['bio'] ?? '';
+          _selectedGender = data['gender'] ?? 'Male';
+          _selectedCurrency = data['currency'] ?? 'UGX';
+          
+          if (data['dateOfBirth'] != null) {
+            _selectedDate = (data['dateOfBirth'] as Timestamp).toDate();
+          }
+          
+          _isLoading = false;
+        });
+      } else {
+        // Fallback to Firebase Auth data
+        setState(() {
+          _emailController.text = user.email ?? '';
+          if (user.displayName != null) {
+            final parts = user.displayName!.split(' ');
+            _firstNameController.text = parts.first;
+            if (parts.length > 1) {
+              _lastNameController.text = parts.sublist(1).join(' ');
+            }
+          }
+          if (user.phoneNumber != null) {
+            _phoneController.text = user.phoneNumber!;
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -46,7 +117,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         centerTitle: true,
         actions: [
           TextButton(
-            onPressed: _saveProfile,
+            onPressed: _isLoading ? null : _saveProfile,
             child: Text('Save', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.darkGreen)),
           ),
         ],
@@ -66,6 +137,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               _buildInputField('Email', _emailController, Iconsax.sms, keyboardType: TextInputType.emailAddress),
               const SizedBox(height: 16),
               _buildInputField('Phone Number', _phoneController, Iconsax.call, keyboardType: TextInputType.phone),
+              const SizedBox(height: 16),
+              _buildCurrencySelector(),
               const SizedBox(height: 16),
               _buildGenderSelector(),
               const SizedBox(height: 16),
@@ -87,12 +160,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         children: [
           Container(
             width: 100, height: 100,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [AppColors.darkGreen, Color(0xFF2D5A45)]),
+            decoration: const BoxDecoration(
+              color: Colors.black,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: AppColors.darkGreen.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
             ),
-            child: Center(child: Text('JD', style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white))),
+            child: const Center(child: Icon(Iconsax.user, size: 40, color: Colors.white)),
           ),
           Positioned(
             right: 0, bottom: 0,
@@ -101,7 +173,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               child: Container(
                 width: 36, height: 36,
                 decoration: BoxDecoration(
-                  color: AppColors.darkGreen,
+                  color: Colors.black,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 3),
                 ),
@@ -172,6 +244,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  Widget _buildCurrencySelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Preferred Currency', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+          child: DropdownButtonFormField<String>(
+            value: _selectedCurrency,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Iconsax.money, size: 20, color: AppColors.darkGreen),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+            dropdownColor: Colors.white,
+            style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textPrimary),
+            items: _currencies.map((currency) {
+              return DropdownMenuItem<String>(
+                value: currency['code'],
+                child: Text('${currency['symbol']} ${currency['name']}', style: GoogleFonts.poppins(fontSize: 14)),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _selectedCurrency = value);
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDatePicker() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,8 +294,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 const Icon(Iconsax.calendar, size: 20, color: AppColors.darkGreen),
                 const SizedBox(width: 12),
                 Text(
-                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                  style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textPrimary),
+                  _selectedDate != null
+                      ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                      : 'Select date of birth',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: _selectedDate != null ? AppColors.textPrimary : AppColors.textSecondary,
+                  ),
                 ),
                 const Spacer(),
                 const Icon(Iconsax.arrow_down_1, size: 18, color: AppColors.textSecondary),
@@ -271,7 +382,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: _selectedDate ?? DateTime(2000, 1, 1),
       firstDate: DateTime(1950),
       lastDate: DateTime.now(),
       builder: (context, child) => Theme(
@@ -284,17 +395,72 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (picked != null) setState(() => _selectedDate = picked);
   }
 
-  void _saveProfile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Profile updated successfully', style: GoogleFonts.poppins(fontSize: 13)),
-        backgroundColor: AppColors.darkGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
-    Navigator.pop(context);
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('No user logged in');
+
+      final firstName = _firstNameController.text.trim();
+      final lastName = _lastNameController.text.trim();
+      final fullName = '$firstName $lastName';
+
+      // Update Firebase Auth display name
+      await user.updateDisplayName(fullName);
+
+      // Prepare data to save
+      final Map<String, dynamic> userData = {
+        'firstName': firstName,
+        'lastName': lastName,
+        'fullName': fullName,
+        'phoneNumber': _phoneController.text.trim(),
+        'bio': _bioController.text.trim(),
+        'gender': _selectedGender,
+        'currency': _selectedCurrency,
+        'email': user.email,
+        'updatedAt': Timestamp.now(),
+      };
+
+      // Only add dateOfBirth if it's set
+      if (_selectedDate != null) {
+        userData['dateOfBirth'] = Timestamp.fromDate(_selectedDate!);
+      }
+
+      // Save to Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(userData, SetOptions(merge: true));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profile updated successfully', style: GoogleFonts.poppins(fontSize: 13)),
+            backgroundColor: AppColors.darkGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update profile', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _showDeleteDialog() {

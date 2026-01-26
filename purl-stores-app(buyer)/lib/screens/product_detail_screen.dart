@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
 import '../services/currency_service.dart';
-import 'chat_detail_screen.dart';
+import '../services/product_questions_service.dart';
+import '../services/messages_service.dart';
+import '../services/wishlist_service.dart';
 import 'store_profile_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -31,12 +35,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   late TabController _tabController;
   final ProductService _productService = ProductService();
   final CurrencyService _currencyService = CurrencyService();
+  final ProductQuestionsService _questionsService = ProductQuestionsService();
+  final WishlistService _wishlistService = WishlistService();
   
   Product? _product;
   bool _isLoading = true;
   String? _error;
   bool _isFavorite = false;
   int _currentImageIndex = 0;
+  int _questionCount = 0;
+  String _userCurrency = 'UGX';
   
   // Selected variant values
   final Map<String, dynamic> _selectedValues = {};
@@ -45,7 +53,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadUserCurrency();
     _loadProduct();
+  }
+
+  Future<void> _loadUserCurrency() async {
+    final currency = await _currencyService.getUserCurrency();
+    if (mounted) {
+      setState(() => _userCurrency = currency);
+    }
   }
 
   @override
@@ -69,6 +85,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
           // Initialize selected values from specs
           if (product != null) {
             _initializeSelectedValues(product);
+            _loadQuestionCount();
+            _checkIfInWishlist();
           }
         });
       }
@@ -79,6 +97,90 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _checkIfInWishlist() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null || _product == null) return;
+    
+    final isInWishlist = await _wishlistService.isInWishlist(
+      userId: userId,
+      productId: widget.productId,
+    );
+    
+    if (mounted) {
+      setState(() => _isFavorite = isInWishlist);
+    }
+  }
+
+  Future<void> _toggleWishlist() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please sign in to save products', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    if (_product == null) return;
+    
+    // Optimistic UI update - update immediately
+    final willBeAdded = !_isFavorite;
+    setState(() => _isFavorite = willBeAdded);
+    
+    // Show immediate feedback
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            willBeAdded ? 'Added to wishlist' : 'Removed from wishlist',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.black,
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+    
+    // Process in background
+    try {
+      await _wishlistService.toggleWishlist(
+        userId: userId,
+        productId: widget.productId,
+        storeId: widget.storeId,
+        productName: _product!.name,
+        productImage: _product!.primaryImageUrl,
+        price: _product!.price,
+        currency: _product!.currency,
+        storeName: _product!.storeName,
+        isInStock: _product!.isInStock,
+      );
+    } catch (e) {
+      // Revert UI on error
+      if (mounted) {
+        setState(() => _isFavorite = !willBeAdded);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update wishlist', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadQuestionCount() async {
+    if (_product == null) return;
+    final count = await _questionsService.getQuestionCount(
+      storeId: widget.storeId,
+      productId: widget.productId,
+    );
+    if (mounted) {
+      setState(() => _questionCount = count);
     }
   }
 
@@ -129,7 +231,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
               _isFavorite ? Iconsax.heart5 : Iconsax.heart,
               color: _isFavorite ? Colors.red : Colors.black,
             ),
-            onPressed: () => setState(() => _isFavorite = !_isFavorite),
+            onPressed: _toggleWishlist,
           ),
         ],
       ),
@@ -202,7 +304,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
             tabs: [
               const Tab(text: 'Details'),
               Tab(text: 'Reviews ${_product!.reviewCount}'),
-              const Tab(text: 'Questions'),
+              Tab(text: 'Questions $_questionCount'),
             ],
           ),
         ),
@@ -222,7 +324,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
   Widget _buildDetailsTab() {
     final product = _product!;
-    final formattedPrice = _currencyService.formatPrice(product.price, product.currency);
+    final convertedPrice = _currencyService.convertPrice(product.price, product.currency, _userCurrency);
+    final formattedPrice = _currencyService.formatPrice(convertedPrice, _userCurrency);
     
     return SingleChildScrollView(
       child: Column(
@@ -407,21 +510,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                           color: Colors.black,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
-                          color: Colors.blue,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.check, size: 8, color: Colors.white),
-                      ),
                       const Spacer(),
                       const Icon(Iconsax.arrow_right_3, size: 16, color: Colors.grey),
                     ],
                   ),
                   Text(
-                    'Verified Seller • Tap to view store',
+                    'Tap to view store',
                     style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
                   ),
                 ],
@@ -675,7 +769,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
           child: Column(
             children: specs.entries.map((entry) {
               final label = _formatLabel(entry.key);
-              final value = _formatValue(entry.value);
+              final value = _formatValue(entry.value, entry.key);
               
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -721,6 +815,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   }
 
   String _formatLabel(String key) {
+    // Special case mappings
+    final labelMap = {
+      'expiryDate': 'Expiry Date',
+      'weight': 'Weight',
+      'halalCertified': 'Halal Certified',
+      'organic': 'Organic',
+      'storage': 'Storage',
+      'type': 'Type',
+    };
+    
+    if (labelMap.containsKey(key)) {
+      return labelMap[key]!;
+    }
+    
     // Convert camelCase to Title Case
     return key
         .replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m.group(1)}')
@@ -730,10 +838,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
         .trim();
   }
 
-  String _formatValue(dynamic value) {
+  String _formatValue(dynamic value, String key) {
+    // Handle boolean values
+    if (value is bool) {
+      return value ? 'Yes' : 'No';
+    }
+    
+    // Handle Timestamp for expiry date
+    if (key == 'expiryDate' && value is Timestamp) {
+      final date = value.toDate();
+      return '${date.day}/${date.month}/${date.year}';
+    }
+    
+    // Handle weight - add kg unit
+    if (key == 'weight' && value != null) {
+      return '$value kg';
+    }
+    
+    // Handle lists
     if (value is List) {
       return value.join(', ');
     }
+    
     return value.toString();
   }
 
@@ -747,7 +873,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Text(
-              _currencyService.formatPrice(product.compareAtPrice!, product.currency),
+              _currencyService.formatPrice(
+                _currencyService.convertPrice(product.compareAtPrice!, product.currency, _userCurrency),
+                _userCurrency,
+              ),
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 color: Colors.grey[500],
@@ -817,15 +946,90 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   }
 
   void _messageStore(String storeName) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatDetailScreen(
-          userName: storeName,
-          userAvatar: storeName.isNotEmpty ? storeName[0] : 'S',
+    _openChat();
+  }
+
+  Future<void> _openChat() async {
+    final product = _product!;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please sign in to send messages', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.red,
         ),
-      ),
-    );
+      );
+      return;
+    }
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.black)),
+      );
+
+      String userName = 'User';
+      String? userPhotoUrl;
+      
+      try {
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+        final userData = userDoc.data();
+        if (userData != null && userData['name'] != null && (userData['name'] as String).isNotEmpty) {
+          userName = userData['name'];
+        }
+        userPhotoUrl = userData?['photoUrl'] as String?;
+      } catch (e) {
+        print('Error fetching user: $e');
+      }
+      
+      if (userName == 'User' && FirebaseAuth.instance.currentUser?.displayName != null) {
+        userName = FirebaseAuth.instance.currentUser!.displayName!;
+      }
+      
+      if (userName == 'User' && FirebaseAuth.instance.currentUser?.email != null) {
+        userName = FirebaseAuth.instance.currentUser!.email!.split('@')[0];
+      }
+
+      final messagesService = MessagesService();
+      final conversationId = await messagesService.getOrCreateConversation(
+        storeId: product.storeId,
+        storeName: product.storeName,
+        storeLogoUrl: product.storeLogo,
+        userId: userId,
+        userName: userName,
+        userPhotoUrl: userPhotoUrl,
+      );
+
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => _ChatScreen(
+              conversationId: conversationId,
+              storeName: product.storeName,
+              storeLogoUrl: product.storeLogo,
+              userId: userId,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to open chat', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _openStoreProfile(String storeId, String storeName) {
@@ -863,20 +1067,419 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   }
 
   Widget _buildQuestionsTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Iconsax.message_question, size: 48, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'Questions',
-            style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[600]),
+    final user = FirebaseAuth.instance.currentUser;
+    
+    return Column(
+      children: [
+        Expanded(
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _questionsService.getProductQuestions(
+              storeId: widget.storeId,
+              productId: widget.productId,
+            ),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Colors.black),
+                );
+              }
+
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Iconsax.message_question, size: 48, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No questions yet',
+                        style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Be the first to ask a question',
+                        style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[400]),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final questions = snapshot.data!;
+              return ListView.builder(
+                padding: const EdgeInsets.all(20),
+                itemCount: questions.length,
+                itemBuilder: (context, index) {
+                  final question = questions[index];
+                  final createdAt = question['createdAt'] as Timestamp?;
+                  final timeAgo = createdAt != null
+                      ? _questionsService.getTimeAgo(createdAt)
+                      : '';
+                  final hasAnswer = question['answer'] != null;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Question
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Iconsax.message_question, size: 16, color: Colors.grey[600]),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    question['question'] ?? '',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${question['userName']} • $timeAgo',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        // Answer
+                        if (hasAnswer) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Iconsax.message_text, size: 14, color: Colors.grey[600]),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        question['answer'] ?? '',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Store',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Coming soon',
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[400]),
+        ),
+        
+        // Ask Question Button
+        if (user != null)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _showAskQuestionDialog,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Iconsax.message_add, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Ask a Question',
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showAskQuestionDialog() {
+    final questionController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Ask a Question', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        content: TextField(
+          controller: questionController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: 'Type your question here...',
+            hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (questionController.text.trim().isEmpty) return;
+              
+              final user = FirebaseAuth.instance.currentUser;
+              if (user == null) return;
+              
+              await _questionsService.askQuestion(
+                storeId: widget.storeId,
+                productId: widget.productId,
+                userId: user.uid,
+                userName: user.displayName ?? 'User',
+                userPhotoUrl: user.photoURL,
+                question: questionController.text.trim(),
+              );
+              
+              if (mounted) {
+                Navigator.pop(context);
+                _loadQuestionCount();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Question submitted', style: GoogleFonts.poppins()),
+                    backgroundColor: Colors.black,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Submit', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChatScreen extends StatefulWidget {
+  final String conversationId;
+  final String storeName;
+  final String? storeLogoUrl;
+  final String userId;
+
+  const _ChatScreen({
+    required this.conversationId,
+    required this.storeName,
+    this.storeLogoUrl,
+    required this.userId,
+  });
+
+  @override
+  State<_ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<_ChatScreen> {
+  final TextEditingController _messageController = TextEditingController();
+  final MessagesService _messagesService = MessagesService();
+
+  @override
+  void initState() {
+    super.initState();
+    _messagesService.markAsRead(
+      conversationId: widget.conversationId,
+      userId: widget.userId,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Iconsax.arrow_left, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.grey[200],
+              backgroundImage: widget.storeLogoUrl != null && widget.storeLogoUrl!.isNotEmpty
+                  ? NetworkImage(widget.storeLogoUrl!)
+                  : null,
+              child: widget.storeLogoUrl == null || widget.storeLogoUrl!.isEmpty
+                  ? Icon(Iconsax.shop, size: 18, color: Colors.grey[600])
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Text(widget.storeName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black)),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _messagesService.getMessages(widget.conversationId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Colors.black));
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Iconsax.message, size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text('No messages yet', style: GoogleFonts.poppins(color: Colors.grey[600])),
+                      ],
+                    ),
+                  );
+                }
+
+                final messages = snapshot.data!;
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final message = messages[index];
+                    final isMe = message['senderId'] == widget.userId;
+                    final createdAt = message['createdAt'] as Timestamp?;
+                    final time = createdAt != null ? _messagesService.getMessageTime(createdAt) : '';
+
+                    return Align(
+                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                        child: Column(
+                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isMe ? Colors.black : Colors.grey[100],
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(16),
+                                  topRight: const Radius.circular(16),
+                                  bottomLeft: Radius.circular(isMe ? 16 : 4),
+                                  bottomRight: Radius.circular(isMe ? 4 : 16),
+                                ),
+                              ),
+                              child: Text(message['text'] ?? '', style: GoogleFonts.poppins(fontSize: 14, color: isMe ? Colors.white : Colors.black)),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(time, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+            decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey[200]!))),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    style: GoogleFonts.poppins(fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Type a message...',
+                      hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: () async {
+                    if (_messageController.text.trim().isEmpty) return;
+                    await _messagesService.sendMessage(
+                      conversationId: widget.conversationId,
+                      senderId: widget.userId,
+                      text: _messageController.text.trim(),
+                    );
+                    _messageController.clear();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Iconsax.send_1, color: Colors.white, size: 20),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

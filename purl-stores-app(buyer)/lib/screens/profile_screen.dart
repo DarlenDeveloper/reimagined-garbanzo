@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
+import '../services/wishlist_service.dart';
 import 'bnpl_plans_screen.dart';
 import 'bnpl_subscription_screen.dart';
 import 'wishlist_screen.dart';
@@ -27,8 +29,13 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final bool _hasBnplAccount = true;
+  final bool _hasBnplAccount = false; // Hide BNPL dummy data
   final _authService = AuthService();
+  final _wishlistService = WishlistService();
+  
+  int _wishlistCount = 0;
+  bool _isProfileIncomplete = false;
+  bool _isCheckingProfile = true;
 
   User? get _user => _authService.currentUser;
   
@@ -45,6 +52,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadWishlistCount();
+    _checkProfileCompletion();
+  }
+
+  Future<void> _checkProfileCompletion() async {
+    final userId = _user?.uid;
+    if (userId == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
+        final phoneNumber = data['phoneNumber'] as String?;
+        final bio = data['bio'] as String?;
+        final currency = data['currency'] as String?;
+        
+        setState(() {
+          _isProfileIncomplete = (phoneNumber == null || phoneNumber.isEmpty) || 
+                                 (bio == null || bio.isEmpty) ||
+                                 (currency == null || currency.isEmpty);
+          _isCheckingProfile = false;
+        });
+      } else {
+        setState(() {
+          _isProfileIncomplete = true;
+          _isCheckingProfile = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isCheckingProfile = false);
+    }
+  }
+
+  Future<void> _loadWishlistCount() async {
+    final userId = _user?.uid;
+    if (userId == null) return;
+    
+    final count = await _wishlistService.getWishlistCount(userId);
+    if (mounted) {
+      setState(() => _wishlistCount = count);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -56,6 +113,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               _buildHeader(),
               const SizedBox(height: 24),
+              if (_isProfileIncomplete && !_isCheckingProfile) ...[
+                _buildIncompleteProfileBanner(),
+                const SizedBox(height: 20),
+              ],
               _buildProfileCard(),
               const SizedBox(height: 20),
               _hasBnplAccount ? _buildBnplBalanceCard() : _buildBnplApplyCard(),
@@ -102,7 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               width: 70, height: 70,
               decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-              child: Center(child: Text(_userInitials, style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white))),
+              child: const Center(child: Icon(Iconsax.user, size: 32, color: Colors.white)),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -278,11 +339,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildQuickActions() {
     return Row(
       children: [
-        _buildQuickAction(Iconsax.heart, 'Wishlist', '12', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistScreen()))),
+        _buildQuickAction(Iconsax.heart, 'Wishlist', '$_wishlistCount', () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistScreen())).then((_) => _loadWishlistCount());
+        }),
         const SizedBox(width: 12),
-        _buildQuickAction(Iconsax.gift, 'Rewards', '850', () {}),
+        _buildQuickAction(Iconsax.gift, 'Rewards', '0', () {}),
         const SizedBox(width: 12),
-        _buildQuickAction(Iconsax.ticket_discount, 'Coupons', '5', () {}),
+        _buildQuickAction(Iconsax.ticket_discount, 'Coupons', '0', () {}),
       ],
     );
   }
@@ -431,4 +494,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
+  Widget _buildIncompleteProfileBanner() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+        ).then((_) => _checkProfileCompletion());
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Iconsax.info_circle, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Complete Your Profile',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Add missing details for a better experience',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Iconsax.arrow_right_3, color: Colors.white, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
 }
+

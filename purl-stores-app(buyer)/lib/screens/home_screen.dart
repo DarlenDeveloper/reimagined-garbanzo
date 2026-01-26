@@ -12,6 +12,7 @@ import 'messages_screen.dart';
 import 'notifications_screen.dart';
 import 'search_screen.dart';
 import 'store_profile_screen.dart';
+import 'media_preview_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -200,11 +201,18 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Row(
         children: [
-          Container(
+          Image.asset(
+            'assets/images/logo.png',
             width: 32,
             height: 32,
-            decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
-            child: Center(child: Text('G', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white))),
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
+                child: Center(child: Text('P', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white))),
+              );
+            },
           ),
           const SizedBox(width: 8),
           Text('Purl Stores', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
@@ -338,46 +346,65 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Image if available
                 if (mediaList != null && mediaList.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      (mediaList[0] as Map<String, dynamic>)['thumbnailUrl'] ?? '',
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          height: 160,
-                          width: double.infinity,
-                          color: Colors.grey[100],
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                  : null,
-                              color: Colors.black,
-                              strokeWidth: 2,
-                            ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MediaPreviewScreen(
+                            mediaList: List<Map<String, dynamic>>.from(mediaList),
+                            initialIndex: 0,
+                            storeName: storeName,
                           ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: 160,
+                        ),
+                      );
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxHeight: 400,
+                        ),
+                        child: Image.network(
+                          (mediaList[0] as Map<String, dynamic>)['thumbnailUrl'] ?? '',
                           width: double.infinity,
-                          color: Colors.grey[100],
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Iconsax.image, size: 32, color: Colors.grey[400]),
-                                const SizedBox(height: 4),
-                                Text('Product Image', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[400])),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              height: 200,
+                              width: double.infinity,
+                              color: Colors.grey[100],
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                      : null,
+                                  color: Colors.black,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 200,
+                              width: double.infinity,
+                              color: Colors.grey[100],
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Iconsax.image, size: 32, color: Colors.grey[400]),
+                                    const SizedBox(height: 4),
+                                    Text('Product Image', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[400])),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ],

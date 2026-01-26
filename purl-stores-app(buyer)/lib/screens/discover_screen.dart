@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
 import '../services/currency_service.dart';
+import '../services/messages_service.dart';
+import '../services/wishlist_service.dart';
 import 'product_detail_screen.dart';
-import 'chat_detail_screen.dart';
 import 'order_history_screen.dart';
 import 'store_map_screen.dart';
 import 'categories_screen.dart';
@@ -24,6 +27,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ProductService _productService = ProductService();
   final CurrencyService _currencyService = CurrencyService();
+  final WishlistService _wishlistService = WishlistService();
   final ScrollController _scrollController = ScrollController();
   
   int _selectedCategoryIndex = 0;
@@ -33,6 +37,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   bool _hasMore = true;
   String? _error;
   StreamSubscription<List<Product>>? _productsSubscription;
+  Set<String> _wishlistedProductIds = {};
+  String _userCurrency = 'UGX';
 
   static const int _pageSize = 10;
 
@@ -56,7 +62,30 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _loadUserCurrency();
     _subscribeToProducts();
+    _loadWishlistStatus();
+  }
+
+  void _loadUserCurrency() async {
+    final currency = await _currencyService.getUserCurrency();
+    if (mounted) {
+      setState(() => _userCurrency = currency);
+    }
+  }
+
+  void _loadWishlistStatus() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    // Listen to wishlist changes
+    _wishlistService.getWishlist(userId).listen((wishlistItems) {
+      if (mounted) {
+        setState(() {
+          _wishlistedProductIds = wishlistItems.map((item) => item['productId'] as String).toSet();
+        });
+      }
+    });
   }
 
   @override
@@ -400,7 +429,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Widget _buildProductCard(Product product) {
-    final formattedPrice = _currencyService.formatPrice(product.price, product.currency);
+    final convertedPrice = _currencyService.convertPrice(product.price, product.currency, _userCurrency);
+    final formattedPrice = _currencyService.formatPrice(convertedPrice, _userCurrency);
     
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -477,9 +507,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     top: 8,
                     right: 8,
                     child: GestureDetector(
-                      onTap: () {
-                        // TODO: Add to favorites
-                      },
+                      onTap: () => _toggleWishlist(product),
                       child: Container(
                         width: 28,
                         height: 28,
@@ -487,7 +515,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Iconsax.heart, size: 14, color: Colors.black),
+                        child: Icon(
+                          _wishlistedProductIds.contains(product.id) 
+                              ? Iconsax.heart5 
+                              : Iconsax.heart,
+                          size: 14,
+                          color: _wishlistedProductIds.contains(product.id)
+                              ? Colors.red
+                              : Colors.black,
+                        ),
                       ),
                     ),
                   ),
@@ -589,7 +625,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   // Compare price (strikethrough)
                   if (product.compareAtPrice != null && product.compareAtPrice! > product.price)
                     Text(
-                      _currencyService.formatPrice(product.compareAtPrice!, product.currency),
+                      _currencyService.formatPrice(
+                        _currencyService.convertPrice(product.compareAtPrice!, product.currency, _userCurrency),
+                        _userCurrency,
+                      ),
                       style: GoogleFonts.poppins(
                         fontSize: 11,
                         color: Colors.grey[500],
@@ -659,9 +698,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ChatDetailScreen(
-          userName: storeName,
-          userAvatar: storeName.isNotEmpty ? storeName[0] : 'S',
+        builder: (context) => StoreProfileScreen(
+          storeId: storeId,
+          storeName: storeName,
+          storeAvatar: storeName.isNotEmpty ? storeName[0] : 'S',
         ),
       ),
     );
@@ -804,5 +844,80 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         const SizedBox(height: 20),
       ],
     );
+  }
+
+  void _toggleWishlist(Product product) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please sign in to save products', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.black,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Optimistic UI update - update immediately
+    final isCurrentlyInWishlist = _wishlistedProductIds.contains(product.id);
+    final willBeAdded = !isCurrentlyInWishlist;
+    
+    setState(() {
+      if (willBeAdded) {
+        _wishlistedProductIds.add(product.id);
+      } else {
+        _wishlistedProductIds.remove(product.id);
+      }
+    });
+
+    // Show immediate feedback
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            willBeAdded ? 'Added to wishlist' : 'Removed from wishlist',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.black,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+
+    // Process in background
+    try {
+      await _wishlistService.toggleWishlist(
+        userId: userId,
+        productId: product.id,
+        storeId: product.storeId,
+        productName: product.name,
+        productImage: product.primaryImageUrl,
+        price: product.price,
+        currency: product.currency,
+        storeName: product.storeName,
+        isInStock: product.isInStock,
+      );
+    } catch (e) {
+      // Revert UI on error
+      if (mounted) {
+        setState(() {
+          if (willBeAdded) {
+            _wishlistedProductIds.remove(product.id);
+          } else {
+            _wishlistedProductIds.add(product.id);
+          }
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update wishlist', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
