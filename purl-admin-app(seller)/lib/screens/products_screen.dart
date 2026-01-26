@@ -228,13 +228,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _actionButton(Iconsax.copy, 'Duplicate', () async {
-                    Navigator.pop(context);
-                    await _duplicateProduct(product);
-                  }),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
                   child: _actionButton(
                     Iconsax.trash,
                     'Delete',
@@ -267,29 +260,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ),
       ],
     );
-  }
-
-  Future<void> _duplicateProduct(Product product) async {
-    try {
-      await _productService.duplicateProduct(_storeId!, product.id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Product duplicated', style: GoogleFonts.poppins()),
-            backgroundColor: Colors.black,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to duplicate: $e', style: GoogleFonts.poppins()),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   Future<void> _deleteProduct(Product product) async {

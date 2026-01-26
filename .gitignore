@@ -1,4 +1,3 @@
-
 # Dependencies
 node_modules/
 .pnp/
@@ -15,10 +14,36 @@ out/
 **/.dart_tool/
 **/.flutter-plugins
 **/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
 **/*.iml
 **/.idea/
-**/*.lock
+**/.metadata
 !pubspec.lock
+
+# Android
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/android/.gradle/
+**/android/captures/
+**/android/local.properties
+**/android/key.properties
+**/android/*.jks
+
+# iOS
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/.generated/
 
 # IDE
 .vscode/
@@ -26,10 +51,11 @@ out/
 *.swo
 .DS_Store
 
-# Environment
+# Environment & Secrets
 .env
 .env.local
 .env.*.local
+
 
 # Logs
 *.log
@@ -40,3 +66,12 @@ coverage/
 
 # OS
 Thumbs.db
+
+# Miscellaneous
+*.class
+*.pyc
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/

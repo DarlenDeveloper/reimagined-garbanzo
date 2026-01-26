@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/followers_service.dart';
+import '../services/messages_service.dart';
 import 'product_detail_screen.dart';
 import 'chat_detail_screen.dart';
 
@@ -17,7 +21,17 @@ class StoreProfileScreen extends StatefulWidget {
 
 class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final FollowersService _followersService = FollowersService();
+  final MessagesService _messagesService = MessagesService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  
   bool _isFollowing = false;
+  bool _isLoading = true;
+  
+  Map<String, dynamic>? _storeData;
+  List<Map<String, dynamic>> _products = [];
+  List<Map<String, dynamic>> _posts = [];
+  int _followerCount = 0;
 
   final _storeInfo = _StoreInfo(
     name: 'Glow Electronics',
@@ -33,7 +47,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
     isVerified: true,
   );
 
-  final List<_StoreProduct> _products = [
+  final List<_StoreProduct> _products_dummy = [
     _StoreProduct(id: '1', name: 'iPhone 15 Pro Max', price: 1199.00, originalPrice: 1299.00, rating: 4.9, sold: 234),
     _StoreProduct(id: '2', name: 'AirPods Pro 2nd Gen', price: 249.00, rating: 4.8, sold: 567),
     _StoreProduct(id: '3', name: 'MacBook Air M3', price: 1099.00, originalPrice: 1199.00, rating: 4.9, sold: 123),
@@ -42,7 +56,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
     _StoreProduct(id: '6', name: 'Samsung Galaxy S24', price: 899.00, originalPrice: 999.00, rating: 4.6, sold: 312),
   ];
 
-  final List<_StorePost> _posts = [
+  final List<_StorePost> _posts_dummy = [
     _StorePost(id: '1', caption: 'New arrivals! Check out our latest collection', likes: 234, comments: 45),
     _StorePost(id: '2', caption: 'Flash sale this weekend! Up to 50% off', likes: 567, comments: 89),
     _StorePost(id: '3', caption: 'Customer favorite - iPhone 15 Pro Max', likes: 123, comments: 23),
@@ -52,6 +66,178 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadStoreData();
+  }
+
+  Future<void> _loadStoreData() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      // Load store info
+      final storeDoc = await FirebaseFirestore.instance
+          .collection('stores')
+          .doc(widget.storeId)
+          .get();
+      
+      if (storeDoc.exists) {
+        _storeData = storeDoc.data();
+      }
+      
+      // Load products
+      final productsSnapshot = await FirebaseFirestore.instance
+          .collection('stores')
+          .doc(widget.storeId)
+          .collection('products')
+          .where('isActive', isEqualTo: true)
+          .limit(20)
+          .get();
+      
+      _products = productsSnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+      
+      // Load posts
+      final postsSnapshot = await FirebaseFirestore.instance
+          .collection('stores')
+          .doc(widget.storeId)
+          .collection('posts')
+          .orderBy('createdAt', descending: true)
+          .limit(20)
+          .get();
+      
+      _posts = postsSnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+      
+      // Load follower count
+      _followerCount = await _followersService.getFollowerCount(widget.storeId);
+      
+      // Check if following
+      final userId = _auth.currentUser?.uid;
+      if (userId != null) {
+        _isFollowing = await _followersService.isFollowing(userId, widget.storeId);
+      }
+      
+      setState(() => _isLoading = false);
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _toggleFollow() async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) return;
+
+    setState(() => _isFollowing = !_isFollowing);
+
+    try {
+      if (_isFollowing) {
+        await _followersService.followStore(userId, widget.storeId);
+        setState(() => _followerCount++);
+      } else {
+        await _followersService.unfollowStore(userId, widget.storeId);
+        setState(() => _followerCount--);
+      }
+    } catch (e) {
+      // Revert on error
+      setState(() => _isFollowing = !_isFollowing);
+    }
+  }
+
+  Future<void> _openChat() async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please sign in to send messages', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.black)),
+      );
+
+      // Get user data - try multiple sources
+      String userName = 'User';
+      String? userPhotoUrl;
+      
+      // First try: Firestore user document
+      try {
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+        final userData = userDoc.data();
+        if (userData != null && userData['name'] != null && (userData['name'] as String).isNotEmpty) {
+          userName = userData['name'];
+        }
+        userPhotoUrl = userData?['photoUrl'] as String?;
+      } catch (e) {
+        print('Error fetching user from Firestore: $e');
+      }
+      
+      // Second try: Firebase Auth displayName
+      if (userName == 'User' && _auth.currentUser?.displayName != null && _auth.currentUser!.displayName!.isNotEmpty) {
+        userName = _auth.currentUser!.displayName!;
+      }
+      
+      // Third try: Firebase Auth email (use part before @)
+      if (userName == 'User' && _auth.currentUser?.email != null) {
+        userName = _auth.currentUser!.email!.split('@')[0];
+      }
+
+      // Get or create conversation
+      final conversationId = await _messagesService.getOrCreateConversation(
+        storeId: widget.storeId,
+        storeName: _storeData?['name'] ?? widget.storeName,
+        storeLogoUrl: _storeData?['logoUrl'],
+        userId: userId,
+        userName: userName,
+        userPhotoUrl: userPhotoUrl,
+      );
+
+      // Close loading
+      if (mounted) Navigator.pop(context);
+
+      // Navigate to chat
+      if (mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => _ChatScreen(
+              conversationId: conversationId,
+              storeName: _storeData?['name'] ?? widget.storeName,
+              storeLogoUrl: _storeData?['logoUrl'],
+              userId: userId,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading if still showing
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to open chat: ${e.toString()}', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      print('Error opening chat: $e');
+    }
   }
 
   @override
@@ -130,10 +316,23 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
                 width: 100, height: 100,
                 decoration: BoxDecoration(color: Colors.grey[100], shape: BoxShape.circle),
                 padding: const EdgeInsets.all(4),
-                child: Container(
-                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black),
-                  child: Center(child: Text(widget.storeAvatar, style: GoogleFonts.poppins(fontSize: 36, fontWeight: FontWeight.w700, color: Colors.white))),
-                ),
+                child: _storeData?['logoUrl'] != null && (_storeData!['logoUrl'] as String).isNotEmpty
+                    ? ClipOval(
+                        child: Image.network(
+                          _storeData!['logoUrl'],
+                          width: 92,
+                          height: 92,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.grey[200]),
+                            child: Icon(Iconsax.shop, size: 40, color: Colors.grey[600]),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.grey[200]),
+                        child: Icon(Iconsax.shop, size: 40, color: Colors.grey[600]),
+                      ),
               ),
               Positioned(
                 right: 0, bottom: 0,
@@ -152,8 +351,8 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(_storeInfo.name, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
-              if (_storeInfo.isVerified) ...[
+              Text(_storeData?['name'] ?? widget.storeName, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
+              if (_storeData?['isVerified'] == true) ...[
                 const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.all(2),
@@ -164,15 +363,15 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
             ],
           ),
           const SizedBox(height: 4),
-          Text(_storeInfo.category, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
+          Text(_storeData?['category'] ?? 'Store', style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Iconsax.star1, size: 16, color: Colors.grey[700]),
               const SizedBox(width: 4),
-              Text('${_storeInfo.rating}', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black)),
-              Text(' (${_storeInfo.reviewCount} reviews)', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500])),
+              Text('${(_storeData?['rating'] ?? 4.5).toStringAsFixed(1)}', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black)),
+              Text(' (${_storeData?['reviewCount'] ?? 0} reviews)', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500])),
             ],
           ),
           const SizedBox(height: 16),
@@ -193,11 +392,11 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
         decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
         child: Row(
           children: [
-            _buildStatItem('${_formatNumber(_storeInfo.followers)}', 'Followers'),
+            _buildStatItem('${_formatNumber(_followerCount)}', 'Followers'),
             Container(width: 1, height: 36, color: Colors.grey[300]),
-            _buildStatItem('${_storeInfo.products}', 'Products'),
+            _buildStatItem('${_products.length}', 'Products'),
             Container(width: 1, height: 36, color: Colors.grey[300]),
-            _buildStatItem(_storeInfo.responseTime, 'Response'),
+            _buildStatItem(_storeData?['responseTime'] ?? '< 1 hour', 'Response'),
           ],
         ),
       ),
@@ -229,7 +428,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
           Expanded(
             flex: 2,
             child: GestureDetector(
-              onTap: () => setState(() => _isFollowing = !_isFollowing),
+              onTap: () => _toggleFollow(),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
@@ -244,7 +443,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
           const SizedBox(width: 12),
           Expanded(
             child: GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ChatDetailScreen(userName: widget.storeName, userAvatar: widget.storeAvatar))),
+              onTap: () => _openChat(),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(14)),
@@ -269,6 +468,23 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
   }
 
   Widget _buildProductsTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Colors.black));
+    }
+    
+    if (_products.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Iconsax.box, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text('No products yet', style: GoogleFonts.poppins(color: Colors.grey[600])),
+          ],
+        ),
+      );
+    }
+    
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.65, crossAxisSpacing: 12, mainAxisSpacing: 12),
@@ -277,9 +493,23 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
     );
   }
 
-  Widget _buildProductCard(_StoreProduct product) {
+  Widget _buildProductCard(Map<String, dynamic> product) {
+    final productId = product['id'] as String;
+    final name = product['name'] ?? 'Product';
+    final price = (product['price'] ?? 0).toDouble();
+    final originalPrice = product['originalPrice'] != null ? (product['originalPrice'] as num).toDouble() : null;
+    final rating = (product['rating'] ?? 4.5).toDouble();
+    
+    // Handle images array - get first image URL
+    String? imageUrl;
+    final images = product['images'] as List?;
+    if (images != null && images.isNotEmpty) {
+      final firstImage = images[0] as Map<String, dynamic>;
+      imageUrl = firstImage['url'] as String?;
+    }
+    
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: product.id, productName: product.name, storeName: widget.storeName, storeId: widget.storeId))),
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: productId, productName: name, storeName: widget.storeName, storeId: widget.storeId))),
       child: Container(
         decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
         child: Column(
@@ -292,15 +522,24 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(color: Colors.grey[200], borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
-                    child: Center(child: Icon(Iconsax.box, size: 40, color: Colors.grey[400])),
+                    child: imageUrl != null && imageUrl.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Center(child: Icon(Iconsax.box, size: 40, color: Colors.grey[400])),
+                            ),
+                          )
+                        : Center(child: Icon(Iconsax.box, size: 40, color: Colors.grey[400])),
                   ),
-                  if (product.originalPrice != null)
+                  if (originalPrice != null && originalPrice > price)
                     Positioned(
                       top: 8, left: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
-                        child: Text('-${((1 - product.price / product.originalPrice!) * 100).toInt()}%', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
+                        child: Text('-${((1 - price / originalPrice) * 100).toInt()}%', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
                       ),
                     ),
                   Positioned(
@@ -321,24 +560,22 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black)),
+                    Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black)),
                     const Spacer(),
                     Row(
                       children: [
                         Icon(Iconsax.star1, size: 12, color: Colors.grey[600]),
                         const SizedBox(width: 2),
-                        Text('${product.rating}', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
-                        const SizedBox(width: 6),
-                        Text('${product.sold} sold', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
+                        Text('${rating.toStringAsFixed(1)}', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Text('\$${product.price.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black)),
-                        if (product.originalPrice != null) ...[
+                        Text('\$${price.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black)),
+                        if (originalPrice != null && originalPrice > price) ...[
                           const SizedBox(width: 6),
-                          Text('\$${product.originalPrice!.toStringAsFixed(0)}', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500], decoration: TextDecoration.lineThrough)),
+                          Text('\$${originalPrice.toStringAsFixed(0)}', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500], decoration: TextDecoration.lineThrough)),
                         ],
                       ],
                     ),
@@ -353,6 +590,23 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
   }
 
   Widget _buildPostsTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Colors.black));
+    }
+    
+    if (_posts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Iconsax.document, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text('No posts yet', style: GoogleFonts.poppins(color: Colors.grey[600])),
+          ],
+        ),
+      );
+    }
+    
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 4, mainAxisSpacing: 4),
@@ -361,21 +615,39 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
     );
   }
 
-  Widget _buildPostTile(_StorePost post) {
+  Widget _buildPostTile(Map<String, dynamic> post) {
+    final likes = post['likes'] ?? 0;
+    final mediaList = post['mediaUrls'] as List?;
+    final thumbnailUrl = (mediaList != null && mediaList.isNotEmpty) 
+        ? (mediaList[0] as Map<String, dynamic>)['thumbnailUrl'] as String?
+        : null;
+    
     return GestureDetector(
       onTap: () {},
       child: Container(
         decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
         child: Stack(
           children: [
-            Center(child: Icon(Iconsax.image, size: 24, color: Colors.grey[400])),
+            if (thumbnailUrl != null && thumbnailUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Image.network(
+                  thumbnailUrl,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Center(child: Icon(Iconsax.image, size: 24, color: Colors.grey[400])),
+                ),
+              )
+            else
+              Center(child: Icon(Iconsax.image, size: 24, color: Colors.grey[400])),
             Positioned(
               bottom: 4, left: 4,
               child: Row(
                 children: [
                   const Icon(Iconsax.heart5, size: 12, color: Colors.white),
                   const SizedBox(width: 2),
-                  Text('${post.likes}', style: GoogleFonts.poppins(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w500)),
+                  Text('$likes', style: GoogleFonts.poppins(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w500)),
                 ],
               ),
             ),
@@ -386,18 +658,30 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
   }
 
   Widget _buildAboutTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Colors.black));
+    }
+    
+    final bio = _storeData?['bio'] ?? 'No description available';
+    final location = _storeData?['location'] ?? 'Location not specified';
+    final createdAt = _storeData?['createdAt'] as Timestamp?;
+    final joinedDate = createdAt != null 
+        ? '${_getMonthName(createdAt.toDate().month)} ${createdAt.toDate().year}'
+        : 'Recently joined';
+    final responseTime = _storeData?['responseTime'] ?? '< 1 hour';
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAboutSection('About', _storeInfo.bio, Iconsax.info_circle),
+          _buildAboutSection('About', bio, Iconsax.info_circle),
           const SizedBox(height: 16),
-          _buildAboutSection('Location', _storeInfo.location, Iconsax.location),
+          _buildAboutSection('Location', location, Iconsax.location),
           const SizedBox(height: 16),
-          _buildAboutSection('Member Since', _storeInfo.joinedDate, Iconsax.calendar),
+          _buildAboutSection('Member Since', joinedDate, Iconsax.calendar),
           const SizedBox(height: 16),
-          _buildAboutSection('Response Time', _storeInfo.responseTime, Iconsax.timer_1),
+          _buildAboutSection('Response Time', responseTime, Iconsax.timer_1),
           const SizedBox(height: 24),
           _buildStoreHighlights(),
           const SizedBox(height: 24),
@@ -469,6 +753,9 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
   }
 
   Widget _buildReviewsSummary() {
+    final rating = (_storeData?['rating'] ?? 4.5).toDouble();
+    final reviewCount = _storeData?['reviewCount'] ?? 0;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
@@ -487,10 +774,10 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
             children: [
               Column(
                 children: [
-                  Text('${_storeInfo.rating}', style: GoogleFonts.poppins(fontSize: 40, fontWeight: FontWeight.w700, color: Colors.black)),
-                  Row(children: List.generate(5, (i) => Icon(i < _storeInfo.rating.floor() ? Iconsax.star1 : Iconsax.star, size: 16, color: Colors.grey[700]))),
+                  Text('${rating.toStringAsFixed(1)}', style: GoogleFonts.poppins(fontSize: 40, fontWeight: FontWeight.w700, color: Colors.black)),
+                  Row(children: List.generate(5, (i) => Icon(i < rating.floor() ? Iconsax.star1 : Iconsax.star, size: 16, color: Colors.grey[700]))),
                   const SizedBox(height: 4),
-                  Text('${_storeInfo.reviewCount} reviews', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
+                  Text('$reviewCount reviews', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
                 ],
               ),
               const SizedBox(width: 24),
@@ -591,8 +878,8 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(_storeInfo.name, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
-                              Text(_storeInfo.location, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
+                              Text(_storeData?['name'] ?? widget.storeName, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
+                              Text(_storeData?['location'] ?? 'Location not specified', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
                             ],
                           ),
                         ),
@@ -616,6 +903,11 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
         ),
       ),
     );
+  }
+
+  String _getMonthName(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
   }
 }
 
@@ -659,6 +951,188 @@ class _StorePost {
   final int likes, comments;
 
   _StorePost({required this.id, required this.caption, required this.likes, required this.comments});
+}
+
+class _ChatScreen extends StatefulWidget {
+  final String conversationId;
+  final String storeName;
+  final String? storeLogoUrl;
+  final String userId;
+
+  const _ChatScreen({
+    required this.conversationId,
+    required this.storeName,
+    this.storeLogoUrl,
+    required this.userId,
+  });
+
+  @override
+  State<_ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<_ChatScreen> {
+  final TextEditingController _messageController = TextEditingController();
+  final MessagesService _messagesService = MessagesService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Mark as read when opening
+    _messagesService.markAsRead(
+      conversationId: widget.conversationId,
+      userId: widget.userId,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Iconsax.arrow_left, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.grey[200],
+              backgroundImage: widget.storeLogoUrl != null && widget.storeLogoUrl!.isNotEmpty
+                  ? NetworkImage(widget.storeLogoUrl!)
+                  : null,
+              child: widget.storeLogoUrl == null || widget.storeLogoUrl!.isEmpty
+                  ? Icon(Iconsax.shop, size: 18, color: Colors.grey[600])
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.storeName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black)),
+                Text('Store', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
+              ],
+            ),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _messagesService.getMessages(widget.conversationId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Colors.black));
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Iconsax.message, size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text('No messages yet', style: GoogleFonts.poppins(color: Colors.grey[600])),
+                        const SizedBox(height: 8),
+                        Text('Start the conversation', style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 13)),
+                      ],
+                    ),
+                  );
+                }
+
+                final messages = snapshot.data!;
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final message = messages[index];
+                    final isMe = message['senderId'] == widget.userId;
+                    final createdAt = message['createdAt'] as Timestamp?;
+                    final time = createdAt != null ? _messagesService.getMessageTime(createdAt) : '';
+
+                    return Align(
+                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                        child: Column(
+                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isMe ? Colors.black : Colors.grey[100],
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(16),
+                                  topRight: const Radius.circular(16),
+                                  bottomLeft: Radius.circular(isMe ? 16 : 4),
+                                  bottomRight: Radius.circular(isMe ? 4 : 16),
+                                ),
+                              ),
+                              child: Text(message['text'] ?? '', style: GoogleFonts.poppins(fontSize: 14, color: isMe ? Colors.white : Colors.black)),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(time, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+            decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey[200]!))),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    style: GoogleFonts.poppins(fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Type a message...',
+                      hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: _sendMessage,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Iconsax.send_1, color: Colors.white, size: 20),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _sendMessage() async {
+    if (_messageController.text.trim().isEmpty) return;
+
+    await _messagesService.sendMessage(
+      conversationId: widget.conversationId,
+      senderId: widget.userId,
+      text: _messageController.text.trim(),
+    );
+
+    _messageController.clear();
+  }
 }
 
 class _Highlight {

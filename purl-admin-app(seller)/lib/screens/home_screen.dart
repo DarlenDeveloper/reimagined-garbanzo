@@ -9,6 +9,7 @@ import 'request_delivery_screen.dart';
 import 'main_screen.dart';
 import 'messages_screen.dart';
 import '../services/store_service.dart';
+import '../services/messages_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +23,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   final _storeService = StoreService();
+  final _messagesService = MessagesService();
   String _storeName = '';
+  String? _storeId;
   bool _isLoading = true;
 
   @override
@@ -36,11 +39,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> _loadStoreData() async {
     try {
-      // Get user's first name
+      // Get user's first name and store ID
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         setState(() {
           _storeName = user.displayName?.split(' ').first ?? 'there';
+          _storeId = user.uid;
         });
       }
     } catch (e) {
@@ -91,47 +95,51 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         children: [
                           GestureDetector(
                             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MessagesScreen())),
-                            child: Stack(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-                                  child: const Icon(Iconsax.message, color: Colors.black),
-                                ),
-                                Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  child: Container(
-                                    width: 18,
-                                    height: 18,
-                                    decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-                                    child: Center(child: Text('3', style: GoogleFonts.poppins(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600))),
+                            child: _storeId == null
+                                ? Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+                                    child: const Icon(Iconsax.message, color: Colors.black),
+                                  )
+                                : StreamBuilder<int>(
+                                    stream: Stream.periodic(const Duration(seconds: 2)).asyncMap((_) => _messagesService.getTotalUnreadCount(_storeId!)),
+                                    builder: (context, snapshot) {
+                                      final unreadCount = snapshot.data ?? 0;
+                                      return Stack(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+                                            child: const Icon(Iconsax.message, color: Colors.black),
+                                          ),
+                                          if (unreadCount > 0)
+                                            Positioned(
+                                              right: 0,
+                                              top: 0,
+                                              child: Container(
+                                                width: 18,
+                                                height: 18,
+                                                decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+                                                child: Center(
+                                                  child: Text(
+                                                    unreadCount > 99 ? '99+' : '$unreadCount',
+                                                    style: GoogleFonts.poppins(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      );
+                                    },
                                   ),
-                                ),
-                              ],
-                            ),
                           ),
                           const SizedBox(width: 10),
                           GestureDetector(
                             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationsScreen())),
-                            child: Stack(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-                                  child: const Icon(Iconsax.notification, color: Colors.black),
-                                ),
-                                Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  child: Container(
-                                    width: 18,
-                                    height: 18,
-                                    decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-                                    child: Center(child: Text('2', style: GoogleFonts.poppins(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600))),
-                                  ),
-                                ),
-                              ],
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+                              child: const Icon(Iconsax.notification, color: Colors.black),
                             ),
                           ),
                         ],

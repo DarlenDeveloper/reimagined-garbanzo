@@ -1,6 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
+import '../services/posts_service.dart';
+import '../services/followers_service.dart';
+import '../services/store_service.dart';
+import '../services/media_service.dart';
+import '../services/stories_service.dart';
 
 class SocialsScreen extends StatefulWidget {
   const SocialsScreen({super.key});
@@ -11,24 +21,76 @@ class SocialsScreen extends StatefulWidget {
 
 class _SocialsScreenState extends State<SocialsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final PostsService _postsService = PostsService();
+  final FollowersService _followersService = FollowersService();
+  final StoreService _storeService = StoreService();
+  final StoriesService _storiesService = StoriesService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   
-  final List<Map<String, dynamic>> _posts = [
-    {'content': 'New arrivals just dropped! Check out our latest collection 🔥', 'likes': 245, 'comments': 42, 'shares': 18, 'views': 1250, 'time': '2h ago', 'image': true, 'isPremium': false, 'expires': '22h left'},
-    {'content': 'Flash sale this weekend! Up to 50% off selected items 🛍️', 'likes': 528, 'comments': 89, 'shares': 156, 'views': 3420, 'time': '1d ago', 'image': true, 'isPremium': true, 'expires': '6d left'},
-    {'content': 'Thank you for 1000 followers! 🎉 Stay tuned for exclusive deals', 'likes': 892, 'comments': 234, 'shares': 67, 'views': 4500, 'time': '3d ago', 'image': false, 'isPremium': false, 'expires': 'Expired'},
-  ];
+  String? _storeId;
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _posts = [];
+  List<Map<String, dynamic>> _stories = [];
+  int _followerCount = 0;
+  Map<String, int> _engagementStats = {};
+  String _storeName = '';
+  String? _storeLogoUrl;
 
-  final List<Map<String, dynamic>> _stories = [
-    {'title': 'Add Story', 'isAdd': true},
-    {'title': 'New Drop', 'views': 234, 'isAdd': false},
-    {'title': 'Sale!', 'views': 567, 'isAdd': false},
-    {'title': 'BTS', 'views': 123, 'isAdd': false},
-  ];
+
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {}); // Rebuild to update FAB
+    });
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      // Get store ID
+      final storeId = await _storeService.getUserStoreId();
+      if (storeId == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      setState(() => _storeId = storeId);
+
+      // Clean up expired stories
+      await _storiesService.cleanupExpiredStories(storeId);
+
+      // Load store data
+      final storeData = await _storeService.getStore(storeId);
+      
+      // Load posts
+      final posts = await _postsService.getPosts(storeId);
+      
+      // Load stories
+      final stories = await _storiesService.getActiveStories(storeId);
+      
+      // Load follower count
+      final followerCount = await _followersService.getFollowerCount(storeId);
+      
+      // Load engagement stats
+      final engagementStats = await _postsService.getEngagementStats(storeId);
+
+      setState(() {
+        _storeName = storeData?['name'] ?? 'Your Store';
+        _storeLogoUrl = storeData?['logoUrl'];
+        _posts = posts;
+        _stories = stories;
+        _followerCount = followerCount;
+        _engagementStats = engagementStats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -42,23 +104,59 @@ class _SocialsScreenState extends State<SocialsScreen> with SingleTickerProvider
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _CreatePostSheet(onPost: (content, isPremium) {
-        setState(() {
-          _posts.insert(0, {
-            'content': content,
-            'likes': 0, 'comments': 0, 'shares': 0, 'views': 0,
-            'time': 'Just now',
-            'image': false,
-            'isPremium': isPremium,
-            'expires': isPremium ? '7d left' : '24h left',
-          });
-        });
-      }),
+      builder: (context) => _CreatePostSheet(
+        storeId: _storeId,
+        onPost: (content, mediaUrls) async {
+          if (_storeId == null) return;
+          
+          try {
+            await _postsService.createPost(
+              storeId: _storeId!,
+              storeName: _storeName,
+              storeLogoUrl: _storeLogoUrl,
+              content: content,
+              mediaUrls: mediaUrls,
+              isPremium: false,
+            );
+            
+            // Reload posts
+            _loadData();
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to create post: $e')),
+              );
+            }
+          }
+        },
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: Colors.black), onPressed: () => Navigator.pop(context)),
+          title: Text('Store Feed', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w700)),
+        ),
+        body: _buildSkeletonLoader(),
+      );
+    }
+
+    // Calculate engagement rate
+    final totalViews = _engagementStats['views'] ?? 0;
+    final totalEngagement = (_engagementStats['likes'] ?? 0) + 
+                           (_engagementStats['comments'] ?? 0) + 
+                           (_engagementStats['shares'] ?? 0);
+    final engagementRate = totalViews > 0 
+        ? ((totalEngagement / totalViews) * 100).toStringAsFixed(1)
+        : '0.0';
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -70,7 +168,17 @@ class _SocialsScreenState extends State<SocialsScreen> with SingleTickerProvider
           IconButton(icon: const Icon(Iconsax.chart, color: Colors.black), onPressed: () => _showInsights()),
         ],
       ),
-      floatingActionButton: FloatingActionButton(onPressed: _showCreatePostSheet, backgroundColor: Colors.black, child: const Icon(Iconsax.add, color: Colors.white)),
+      floatingActionButton: _tabController.index == 0
+          ? FloatingActionButton(
+              onPressed: _showCreatePostSheet,
+              backgroundColor: Colors.black,
+              child: const Icon(Iconsax.add, color: Colors.white),
+            )
+          : FloatingActionButton(
+              onPressed: _showCreateStorySheet,
+              backgroundColor: Colors.black,
+              child: const Icon(Iconsax.camera, color: Colors.white),
+            ),
       body: Column(
         children: [
           // Stats Row
@@ -78,153 +186,186 @@ class _SocialsScreenState extends State<SocialsScreen> with SingleTickerProvider
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                _miniStat('1.2K', 'Followers'),
+                _miniStat(_formatNumber(_followerCount), 'Followers'),
                 _miniStat('${_posts.length}', 'Posts'),
-                _miniStat('8.5%', 'Engagement'),
-                _miniStat('12.4K', 'Reach'),
+                _miniStat('$engagementRate%', 'Engagement'),
+                _miniStat(_formatNumber(totalViews), 'Reach'),
               ],
             ),
           ),
-          // Stories
-          SizedBox(
-            height: 100,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: _stories.length,
-              itemBuilder: (context, index) {
-                final story = _stories[index];
-                return _StoryItem(
-                  title: story['title'],
-                  views: story['views'],
-                  isAdd: story['isAdd'] ?? false,
-                  onTap: story['isAdd'] == true ? () => _showAddStorySheet() : null,
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
           // Tabs
-          Container(
-            decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey[200]!))),
-            child: TabBar(
-              controller: _tabController,
-              labelColor: Colors.black,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: Colors.black,
-              labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-              tabs: const [Tab(text: 'Posts'), Tab(text: 'Scheduled')],
-            ),
+          TabBar(
+            controller: _tabController,
+            labelColor: Colors.black,
+            unselectedLabelColor: Colors.grey[600],
+            indicatorColor: Colors.black,
+            indicatorWeight: 2,
+            dividerColor: Colors.transparent,
+            labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            tabs: const [Tab(text: 'Posts'), Tab(text: 'Stories')],
           ),
-          // Posts
+          // Content
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildPostsList(),
-                _buildScheduledList(),
+                RefreshIndicator(
+                  onRefresh: _loadData,
+                  color: Colors.black,
+                  child: _buildPostsList(),
+                ),
+                RefreshIndicator(
+                  onRefresh: _loadData,
+                  color: Colors.black,
+                  child: _buildStoriesList(),
+                ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _formatNumber(int number) {
+    if (number >= 1000000) {
+      return '${(number / 1000000).toStringAsFixed(1)}M';
+    } else if (number >= 1000) {
+      return '${(number / 1000).toStringAsFixed(1)}K';
+    }
+    return number.toString();
   }
 
   Widget _miniStat(String value, String label) {
     return Expanded(
       child: Column(
         children: [
-          Text(value, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
-          Text(label, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
+          Text(value, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
+          Text(label, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]!)),
         ],
       ),
     );
   }
 
   Widget _buildPostsList() {
+    if (_posts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Iconsax.document, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text('No posts yet', style: GoogleFonts.poppins(color: Colors.grey[600])),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _showCreatePostSheet,
+              child: Text('Create your first post', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.zero,
       itemCount: _posts.length,
-      itemBuilder: (context, index) => _PostCard(post: _posts[index], onTap: () => _showPostDetails(_posts[index])),
+      itemBuilder: (context, index) {
+        final post = _posts[index];
+        return _PostCard(
+          key: ValueKey(post['id']),
+          post: post,
+          postsService: _postsService,
+          storeName: _storeName,
+          storeLogoUrl: _storeLogoUrl,
+          storeId: _storeId!,
+          userId: _auth.currentUser?.uid ?? '',
+          onTap: () => _showPostDetails(post),
+          onDelete: () async {
+            if (_storeId != null) {
+              await _postsService.deletePost(_storeId!, post['id']);
+              _loadData();
+            }
+          },
+        );
+      },
     );
   }
 
-  Widget _buildScheduledList() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Iconsax.calendar, size: 48, color: Colors.grey[300]),
-          const SizedBox(height: 16),
-          Text('No scheduled posts', style: GoogleFonts.poppins(color: Colors.grey[600])),
-          const SizedBox(height: 8),
-          TextButton(onPressed: _showCreatePostSheet, child: Text('Schedule a post', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600))),
-        ],
+  Widget _buildStoriesList() {
+    if (_stories.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Iconsax.video_circle, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text('No stories yet', style: GoogleFonts.poppins(color: Colors.grey[600])),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _showCreateStorySheet,
+              child: Text('Create your first story', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(8),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 9 / 16,
       ),
+      itemCount: _stories.length,
+      itemBuilder: (context, index) {
+        final story = _stories[index];
+        return _StoryCard(
+          story: story,
+          storiesService: _storiesService,
+          onTap: () => _viewStory(index),
+          onDelete: () async {
+            if (_storeId != null) {
+              await _storiesService.deleteStory(_storeId!, story['id']);
+              _loadData();
+            }
+          },
+        );
+      },
     );
   }
 
-  void _showInsights() {
+  void _showCreateStorySheet() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Insights', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 20),
-            Row(children: [_insightCard('Total Views', '24.5K', '+12%', Colors.blue), const SizedBox(width: 12), _insightCard('Engagement', '8.5%', '+3%', Colors.green)]),
-            const SizedBox(height: 12),
-            Row(children: [_insightCard('New Followers', '+156', 'This week', Colors.purple), const SizedBox(width: 12), _insightCard('Profile Visits', '892', '+24%', Colors.orange)]),
-            const SizedBox(height: 24),
-          ],
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-      ),
-    );
-  }
-
-  Widget _insightCard(String label, String value, String change, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: color.withAlpha(25), borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
-            const SizedBox(height: 4),
-            Text(value, style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700)),
-            Text(change, style: GoogleFonts.poppins(fontSize: 12, color: color, fontWeight: FontWeight.w500)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showAddStorySheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Add Story', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
+            Text('Add Story', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
             const SizedBox(height: 24),
             Row(
               children: [
-                _storyOption(Iconsax.camera, 'Camera', Colors.blue),
+                Expanded(
+                  child: _storyOption(Iconsax.image, 'Photo', () async {
+                    Navigator.pop(context);
+                    await _pickStoryMedia(ImageSource.gallery, isVideo: false);
+                  }),
+                ),
                 const SizedBox(width: 16),
-                _storyOption(Iconsax.gallery, 'Gallery', Colors.purple),
-                const SizedBox(width: 16),
-                _storyOption(Iconsax.text, 'Text', Colors.orange),
+                Expanded(
+                  child: _storyOption(Iconsax.video, 'Video', () async {
+                    Navigator.pop(context);
+                    await _pickStoryMedia(ImageSource.gallery, isVideo: true);
+                  }),
+                ),
               ],
             ),
             const SizedBox(height: 24),
@@ -234,24 +375,184 @@ class _SocialsScreenState extends State<SocialsScreen> with SingleTickerProvider
     );
   }
 
-  Widget _storyOption(IconData icon, String label, Color color) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          decoration: BoxDecoration(color: color.withAlpha(25), borderRadius: BorderRadius.circular(12)),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 8),
-              Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
-            ],
-          ),
+  Widget _storyOption(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.black, size: 28),
+            const SizedBox(height: 8),
+            Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Colors.black)),
+          ],
         ),
       ),
     );
   }
+
+  Future<void> _pickStoryMedia(ImageSource source, {required bool isVideo}) async {
+    if (_storeId == null) return;
+
+    try {
+      final picker = ImagePicker();
+      XFile? file;
+
+      if (isVideo) {
+        file = await picker.pickVideo(source: source);
+      } else {
+        file = await picker.pickImage(source: source);
+      }
+
+      if (file == null) return;
+
+      // Show loading
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Colors.black),
+        ),
+      );
+
+      final mediaService = MediaService();
+      final postId = DateTime.now().millisecondsSinceEpoch.toString();
+
+      if (isVideo) {
+        final mediaData = await mediaService.uploadVideo(
+          videoFile: File(file.path),
+          storeId: _storeId!,
+          postId: postId,
+        );
+
+        await _storiesService.createStory(
+          storeId: _storeId!,
+          mediaUrl: mediaData['fullUrl'],
+          mediaType: 'video',
+          thumbnailUrl: mediaData['thumbnailUrl'],
+          duration: mediaData['duration'],
+        );
+      } else {
+        final mediaData = await mediaService.uploadImage(
+          imageFile: File(file.path),
+          storeId: _storeId!,
+          postId: postId,
+        );
+
+        await _storiesService.createStory(
+          storeId: _storeId!,
+          mediaUrl: mediaData['fullUrl'],
+          mediaType: 'image',
+          thumbnailUrl: mediaData['thumbnailUrl'],
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      _loadData();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Story created successfully'),
+          backgroundColor: Colors.black,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create story: $e')),
+      );
+    }
+  }
+
+  void _viewStory(int initialIndex) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => _StoryViewerScreen(
+          stories: _stories,
+          initialIndex: initialIndex,
+          storeName: _storeName,
+          storeLogoUrl: _storeLogoUrl,
+          storiesService: _storiesService,
+          storeId: _storeId!,
+          onDelete: (storyId) async {
+            await _storiesService.deleteStory(_storeId!, storyId);
+            Navigator.pop(context);
+            _loadData();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showInsights() {
+    final totalViews = _engagementStats['views'] ?? 0;
+    final totalLikes = _engagementStats['likes'] ?? 0;
+    final totalComments = _engagementStats['comments'] ?? 0;
+    final totalShares = _engagementStats['shares'] ?? 0;
+    final totalEngagement = totalLikes + totalComments + totalShares;
+    final engagementRate = totalViews > 0 
+        ? ((totalEngagement / totalViews) * 100).toStringAsFixed(1)
+        : '0.0';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Insights', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
+            const SizedBox(height: 20),
+            Row(children: [
+              _insightCard('Total Views', _formatNumber(totalViews), '${_posts.length} posts'), 
+              const SizedBox(width: 12), 
+              _insightCard('Engagement', '$engagementRate%', '$totalEngagement total')
+            ]),
+            const SizedBox(height: 12),
+            Row(children: [
+              _insightCard('Followers', _formatNumber(_followerCount), 'Total'), 
+              const SizedBox(width: 12), 
+              _insightCard('Total Likes', _formatNumber(totalLikes), 'All posts')
+            ]),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _insightCard(String label, String value, String change) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[400]!)),
+            const SizedBox(height: 4),
+            Text(value, style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
+            Text(change, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[400]!, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
+  }
+
+
 
   void _showPostDetails(Map<String, dynamic> post) {
     showModalBottomSheet(
@@ -259,20 +560,20 @@ class _SocialsScreenState extends State<SocialsScreen> with SingleTickerProvider
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Post Performance', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+            Text('Post Performance', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _statItem(Iconsax.eye, '${post['views']}', 'Views'),
-                _statItem(Iconsax.heart, '${post['likes']}', 'Likes'),
-                _statItem(Iconsax.message, '${post['comments']}', 'Comments'),
-                _statItem(Iconsax.send_2, '${post['shares']}', 'Shares'),
+                _statItem(Iconsax.eye, '${post['views'] ?? 0}', 'Views'),
+                _statItem(Iconsax.heart, '${post['likes'] ?? 0}', 'Likes'),
+                _statItem(Iconsax.message, '${post['comments'] ?? 0}', 'Comments'),
+                _statItem(Iconsax.send_2, '${post['shares'] ?? 0}', 'Shares'),
               ],
             ),
             const SizedBox(height: 24),
@@ -280,9 +581,18 @@ class _SocialsScreenState extends State<SocialsScreen> with SingleTickerProvider
               children: [
                 Expanded(child: _actionBtn(Iconsax.edit, 'Edit', () => Navigator.pop(context))),
                 const SizedBox(width: 12),
-                Expanded(child: _actionBtn(Iconsax.chart, 'Boost', () => Navigator.pop(context))),
-                const SizedBox(width: 12),
-                Expanded(child: _actionBtn(Iconsax.trash, 'Delete', () => Navigator.pop(context), isDestructive: true)),
+                Expanded(child: _actionBtn(Iconsax.trash, 'Delete', () async {
+                  Navigator.pop(context);
+                  if (_storeId != null) {
+                    await _postsService.deletePost(_storeId!, post['id']);
+                    _loadData();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Post deleted'), backgroundColor: Colors.black),
+                      );
+                    }
+                  }
+                }, isDestructive: true)),
               ],
             ),
             const SizedBox(height: 16),
@@ -295,10 +605,10 @@ class _SocialsScreenState extends State<SocialsScreen> with SingleTickerProvider
   Widget _statItem(IconData icon, String value, String label) {
     return Column(
       children: [
-        Icon(icon, color: Colors.grey[600], size: 20),
+        Icon(icon, color: Colors.grey[600]!, size: 20),
         const SizedBox(height: 4),
-        Text(value, style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-        Text(label, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
+        Text(value, style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: Colors.black)),
+        Text(label, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]!)),
       ],
     );
   }
@@ -308,7 +618,11 @@ class _SocialsScreenState extends State<SocialsScreen> with SingleTickerProvider
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(color: isDestructive ? Colors.red.withAlpha(25) : Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: isDestructive ? Colors.red.withOpacity(0.1) : Colors.white, 
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isDestructive ? Colors.red : Colors.grey[200]!),
+        ),
         child: Column(
           children: [
             Icon(icon, color: isDestructive ? Colors.red : Colors.black, size: 20),
@@ -319,133 +633,640 @@ class _SocialsScreenState extends State<SocialsScreen> with SingleTickerProvider
       ),
     );
   }
-}
 
-class _StoryItem extends StatelessWidget {
-  final String title;
-  final int? views;
-  final bool isAdd;
-  final VoidCallback? onTap;
-
-  const _StoryItem({required this.title, this.views, required this.isAdd, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 72,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        child: Column(
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: isAdd ? Colors.grey[100] : Colors.black,
-                shape: BoxShape.circle,
-                border: isAdd ? Border.all(color: Colors.grey[300]!, width: 2, strokeAlign: BorderSide.strokeAlignOutside) : null,
-                
+  Widget _buildSkeletonLoader() {
+    return Column(
+      children: [
+        // Stats skeleton
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: List.generate(4, (index) => Expanded(
+              child: Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: 50,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: isAdd
-                  ? const Icon(Iconsax.add, color: Colors.black)
-                  : Center(child: Text(title[0], style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20))),
-            ),
-            const SizedBox(height: 4),
-            Text(title, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
-            if (!isAdd) Text('${views} views', style: GoogleFonts.poppins(fontSize: 9, color: Colors.grey[500])),
-          ],
+            )),
+          ),
         ),
-      ),
+        // Tabs skeleton
+        Container(
+          height: 48,
+          child: Row(
+            children: [
+              Expanded(
+                child: Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 60, vertical: 14),
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 60, vertical: 14),
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Posts skeleton
+        Expanded(
+          child: ListView.builder(
+            padding: EdgeInsets.zero,
+            itemCount: 3,
+            itemBuilder: (context, index) => _buildSkeletonPost(),
+          ),
+        ),
+      ],
     );
   }
-}
 
-class _PostCard extends StatelessWidget {
-  final Map<String, dynamic> post;
-  final VoidCallback onTap;
-
-  const _PostCard({required this.post, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (post['image'] == true)
-              Container(
-                height: 180,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+  Widget _buildSkeletonPost() {
+    return Container(
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header skeleton
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ),
-                child: Center(child: Icon(Iconsax.image, size: 48, color: Colors.grey[400])),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (post['isPremium'] == true)
-                        Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: Colors.purple.withAlpha(25), borderRadius: BorderRadius.circular(4)),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Iconsax.crown, size: 12, color: Colors.purple),
-                              const SizedBox(width: 4),
-                              Text('Premium', style: GoogleFonts.poppins(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.w500)),
-                            ],
+                      Shimmer.fromColors(
+                        baseColor: Colors.grey[300]!,
+                        highlightColor: Colors.grey[100]!,
+                        child: Container(
+                          width: 120,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
                           ),
                         ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: post['expires'] == 'Expired' ? Colors.grey.withAlpha(25) : Colors.orange.withAlpha(25),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(post['expires'], style: GoogleFonts.poppins(fontSize: 10, color: post['expires'] == 'Expired' ? Colors.grey : Colors.orange)),
                       ),
-                      const Spacer(),
-                      Text(post['time'], style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
+                      const SizedBox(height: 4),
+                      Shimmer.fromColors(
+                        baseColor: Colors.grey[300]!,
+                        highlightColor: Colors.grey[100]!,
+                        child: Container(
+                          width: 60,
+                          height: 11,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(post['content'], style: GoogleFonts.poppins(fontSize: 14, height: 1.4)),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _engagementStat(Iconsax.eye, '${post['views']}'),
-                      _engagementStat(Iconsax.heart, '${post['likes']}'),
-                      _engagementStat(Iconsax.message, '${post['comments']}'),
-                      _engagementStat(Iconsax.send_2, '${post['shares']}'),
-                    ],
+                ),
+              ],
+            ),
+          ),
+          // Content skeleton
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    width: double.infinity,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
-                ],
+                ),
+                const SizedBox(height: 4),
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    width: 200,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Image skeleton
+          AspectRatio(
+            aspectRatio: 1,
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey[300]!,
+              highlightColor: Colors.grey[100]!,
+              child: Container(
+                color: Colors.white,
               ),
             ),
-          ],
-        ),
+          ),
+          // Engagement skeleton
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    width: 60,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+class _PostCard extends StatefulWidget {
+  final Map<String, dynamic> post;
+  final PostsService postsService;
+  final String storeName;
+  final String? storeLogoUrl;
+  final String storeId;
+  final String userId;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _PostCard({
+    super.key,
+    required this.post,
+    required this.postsService,
+    required this.storeName,
+    this.storeLogoUrl,
+    required this.storeId,
+    required this.userId,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  State<_PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<_PostCard> {
+  int? _likes;
+  bool? _isLiked;
+  bool _isLiking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateLikeState();
+  }
+
+  @override
+  void didUpdateWidget(_PostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Always update when widget rebuilds to get fresh data
+    _updateLikeState();
+  }
+
+  void _updateLikeState() {
+    setState(() {
+      _likes = widget.post['likes'] ?? 0;
+      _isLiked = widget.postsService.hasUserLiked(widget.post, widget.userId);
+    });
+  }
+
+  Future<void> _handleLike() async {
+    if (_isLiking || _likes == null || _isLiked == null) return;
+    
+    final wasLiked = _isLiked!;
+    final wasLikes = _likes!;
+    
+    // Optimistic update
+    setState(() {
+      _isLiking = true;
+      _isLiked = !_isLiked!;
+      _likes = _likes! + (_isLiked! ? 1 : -1);
+    });
+
+    try {
+      await widget.postsService.toggleLike(widget.storeId, widget.post['id'], widget.userId);
+      
+      // Update the post data in the parent's list
+      widget.post['likes'] = _likes;
+      if (_isLiked!) {
+        widget.post['likedBy'] = [...(widget.post['likedBy'] ?? []), widget.userId];
+      } else {
+        final likedBy = List<String>.from(widget.post['likedBy'] ?? []);
+        likedBy.remove(widget.userId);
+        widget.post['likedBy'] = likedBy;
+      }
+    } catch (e) {
+      // Revert on error
+      setState(() {
+        _isLiked = wasLiked;
+        _likes = wasLikes;
+      });
+    } finally {
+      setState(() {
+        _isLiking = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaList = widget.post['mediaUrls'] as List?;
+    final hasMedia = mediaList != null && mediaList.isNotEmpty;
+    final createdAt = widget.post['createdAt'] as Timestamp?;
+    
+    final timeAgo = createdAt != null 
+        ? widget.postsService.getTimeAgo(createdAt)
+        : 'Unknown';
+
+    return Container(
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Post header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                // Store logo/avatar
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    shape: BoxShape.circle,
+                  ),
+                  child: widget.storeLogoUrl != null
+                      ? ClipOval(
+                          child: Image.network(
+                            widget.storeLogoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Center(
+                                child: Text(
+                                  widget.storeName.isNotEmpty ? widget.storeName[0].toUpperCase() : 'S',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      : Center(
+                          child: Text(
+                            widget.storeName.isNotEmpty ? widget.storeName[0].toUpperCase() : 'S',
+                            style: GoogleFonts.poppins(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.storeName,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: Colors.black,
+                        ),
+                      ),
+                      Text(
+                        timeAgo,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Iconsax.more, size: 20),
+                  onPressed: widget.onTap,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  color: Colors.black,
+                ),
+              ],
+            ),
+          ),
+          
+          // Media
+          if (hasMedia)
+            _buildMediaPreview(mediaList!),
+          
+          // Post content below media
+          if (widget.post['content'] != null && (widget.post['content'] as String).isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Text(
+                widget.post['content'] ?? '',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  height: 1.4,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          
+          // Engagement row
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                if (_likes != null && _isLiked != null)
+                  _engagementButtonClickable(
+                    _isLiked! ? Iconsax.heart5 : Iconsax.heart,
+                    '$_likes',
+                    _handleLike,
+                    isActive: _isLiked!,
+                  )
+                else
+                  _engagementButton(Iconsax.heart, '0'),
+                const SizedBox(width: 20),
+                _engagementButton(Iconsax.message, '${widget.post['comments'] ?? 0}'),
+                const SizedBox(width: 20),
+                _engagementButton(Iconsax.send_2, '${widget.post['shares'] ?? 0}'),
+                const Spacer(),
+                Text(
+                  '${widget.post['views'] ?? 0} views',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _engagementStat(IconData icon, String value) {
-    return Expanded(
+  Widget _buildMediaPreview(List mediaList) {
+    final firstMedia = mediaList[0] as Map<String, dynamic>;
+    final type = firstMedia['type'] as String?;
+    final thumbnailUrl = firstMedia['thumbnailUrl'] as String?;
+    final duration = firstMedia['duration'] as num?;
+
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(maxHeight: 500),
+      color: Colors.black,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (thumbnailUrl != null)
+            Image.network(
+              thumbnailUrl,
+              fit: BoxFit.contain,
+              width: double.infinity,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                        : null,
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Center(child: Icon(Iconsax.image, size: 48, color: Colors.grey[400]));
+              },
+            )
+          else
+            Center(child: Icon(Iconsax.image, size: 48, color: Colors.grey[400])),
+          
+          // Video play button
+          if (type == 'video')
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.6),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Iconsax.play, color: Colors.white, size: 28),
+            ),
+          
+          // Video duration
+          if (type == 'video' && duration != null)
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  _formatDuration(duration.toInt()),
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          
+          // Multiple media indicator
+          if (mediaList.length > 1)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Iconsax.gallery, size: 12, color: Colors.white),
+                    const SizedBox(width: 4),
+                    Text(
+                      '1/${mediaList.length}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDuration(int seconds) {
+    final minutes = seconds ~/ 60;
+    final remainingSeconds = seconds % 60;
+    return '${minutes}:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+
+  Widget _engagementButton(IconData icon, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 22, color: Colors.black),
+        if (value != '0') ...[
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: Colors.black,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _engagementButtonClickable(IconData icon, String value, VoidCallback onTap, {bool isActive = false}) {
+    return GestureDetector(
+      onTap: onTap,
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.grey[600]),
-          const SizedBox(width: 4),
-          Text(value, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
+          Icon(icon, size: 22, color: isActive ? Colors.red : Colors.black),
+          if (value != '0') ...[
+            const SizedBox(width: 4),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.black,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -453,8 +1274,9 @@ class _PostCard extends StatelessWidget {
 }
 
 class _CreatePostSheet extends StatefulWidget {
-  final Function(String content, bool isPremium) onPost;
-  const _CreatePostSheet({required this.onPost});
+  final String? storeId;
+  final Function(String content, List<Map<String, dynamic>> mediaUrls) onPost;
+  const _CreatePostSheet({required this.storeId, required this.onPost});
 
   @override
   State<_CreatePostSheet> createState() => _CreatePostSheetState();
@@ -462,37 +1284,142 @@ class _CreatePostSheet extends StatefulWidget {
 
 class _CreatePostSheetState extends State<_CreatePostSheet> {
   final _contentController = TextEditingController();
-  bool _isPremium = false;
-  bool _hasImage = false;
+  final MediaService _mediaService = MediaService();
+  final ImagePicker _picker = ImagePicker();
+  
+  List<File> _selectedMedia = [];
+  List<String> _mediaTypes = []; // 'image' or 'video'
+  bool _isPosting = false;
+  bool _isUploadingMedia = false;
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        setState(() {
+          _selectedMedia.add(File(image.path));
+          _mediaTypes.add('image');
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick image: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    try {
+      final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+      if (video != null) {
+        setState(() {
+          _selectedMedia.add(File(video.path));
+          _mediaTypes.add('video');
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick video: $e')),
+        );
+      }
+    }
+  }
+
+  void _removeMedia(int index) {
+    setState(() {
+      _selectedMedia.removeAt(index);
+      _mediaTypes.removeAt(index);
+    });
+  }
+
+  Future<void> _handlePost() async {
+    if (_contentController.text.isEmpty && _selectedMedia.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add content or media')),
+      );
+      return;
+    }
+
+    setState(() => _isPosting = true);
+
+    try {
+      // Upload media if any
+      List<Map<String, dynamic>> uploadedMedia = [];
+      
+      if (_selectedMedia.isNotEmpty && widget.storeId != null) {
+        setState(() => _isUploadingMedia = true);
+        
+        for (int i = 0; i < _selectedMedia.length; i++) {
+          final file = _selectedMedia[i];
+          final type = _mediaTypes[i];
+          final postId = DateTime.now().millisecondsSinceEpoch.toString();
+
+          if (type == 'image') {
+            final mediaData = await _mediaService.uploadImage(
+              imageFile: file,
+              storeId: widget.storeId!,
+              postId: postId,
+            );
+            uploadedMedia.add(mediaData);
+          } else if (type == 'video') {
+            final mediaData = await _mediaService.uploadVideo(
+              videoFile: file,
+              storeId: widget.storeId!,
+              postId: postId,
+            );
+            uploadedMedia.add(mediaData);
+          }
+        }
+        
+        setState(() => _isUploadingMedia = false);
+      }
+
+      await widget.onPost(_contentController.text, uploadedMedia);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      setState(() {
+        _isPosting = false;
+        _isUploadingMedia = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create post: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
-      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
       child: Column(
         children: [
-          Container(margin: const EdgeInsets.only(top: 12), width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+          Container(margin: const EdgeInsets.only(top: 12), width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[200]!, borderRadius: BorderRadius.circular(2))),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey[600]))),
-                Text('Create Post', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
                 TextButton(
-                  onPressed: () {
-                    if (_contentController.text.isNotEmpty) {
-                      widget.onPost(_contentController.text, _isPremium);
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: Text('Post', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
+                  onPressed: _isPosting ? null : () => Navigator.pop(context), 
+                  child: Text('Cancel', style: GoogleFonts.poppins(color: _isPosting ? Colors.grey[600]! : Colors.grey[600]!)),
                 ),
+                Text('Create Post', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
+                _isPosting
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                    : TextButton(
+                        onPressed: _handlePost,
+                        child: Text('Post', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
+                      ),
               ],
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1, color: Colors.grey[200]!),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(16),
@@ -500,59 +1427,115 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
                 Container(
                   height: 150,
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
                   child: TextField(
                     controller: _contentController,
                     maxLines: 6,
-                    decoration: InputDecoration.collapsed(hintText: "What's happening at your store?", hintStyle: GoogleFonts.poppins(color: Colors.grey[400])),
-                    style: GoogleFonts.poppins(),
+                    enabled: !_isPosting,
+                    decoration: InputDecoration.collapsed(
+                      hintText: "What's happening at your store?", 
+                      hintStyle: GoogleFonts.poppins(color: Colors.grey[600]!)
+                    ),
+                    style: GoogleFonts.poppins(color: Colors.black),
                   ),
                 ),
                 const SizedBox(height: 16),
+                
+                // Media buttons
                 Row(
                   children: [
-                    _mediaBtn(Iconsax.image, 'Photo', () => setState(() => _hasImage = !_hasImage), _hasImage),
+                    Expanded(
+                      child: _mediaBtn(Iconsax.image, 'Photo', _pickImage, _selectedMedia.any((m) => _mediaTypes[_selectedMedia.indexOf(m)] == 'image')),
+                    ),
                     const SizedBox(width: 12),
-                    _mediaBtn(Iconsax.video, 'Video', () {}, false),
-                    const SizedBox(width: 12),
-                    _mediaBtn(Iconsax.link, 'Link', () {}, false),
+                    Expanded(
+                      child: _mediaBtn(Iconsax.video, 'Video', _pickVideo, _selectedMedia.any((m) => _mediaTypes[_selectedMedia.indexOf(m)] == 'video')),
+                    ),
                   ],
                 ),
-                if (_hasImage) ...[
+                
+                // Selected media preview
+                if (_selectedMedia.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  Container(
+                  SizedBox(
                     height: 120,
-                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
-                    child: Center(child: Icon(Iconsax.gallery_add, size: 32, color: Colors.grey[400])),
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _selectedMedia.length,
+                      itemBuilder: (context, index) {
+                        return _buildMediaPreview(index);
+                      },
+                    ),
                   ),
                 ],
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.purple.withAlpha(15), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.purple.withAlpha(50))),
-                  child: Row(
-                    children: [
-                      const Icon(Iconsax.crown, color: Colors.purple, size: 24),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Premium Post', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                            Text('Visible for 7 days instead of 24h', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
-                          ],
+                
+                // Upload progress
+                if (_isUploadingMedia) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                         ),
-                      ),
-                      Switch(
-                        value: _isPremium,
-                        onChanged: (v) => setState(() => _isPremium = v),
-                        activeTrackColor: Colors.purple.withAlpha(100),
-                        thumbColor: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.selected) ? Colors.purple : Colors.grey),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Text('Uploading media...', style: GoogleFonts.poppins(color: Colors.black)),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMediaPreview(int index) {
+    final file = _selectedMedia[index];
+    final type = _mediaTypes[index];
+
+    return Container(
+      width: 120,
+      margin: const EdgeInsets.only(right: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: type == 'image'
+                ? Image.file(file, fit: BoxFit.cover, width: 120, height: 120)
+                : Container(
+                    color: Colors.black,
+                    child: const Center(
+                      child: Icon(Iconsax.video, color: Colors.white, size: 32),
+                    ),
+                  ),
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: () => _removeMedia(index),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Iconsax.close_circle, color: Colors.white, size: 20),
+              ),
             ),
           ),
         ],
@@ -561,22 +1544,573 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
   }
 
   Widget _mediaBtn(IconData icon, String label, VoidCallback onTap, bool isActive) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(color: isActive ? Colors.black : Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 18, color: isActive ? Colors.white : Colors.black),
-              const SizedBox(width: 6),
-              Text(label, style: GoogleFonts.poppins(fontSize: 13, color: isActive ? Colors.white : Colors.black)),
-            ],
-          ),
+    return GestureDetector(
+      onTap: _isPosting ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.black : Colors.white, 
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isActive ? Colors.black : Colors.grey[200]!),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: isActive ? Colors.white : Colors.black),
+            const SizedBox(width: 6),
+            Text(label, style: GoogleFonts.poppins(fontSize: 13, color: isActive ? Colors.white : Colors.black)),
+          ],
         ),
       ),
     );
+  }
+}
+
+
+// Story Card Widget
+class _StoryCard extends StatelessWidget {
+  final Map<String, dynamic> story;
+  final StoriesService storiesService;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _StoryCard({
+    required this.story,
+    required this.storiesService,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final thumbnailUrl = story['thumbnailUrl'] as String?;
+    final mediaType = story['mediaType'] as String?;
+    final expiresAt = story['expiresAt'] as Timestamp?;
+    final timeRemaining = expiresAt != null ? storiesService.getTimeRemaining(expiresAt) : '';
+
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: () => _showOptions(context),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Thumbnail
+            if (thumbnailUrl != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  thumbnailUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Center(
+                      child: Icon(Iconsax.image, size: 48, color: Colors.grey[400]),
+                    );
+                  },
+                ),
+              )
+            else
+              Center(child: Icon(Iconsax.image, size: 48, color: Colors.grey[400])),
+            
+            // Video indicator
+            if (mediaType == 'video')
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Iconsax.play, color: Colors.white, size: 32),
+                ),
+              ),
+            
+            // Time remaining badge
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  timeRemaining,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+            
+            // Views count
+            Positioned(
+              bottom: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Iconsax.eye, size: 12, color: Colors.white),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${story['views'] ?? 0}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Iconsax.trash, color: Colors.red),
+              title: Text('Delete Story', style: GoogleFonts.poppins(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                onDelete();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Story Viewer Screen
+class _StoryViewerScreen extends StatefulWidget {
+  final List<Map<String, dynamic>> stories;
+  final int initialIndex;
+  final String storeName;
+  final String? storeLogoUrl;
+  final StoriesService storiesService;
+  final String storeId;
+  final Function(String storyId) onDelete;
+
+  const _StoryViewerScreen({
+    required this.stories,
+    required this.initialIndex,
+    required this.storeName,
+    this.storeLogoUrl,
+    required this.storiesService,
+    required this.storeId,
+    required this.onDelete,
+  });
+
+  @override
+  State<_StoryViewerScreen> createState() => _StoryViewerScreenState();
+}
+
+class _StoryViewerScreenState extends State<_StoryViewerScreen> with SingleTickerProviderStateMixin {
+  late int _currentIndex;
+  late AnimationController _progressController;
+  bool _isPaused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    );
+    
+    // Increment views for initial story
+    widget.storiesService.incrementViews(
+      widget.storeId,
+      widget.stories[widget.initialIndex]['id'],
+    );
+    
+    _progressController.addStatusListener(_onProgressComplete);
+    _startProgress();
+  }
+
+  void _startProgress() {
+    _progressController.forward();
+  }
+
+  void _onProgressComplete(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      _nextStory();
+    }
+  }
+
+  void _nextStory() {
+    if (_currentIndex < widget.stories.length - 1) {
+      setState(() {
+        _currentIndex++;
+        _progressController.reset();
+      });
+      widget.storiesService.incrementViews(
+        widget.storeId,
+        widget.stories[_currentIndex]['id'],
+      );
+      _startProgress();
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
+  void _previousStory() {
+    if (_currentIndex > 0) {
+      setState(() {
+        _currentIndex--;
+        _progressController.reset();
+      });
+      _startProgress();
+    }
+  }
+
+  void _togglePause() {
+    setState(() {
+      _isPaused = !_isPaused;
+      if (_isPaused) {
+        _progressController.stop();
+      } else {
+        _progressController.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _progressController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final story = widget.stories[_currentIndex];
+    
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onTapDown: (details) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final tapPosition = details.globalPosition.dx;
+          
+          if (tapPosition < screenWidth / 3) {
+            // Tap on left third - previous story
+            _previousStory();
+          } else if (tapPosition > screenWidth * 2 / 3) {
+            // Tap on right third - next story
+            _nextStory();
+          } else {
+            // Tap in middle - pause/play
+            _togglePause();
+          }
+        },
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Story content - full screen
+            _buildStoryContent(story),
+            
+            // Progress bars at top
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              left: 8,
+              right: 8,
+              child: Row(
+                children: List.generate(
+                  widget.stories.length,
+                  (index) => Expanded(
+                    child: Container(
+                      height: 3,
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(1.5),
+                      ),
+                      child: index < _currentIndex
+                          ? Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(1.5),
+                              ),
+                            )
+                          : index == _currentIndex
+                              ? AnimatedBuilder(
+                                  animation: _progressController,
+                                  builder: (context, child) {
+                                    return FractionallySizedBox(
+                                      alignment: Alignment.centerLeft,
+                                      widthFactor: _progressController.value,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(1.5),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                )
+                              : const SizedBox(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            
+            // Top bar with store info
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 20,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.5),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // Store avatar
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: widget.storeLogoUrl != null
+                          ? ClipOval(
+                              child: Image.network(
+                                widget.storeLogoUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Center(
+                                    child: Text(
+                                      widget.storeName.isNotEmpty ? widget.storeName[0].toUpperCase() : 'S',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            )
+                          : Center(
+                              child: Text(
+                                widget.storeName.isNotEmpty ? widget.storeName[0].toUpperCase() : 'S',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.storeName,
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: Colors.white,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withOpacity(0.5),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            widget.storiesService.getTimeRemaining(
+                              story['expiresAt'] as Timestamp,
+                            ),
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: Colors.white.withOpacity(0.9),
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withOpacity(0.5),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isPaused)
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Iconsax.pause, color: Colors.white, size: 16),
+                      ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Iconsax.more, color: Colors.white, size: 20),
+                      onPressed: () {
+                        _progressController.stop();
+                        _showStoryOptions();
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Iconsax.close_circle, color: Colors.white, size: 20),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Bottom info
+            Positioned(
+              bottom: MediaQuery.of(context).padding.bottom + 16,
+              left: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Iconsax.eye, size: 14, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${story['views'] ?? 0} views',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStoryContent(Map<String, dynamic> story) {
+    final mediaUrl = story['mediaUrl'] as String?;
+
+    if (mediaUrl == null) {
+      return const Center(
+        child: Icon(Iconsax.image, size: 64, color: Colors.white),
+      );
+    }
+
+    return Center(
+      child: Image.network(
+        mediaUrl,
+        fit: BoxFit.contain,
+        width: double.infinity,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return const Center(
+            child: Icon(Iconsax.image, size: 64, color: Colors.white),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showStoryOptions() {
+    final currentStory = widget.stories[_currentIndex];
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Iconsax.trash, color: Colors.red),
+              title: Text('Delete Story', style: GoogleFonts.poppins(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                widget.onDelete(currentStory['id']);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    ).then((_) {
+      // Resume progress when bottom sheet closes
+      if (!_isPaused) {
+        _progressController.forward();
+      }
+    });
   }
 }

@@ -53,8 +53,12 @@ class StoreService {
     final uid = _auth.currentUser?.uid;
     if (uid == null) throw Exception('User not authenticated');
 
+    // Generate slug from store name
+    final slug = _generateSlug(name);
+
     final storeRef = await _firestore.collection('stores').add({
       'name': name,
+      'slug': slug,
       'category': category,
       'description': description ?? '',
       'logoUrl': logoUrl ?? '',
@@ -70,6 +74,26 @@ class StoreService {
     });
 
     return storeRef.id;
+  }
+
+  /// Generate URL-friendly slug from store name
+  String _generateSlug(String name) {
+    return name
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
+        .replaceAll(RegExp(r'\s+'), '-')
+        .replaceAll(RegExp(r'-+'), '-')
+        .trim();
+  }
+
+  /// Get store deep link URL
+  String getStoreDeepLink(String slug) {
+    return 'purl://stores/$slug';
+  }
+
+  /// Get store web URL (for sharing)
+  String getStoreWebUrl(String slug) {
+    return 'https://purlecom.com/stores/$slug';
   }
 
   /// Generates a 4-digit invite code for adding store runners.
