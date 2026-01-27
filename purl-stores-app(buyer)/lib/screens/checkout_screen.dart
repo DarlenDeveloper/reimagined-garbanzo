@@ -1,72 +1,133 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/colors.dart';
+import '../services/cart_service.dart';
+import '../services/order_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  final double orderAmount;
-  final double promoDiscount;
-  final double delivery;
-  final double tax;
-  final double totalAmount;
-
-  const CheckoutScreen({
-    super.key,
-    required this.orderAmount,
-    required this.promoDiscount,
-    required this.delivery,
-    required this.tax,
-    required this.totalAmount,
-  });
+  const CheckoutScreen({super.key});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  int _selectedPaymentIndex = 0;
+  final CartService _cartService = CartService();
+  final OrderService _orderService = OrderService();
+  
   int _selectedAddressIndex = -1;
   bool _showAddressError = false;
+  bool _useMyContactDetails = true;
+  bool _isProcessing = false;
+  GeoPoint? _currentLocation;
+  
+  // Contact details controllers
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  
+  final List<_DeliveryAddress> _savedAddresses = [];
 
-  final List<_PaymentMethod> _paymentMethods = [
-    _PaymentMethod(name: 'Master Card', detail: '******** 8463', icon: 'mastercard', color: const Color(0xFFEB001B)),
-    _PaymentMethod(name: 'Paypal', detail: 'ord*****@gmail.com', icon: 'paypal', color: const Color(0xFF003087)),
-    _PaymentMethod(name: 'Mobile Money', detail: '+256 7** *** **9', icon: 'mobile', color: const Color(0xFFFFB800)),
-    _PaymentMethod(name: 'Buy Now Pay Later', detail: 'Pay in 4 installments', icon: 'bnpl', color: const Color(0xFF8B5CF6)),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadUserContactDetails();
+  }
 
-  final List<_DeliveryAddress> _savedAddresses = [
-    _DeliveryAddress(label: 'Home', address: '11/2 Diriyah, Road no A3', city: 'Riyadh (SA)', icon: Iconsax.home_2),
-    _DeliveryAddress(label: 'Office', address: '45 Business Park, Tower B', city: 'Riyadh (SA)', icon: Iconsax.building),
-  ];
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUserContactDetails() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        _nameController.text = user.displayName ?? '';
+        _emailController.text = user.email ?? '';
+        _phoneController.text = user.phoneNumber ?? '';
+      });
+    }
+  }
+
+  Future<void> _requestLocationPermission() async {
+    // Simulate location permission - in production use geolocator package
+    setState(() {
+      _currentLocation = const GeoPoint(0.3476, 32.5825); // Kampala coordinates
+    });
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Location access granted', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.backgroundColor,
+      backgroundColor: AppColors.white,
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        child: StreamBuilder<Map<String, List<CartItemData>>>(
+          stream: _cartService.getCartItemsByStoreStream(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: AppColors.black));
+            }
+
+            final itemsByStore = snapshot.data ?? {};
+            if (itemsByStore.isEmpty) {
+              return Center(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildDeliveryAddressSection(),
-                    const SizedBox(height: 24),
-                    _buildPaymentMethods(),
+                    const Icon(Icons.shopping_cart_outlined, size: 80, color: AppColors.grey400),
                     const SizedBox(height: 16),
-                    _buildAddPaymentMethod(),
-                    const SizedBox(height: 24),
-                    _buildOrderSummary(),
+                    Text('Your cart is empty', style: GoogleFonts.poppins(color: AppColors.grey600)),
                   ],
                 ),
-              ),
-            ),
-            _buildPayButton(),
-          ],
+              );
+            }
+
+            final totalsByStore = _cartService.calculateTotalsByStore(itemsByStore);
+            final grandTotal = totalsByStore.values.fold<double>(
+              0,
+              (sum, totals) => sum + totals.total,
+            );
+
+            return Column(
+              children: [
+                _buildHeader(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLocationSection(),
+                        const SizedBox(height: 24),
+                        _buildDeliveryAddressSection(),
+                        const SizedBox(height: 24),
+                        _buildContactDetailsSection(),
+                        const SizedBox(height: 24),
+                        _buildOrderSummary(itemsByStore, totalsByStore, grandTotal),
+                      ],
+                    ),
+                  ),
+                ),
+                _buildPayButton(itemsByStore, totalsByStore),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -79,14 +140,138 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: Icon(Iconsax.arrow_left, color: context.textPrimaryColor),
+            child: const Icon(Iconsax.arrow_left, color: AppColors.black),
           ),
           const Spacer(),
-          Text('Checkout', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: context.textPrimaryColor)),
+          Text('Checkout', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
           const Spacer(),
-          Icon(Iconsax.more, color: context.textPrimaryColor),
+          const SizedBox(width: 24), // Balance the back button
         ],
       ),
+    );
+  }
+
+  Widget _buildLocationSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _currentLocation != null ? Colors.green.shade50 : AppColors.grey100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _currentLocation != null ? Colors.green : AppColors.grey300,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _currentLocation != null ? Iconsax.tick_circle5 : Iconsax.location,
+                color: _currentLocation != null ? Colors.green : AppColors.black,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _currentLocation != null ? 'Location Access Granted' : 'Location Permission Required',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          if (_currentLocation == null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'We need your location to find the nearest pickup point',
+              style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _requestLocationPermission,
+                icon: const Icon(Iconsax.gps, size: 18),
+                label: Text('Allow Location Access', style: GoogleFonts.poppins(fontSize: 14)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.black,
+                  foregroundColor: AppColors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactDetailsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Contact Details', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.grey100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Checkbox(
+                    value: _useMyContactDetails,
+                    onChanged: (value) => setState(() => _useMyContactDetails = value ?? true),
+                    activeColor: AppColors.black,
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Use my contact details',
+                      style: GoogleFonts.poppins(fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+              if (!_useMyContactDetails) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Full Name',
+                    labelStyle: GoogleFonts.poppins(),
+                    filled: true,
+                    fillColor: AppColors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _phoneController,
+                  decoration: InputDecoration(
+                    labelText: 'Phone Number',
+                    labelStyle: GoogleFonts.poppins(),
+                    filled: true,
+                    fillColor: AppColors.white,
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    labelStyle: GoogleFonts.poppins(),
+                    filled: true,
+                    fillColor: AppColors.white,
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -99,22 +284,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           children: [
             Row(
               children: [
-                Text('Delivery Address', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: context.textPrimaryColor)),
+                Text('Delivery Address', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(width: 4),
-                Text('*', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.error)),
+                const Text('*', style: TextStyle(color: Colors.red, fontSize: 16)),
               ],
             ),
             GestureDetector(
               onTap: _showAddNewAddressSheet,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: context.primaryColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(
+                  color: AppColors.grey100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Iconsax.add, size: 16, color: context.primaryColor),
+                    const Icon(Iconsax.add, size: 16),
                     const SizedBox(width: 4),
-                    Text('Add New', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: context.primaryColor)),
+                    Text('Add New', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
@@ -125,12 +313,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Row(
               children: [
-                const Icon(Iconsax.warning_2, size: 16, color: AppColors.error),
+                const Icon(Iconsax.warning_2, size: 16, color: Colors.red),
                 const SizedBox(width: 8),
-                Text('Please select a delivery address', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.error)),
+                Text('Please select a delivery address', style: GoogleFonts.poppins(fontSize: 12, color: Colors.red)),
               ],
             ),
           ),
@@ -150,20 +341,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.grey100,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
           children: [
             Container(
-              width: 56, height: 56,
-              decoration: BoxDecoration(color: context.primaryColor.withValues(alpha: 0.1), shape: BoxShape.circle),
-              child: Icon(Iconsax.location_add, color: context.primaryColor, size: 28),
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(
+                color: AppColors.white,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Iconsax.location_add, size: 28),
             ),
             const SizedBox(height: 12),
-            Text('Add Delivery Address', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: context.textPrimaryColor)),
+            Text('Add Delivery Address', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
-            Text('Tap to add your delivery location', style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondaryColor)),
+            Text('Tap to add your delivery location', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600)),
           ],
         ),
       ),
@@ -172,56 +367,53 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Widget _buildAddressCard(_DeliveryAddress address, int index) {
     final isSelected = _selectedAddressIndex == index;
-    final isDark = context.isDark;
     return GestureDetector(
-      onTap: () => setState(() { _selectedAddressIndex = index; _showAddressError = false; }),
+      onTap: () => setState(() {
+        _selectedAddressIndex = index;
+        _showAddressError = false;
+      }),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.darkGreen.withValues(alpha: 0.05) : Colors.white,
+          color: isSelected ? AppColors.grey100 : AppColors.white,
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? AppColors.black : AppColors.grey300,
+            width: isSelected ? 2 : 1,
+          ),
         ),
         child: Row(
           children: [
             Container(
-              width: 44, height: 44,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.darkGreen : AppColors.darkGreen.withValues(alpha: 0.1),
+                color: isSelected ? AppColors.black : AppColors.grey100,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(address.icon, color: isSelected ? Colors.white : AppColors.darkGreen, size: 22),
+              child: Icon(address.icon, color: isSelected ? AppColors.white : AppColors.black, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(address.label, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: context.textPrimaryColor)),
-                      if (isSelected) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: context.primaryColor, borderRadius: BorderRadius.circular(10)),
-                          child: Text('Selected', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w500, color: isDark ? Colors.black : Colors.white)),
-                        ),
-                      ],
-                    ],
-                  ),
-                  Text(address.address, style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textPrimary)),
-                  Text(address.city, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                  Text(address.label, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text(address.street, style: GoogleFonts.poppins(fontSize: 13)),
+                  Text(address.city, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600)),
                 ],
               ),
             ),
             Container(
-              width: 24, height: 24,
+              width: 24,
+              height: 24,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? AppColors.darkGreen : AppColors.surfaceVariant,
+                color: isSelected ? AppColors.black : Colors.transparent,
+                border: Border.all(color: isSelected ? AppColors.black : AppColors.grey400, width: 2),
               ),
-              child: isSelected ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+              child: isSelected ? const Icon(Icons.check, size: 14, color: AppColors.white) : null,
             ),
           ],
         ),
@@ -234,14 +426,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final cityController = TextEditingController();
     String selectedLabel = 'Home';
 
-    final isDark = context.isDark;
-    final primaryCol = isDark ? AppColors.limeAccent : AppColors.darkGreen;
-    final surfaceCol = isDark ? AppColors.darkSurface : Colors.white;
-    final surfaceVarCol = isDark ? AppColors.darkSurfaceVariant : const Color(0xFFF5F0E8);
-    final textPrimCol = isDark ? Colors.white : AppColors.textPrimary;
-    final textSecCol = isDark ? Colors.white60 : AppColors.textSecondary;
-    final borderCol = isDark ? AppColors.darkBorder : AppColors.border;
-    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -249,16 +433,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       builder: (sheetContext) => StatefulBuilder(
         builder: (sheetContext, setSheetState) => Container(
           padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 20),
-          decoration: BoxDecoration(color: surfaceCol, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
+          decoration: const BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: borderCol, borderRadius: BorderRadius.circular(2)))),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.grey300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               const SizedBox(height: 20),
-              Text('Add New Address', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: textPrimCol)),
+              Text('Add New Address', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
               const SizedBox(height: 20),
-              Text('Label', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: textSecCol)),
+              Text('Label', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.grey600)),
               const SizedBox(height: 8),
               Row(
                 children: ['Home', 'Office', 'Other'].map((label) {
@@ -270,70 +466,55 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: isSelected ? primaryCol : surfaceCol,
+                          color: isSelected ? AppColors.black : AppColors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: isSelected ? primaryCol : borderCol),
+                          border: Border.all(color: isSelected ? AppColors.black : AppColors.grey300),
                         ),
-                        child: Text(label, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: isSelected ? (isDark ? Colors.black : Colors.white) : textPrimCol)),
+                        child: Text(
+                          label,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: isSelected ? AppColors.white : AppColors.black,
+                          ),
+                        ),
                       ),
                     ),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 16),
-              Text('Street Address', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: textSecCol)),
-              const SizedBox(height: 8),
               TextField(
                 controller: addressController,
-                style: GoogleFonts.poppins(color: textPrimCol),
                 decoration: InputDecoration(
-                  hintText: 'Enter your street address',
-                  hintStyle: GoogleFonts.poppins(fontSize: 14, color: textSecCol),
-                  filled: true, fillColor: surfaceVarCol,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  labelText: 'Street Address',
+                  labelStyle: GoogleFonts.poppins(),
                 ),
               ),
               const SizedBox(height: 16),
-              Text('City / Region', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: textSecCol)),
-              const SizedBox(height: 8),
               TextField(
                 controller: cityController,
-                style: GoogleFonts.poppins(color: textPrimCol),
                 decoration: InputDecoration(
-                  hintText: 'Enter city or region',
-                  hintStyle: GoogleFonts.poppins(fontSize: 14, color: textSecCol),
-                  filled: true, fillColor: surfaceVarCol,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                ),
-              ),
-              const SizedBox(height: 16),
-              GestureDetector(
-                onTap: () { addressController.text = '123 Current Location St'; cityController.text = 'Kampala (UG)'; },
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: primaryCol.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Iconsax.gps, size: 20, color: primaryCol),
-                      const SizedBox(width: 8),
-                      Text('Use Current Location', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: primaryCol)),
-                    ],
-                  ),
+                  labelText: 'City / Region',
+                  labelStyle: GoogleFonts.poppins(),
                 ),
               ),
               const SizedBox(height: 20),
               SizedBox(
-                width: double.infinity, height: 52,
+                width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
                     if (addressController.text.isNotEmpty && cityController.text.isNotEmpty) {
                       setState(() {
                         _savedAddresses.add(_DeliveryAddress(
-                          label: selectedLabel, address: addressController.text, city: cityController.text,
-                          icon: selectedLabel == 'Home' ? Iconsax.home_2 : selectedLabel == 'Office' ? Iconsax.building : Iconsax.location,
+                          label: selectedLabel,
+                          street: addressController.text,
+                          city: cityController.text,
+                          icon: selectedLabel == 'Home'
+                              ? Iconsax.home_2
+                              : selectedLabel == 'Office'
+                                  ? Iconsax.building
+                                  : Iconsax.location,
                         ));
                         _selectedAddressIndex = _savedAddresses.length - 1;
                         _showAddressError = false;
@@ -341,7 +522,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       Navigator.pop(sheetContext);
                     }
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: primaryCol, foregroundColor: isDark ? Colors.black : Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                   child: Text('Save Address', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
                 ),
               ),
@@ -352,110 +536,57 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildPaymentMethods() {
+  Widget _buildOrderSummary(
+    Map<String, List<CartItemData>> itemsByStore,
+    Map<String, CartTotals> totalsByStore,
+    double grandTotal,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Payment Method', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: context.textPrimaryColor)),
-        const SizedBox(height: 12),
-        ...List.generate(_paymentMethods.length, (index) => _buildPaymentOption(_paymentMethods[index], index)),
-      ],
-    );
-  }
-
-  Widget _buildPaymentOption(_PaymentMethod method, int index) {
-    final isSelected = _selectedPaymentIndex == index;
-    final isDark = context.isDark;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedPaymentIndex = index),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: context.surfaceColor, borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: isSelected ? context.primaryColor : context.borderColor, width: isSelected ? 2 : 1),
-        ),
-        child: Row(
-          children: [
-            _buildPaymentIcon(method),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(method.name, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: context.textPrimaryColor)),
-                  if (method.detail.isNotEmpty) Text(method.detail, style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondaryColor)),
-                ],
-              ),
-            ),
-            Container(
-              width: 24, height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected ? context.primaryColor : Colors.transparent,
-                border: Border.all(color: isSelected ? context.primaryColor : context.borderColor, width: 2),
-              ),
-              child: isSelected ? Icon(Icons.check, size: 14, color: isDark ? Colors.black : Colors.white) : null,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentIcon(_PaymentMethod method) {
-    IconData icon;
-    switch (method.icon) {
-      case 'mastercard': icon = Iconsax.card; break;
-      case 'paypal': icon = Iconsax.wallet; break;
-      case 'mobile': icon = Iconsax.mobile; break;
-      case 'bnpl': icon = Iconsax.calendar_tick; break;
-      default: icon = Iconsax.card;
-    }
-    return Container(
-      width: 44, height: 44,
-      decoration: BoxDecoration(color: method.color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-      child: Icon(icon, color: method.color, size: 22),
-    );
-  }
-
-  Widget _buildAddPaymentMethod() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: context.surfaceColor, borderRadius: BorderRadius.circular(14), border: Border.all(color: context.borderColor)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Iconsax.add, size: 20, color: context.textSecondaryColor),
-          const SizedBox(width: 8),
-          Text('Add Payment Method', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: context.textSecondaryColor)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrderSummary() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Order Summary', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: context.textPrimaryColor)),
+        Text('Order Summary', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
         const SizedBox(height: 16),
-        _buildSummaryRow('Order Amount', widget.orderAmount),
-        if (widget.promoDiscount > 0) _buildSummaryRow('Promo-code', -widget.promoDiscount, isDiscount: true),
-        _buildSummaryRow('Delivery', widget.delivery),
-        _buildSummaryRow('Tax', widget.tax),
-        const SizedBox(height: 12),
-        Container(height: 1, color: context.borderColor),
-        const SizedBox(height: 12),
+        ...itemsByStore.entries.map((entry) {
+          final storeName = entry.value.first.storeName;
+          final totals = totalsByStore[entry.key]!;
+          
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.grey100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.store, size: 16),
+                    const SizedBox(width: 8),
+                    Text(storeName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('${entry.value.length} items', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600)),
+                    Text('KES ${totals.total.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }),
+        const Divider(height: 24),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Total Amount', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: context.textPrimaryColor)),
-            Row(
-              children: [
-                Text('\$ ', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: context.primaryColor)),
-                Text(widget.totalAmount.toStringAsFixed(2), style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: context.textPrimaryColor)),
-              ],
+            Text('Grand Total', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+            Text(
+              'KES ${grandTotal.toStringAsFixed(2)}',
+              style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -463,44 +594,115 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildSummaryRow(String label, double amount, {bool isDiscount = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: GoogleFonts.poppins(fontSize: 14, color: context.textSecondaryColor)),
-          Text('${isDiscount ? "-" : ""}\$ ${amount.abs().toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: isDiscount ? context.primaryColor : context.textPrimaryColor)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPayButton() {
-    final isDark = context.isDark;
+  Widget _buildPayButton(
+    Map<String, List<CartItemData>> itemsByStore,
+    Map<String, CartTotals> totalsByStore,
+  ) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
       child: SizedBox(
-        width: double.infinity, height: 54,
+        width: double.infinity,
+        height: 54,
         child: ElevatedButton(
-          onPressed: () {
-            if (_selectedAddressIndex == -1) { setState(() => _showAddressError = true); return; }
-            _showSuccessDialog();
-          },
-          style: ElevatedButton.styleFrom(backgroundColor: context.primaryColor, foregroundColor: isDark ? Colors.black : Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-          child: Text('Pay Now', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+          onPressed: _isProcessing ? null : () => _processOrder(itemsByStore, totalsByStore),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.black,
+            foregroundColor: AppColors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          child: _isProcessing
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2),
+                )
+              : Text('Place Order', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
         ),
       ),
     );
   }
 
-  void _showSuccessDialog() {
-    final isDark = context.isDark;
+  Future<void> _processOrder(
+    Map<String, List<CartItemData>> itemsByStore,
+    Map<String, CartTotals> totalsByStore,
+  ) async {
+    // Validate
+    if (_currentLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please allow location access', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedAddressIndex == -1) {
+      setState(() => _showAddressError = true);
+      return;
+    }
+
+    setState(() => _isProcessing = true);
+
+    try {
+      final selectedAddress = _savedAddresses[_selectedAddressIndex];
+      final user = FirebaseAuth.instance.currentUser!;
+
+      // Create orders
+      final orderIds = await _orderService.createOrdersFromCart(
+        itemsByStore: itemsByStore,
+        totalsByStore: totalsByStore,
+        deliveryAddress: DeliveryAddress(
+          label: selectedAddress.label,
+          street: selectedAddress.street,
+          city: selectedAddress.city,
+        ),
+        contactDetails: ContactDetails(
+          name: _useMyContactDetails ? (user.displayName ?? _nameController.text) : _nameController.text,
+          phone: _useMyContactDetails ? (user.phoneNumber ?? _phoneController.text) : _phoneController.text,
+          email: _useMyContactDetails ? (user.email ?? _emailController.text) : _emailController.text,
+        ),
+        deliveryLocation: _currentLocation,
+      );
+
+      // Clear cart
+      for (var storeId in itemsByStore.keys) {
+        await _cartService.clearStoreCart(storeId);
+      }
+
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        _showSuccessDialog(orderIds.length);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to place order: $e', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showSuccessDialog(int orderCount) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => Dialog(
-        backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -508,33 +710,39 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 80, height: 80,
-                decoration: BoxDecoration(color: (isDark ? AppColors.limeAccent : AppColors.darkGreen).withValues(alpha: 0.1), shape: BoxShape.circle),
-                child: Center(
-                  child: Container(
-                    width: 56, height: 56,
-                    decoration: BoxDecoration(color: isDark ? AppColors.limeAccent : AppColors.darkGreen, shape: BoxShape.circle),
-                    child: Icon(Icons.check, color: isDark ? Colors.black : Colors.white, size: 32),
-                  ),
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
                 ),
+                child: const Icon(Icons.check_circle, color: Colors.green, size: 50),
               ),
               const SizedBox(height: 24),
-              Text('Order Successful!', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppColors.textPrimary)),
+              Text(
+                'Order Successful!',
+                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 8),
-              Text("We're preparing your\norder. See updates in Delivery.", textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 14, color: isDark ? Colors.white60 : AppColors.textSecondary, height: 1.5)),
+              Text(
+                '$orderCount ${orderCount == 1 ? 'order' : 'orders'} placed successfully',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(fontSize: 14, color: AppColors.grey600),
+              ),
               const SizedBox(height: 24),
               SizedBox(
-                width: double.infinity, height: 50,
+                width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.of(dialogContext).popUntil((route) => route.isFirst),
-                  style: ElevatedButton.styleFrom(backgroundColor: isDark ? AppColors.limeAccent : AppColors.darkGreen, foregroundColor: isDark ? Colors.black : Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                   child: Text('Go Home', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).popUntil((route) => route.isFirst),
-                child: Text('Track your order', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: isDark ? Colors.white60 : AppColors.textSecondary)),
               ),
             ],
           ),
@@ -544,18 +752,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 }
 
-class _PaymentMethod {
-  final String name;
-  final String detail;
-  final String icon;
-  final Color color;
-  _PaymentMethod({required this.name, required this.detail, required this.icon, required this.color});
-}
-
 class _DeliveryAddress {
   final String label;
-  final String address;
+  final String street;
   final String city;
   final IconData icon;
-  _DeliveryAddress({required this.label, required this.address, required this.city, required this.icon});
+
+  _DeliveryAddress({
+    required this.label,
+    required this.street,
+    required this.city,
+    required this.icon,
+  });
 }

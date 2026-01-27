@@ -10,6 +10,7 @@ import '../services/currency_service.dart';
 import '../services/product_questions_service.dart';
 import '../services/messages_service.dart';
 import '../services/wishlist_service.dart';
+import '../services/cart_service.dart';
 import 'store_profile_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -37,6 +38,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   final CurrencyService _currencyService = CurrencyService();
   final ProductQuestionsService _questionsService = ProductQuestionsService();
   final WishlistService _wishlistService = WishlistService();
+  final CartService _cartService = CartService();
   
   Product? _product;
   bool _isLoading = true;
@@ -889,14 +891,45 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
         Expanded(
           child: ElevatedButton(
             onPressed: product.isInStock
-                ? () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Added to cart', style: GoogleFonts.poppins()),
-                        backgroundColor: Colors.black,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                ? () async {
+                    try {
+                      await _cartService.addToCart(
+                        productId: widget.productId,
+                        storeId: widget.storeId,
+                        storeName: product.storeName,
+                        productName: product.name,
+                        productImage: product.images.isNotEmpty ? product.images.first.url : '',
+                        price: product.price,
+                        currency: product.currency,
+                        quantity: 1,
+                      );
+                      
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Added to cart', style: GoogleFonts.poppins()),
+                            backgroundColor: Colors.black,
+                            behavior: SnackBarBehavior.floating,
+                            action: SnackBarAction(
+                              label: 'View Cart',
+                              textColor: Colors.white,
+                              onPressed: () {
+                                Navigator.pushNamed(context, '/cart');
+                              },
+                            ),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to add to cart', style: GoogleFonts.poppins()),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
                   }
                 : null,
             style: ElevatedButton.styleFrom(

@@ -10,6 +10,7 @@ import '../screens/reset_password_screen.dart';
 import '../screens/interests_screen.dart';
 import '../screens/complete_profile_screen.dart';
 import '../screens/main_screen.dart';
+import '../screens/checkout_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -64,6 +65,10 @@ final router = GoRouter(
     GoRoute(
       path: '/home',
       builder: (context, state) => const MainScreen(),
+    ),
+    GoRoute(
+      path: '/checkout',
+      builder: (context, state) => const CheckoutScreen(),
     ),
   ],
 );

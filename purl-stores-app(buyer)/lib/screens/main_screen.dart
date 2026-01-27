@@ -4,7 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../theme/colors.dart';
 import 'home_screen.dart';
 import 'discover_screen.dart';
-import 'order_screen.dart';
+import 'cart_screen.dart';
 import 'my_orders_screen.dart';
 import 'profile_screen.dart';
 
@@ -40,7 +40,7 @@ class _MainScreenState extends State<MainScreen> {
         children: const [
           HomeScreen(),
           DiscoverScreen(),
-          OrderScreen(),
+          CartScreen(),
           MyOrdersScreen(),
           ProfileScreen(),
         ],
