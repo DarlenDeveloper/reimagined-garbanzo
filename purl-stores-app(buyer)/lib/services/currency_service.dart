@@ -46,8 +46,8 @@ class CurrencyService {
   };
 
   /// Get user's preferred currency
-  Future<String> getUserCurrency() async {
-    if (_userCurrency != null) return _userCurrency!;
+  Future<String> getUserCurrency({bool forceRefresh = false}) async {
+    if (_userCurrency != null && !forceRefresh) return _userCurrency!;
 
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return 'UGX'; // Default
@@ -63,6 +63,22 @@ class CurrencyService {
     }
 
     return 'UGX'; // Default
+  }
+
+  /// Update user currency and clear cache
+  Future<void> updateUserCurrency(String currency) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    // Update cache FIRST before saving to Firestore
+    _userCurrency = currency;
+    _currencyCache.clear();
+
+    // Then save to Firestore
+    await _firestore.collection('users').doc(userId).update({
+      'currency': currency,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   /// Convert price from one currency to another
@@ -113,8 +129,9 @@ class CurrencyService {
     return intPart;
   }
 
-  /// Clear cache
+  /// Clear cache and force refresh
   void clearCache() {
     _currencyCache.clear();
+    _userCurrency = null;
   }
 }

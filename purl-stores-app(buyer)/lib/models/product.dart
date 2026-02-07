@@ -142,4 +142,95 @@ class Product {
     if (compareAtPrice == null || compareAtPrice! <= price) return null;
     return (((compareAtPrice! - price) / compareAtPrice!) * 100).round();
   }
+
+  /// Calculate markup percentage based on price and currency
+  static double _getMarkupPercentage(double price, String currency) {
+    // Convert thresholds based on currency
+    // Base tiers are in UGX
+    switch (currency.toUpperCase()) {
+      case 'UGX': // Ugandan Shilling (base currency)
+        if (price >= 500001) return 0.03;
+        if (price >= 260001) return 0.04;
+        if (price >= 125001) return 0.06;
+        if (price >= 100001) return 0.09;
+        if (price >= 75001) return 0.11;
+        if (price >= 50001) return 0.14;
+        if (price >= 25000) return 0.168;
+        return 0.168;
+        
+      case 'KES': // Kenyan Shilling (1 KES ≈ 28.7 UGX)
+        if (price >= 17422) return 0.03;  // 500,001 UGX
+        if (price >= 9059) return 0.04;   // 260,001 UGX
+        if (price >= 4355) return 0.06;   // 125,001 UGX
+        if (price >= 3484) return 0.09;   // 100,001 UGX
+        if (price >= 2613) return 0.11;   // 75,001 UGX
+        if (price >= 1742) return 0.14;   // 50,001 UGX
+        if (price >= 871) return 0.168;   // 25,000 UGX
+        return 0.168;
+        
+      case 'TZS': // Tanzanian Shilling (1 TZS ≈ 1.48 UGX)
+        if (price >= 337838) return 0.03; // 500,001 UGX
+        if (price >= 175676) return 0.04; // 260,001 UGX
+        if (price >= 84459) return 0.06;  // 125,001 UGX
+        if (price >= 67568) return 0.09;  // 100,001 UGX
+        if (price >= 50676) return 0.11;  // 75,001 UGX
+        if (price >= 33784) return 0.14;  // 50,001 UGX
+        if (price >= 16892) return 0.168; // 25,000 UGX
+        return 0.168;
+        
+      case 'USD': // US Dollar (1 USD ≈ 3,700 UGX)
+        if (price >= 135) return 0.03;    // 500,001 UGX
+        if (price >= 70) return 0.04;     // 260,001 UGX
+        if (price >= 34) return 0.06;     // 125,001 UGX
+        if (price >= 27) return 0.09;     // 100,001 UGX
+        if (price >= 20) return 0.11;     // 75,001 UGX
+        if (price >= 14) return 0.14;     // 50,001 UGX
+        if (price >= 7) return 0.168;     // 25,000 UGX
+        return 0.168;
+        
+      case 'EUR': // Euro (1 EUR ≈ 4,022 UGX)
+        if (price >= 124) return 0.03;    // 500,001 UGX
+        if (price >= 65) return 0.04;     // 260,001 UGX
+        if (price >= 31) return 0.06;     // 125,001 UGX
+        if (price >= 25) return 0.09;     // 100,001 UGX
+        if (price >= 19) return 0.11;     // 75,001 UGX
+        if (price >= 12) return 0.14;     // 50,001 UGX
+        if (price >= 6) return 0.168;     // 25,000 UGX
+        return 0.168;
+        
+      case 'GBP': // British Pound (1 GBP ≈ 4,684 UGX)
+        if (price >= 107) return 0.03;    // 500,001 UGX
+        if (price >= 56) return 0.04;     // 260,001 UGX
+        if (price >= 27) return 0.06;     // 125,001 UGX
+        if (price >= 21) return 0.09;     // 100,001 UGX
+        if (price >= 16) return 0.11;     // 75,001 UGX
+        if (price >= 11) return 0.14;     // 50,001 UGX
+        if (price >= 5) return 0.168;     // 25,000 UGX
+        return 0.168;
+        
+      default:
+        // For unknown currencies, use UGX tiers
+        if (price >= 500001) return 0.03;
+        if (price >= 260001) return 0.04;
+        if (price >= 125001) return 0.06;
+        if (price >= 100001) return 0.09;
+        if (price >= 75001) return 0.11;
+        if (price >= 50001) return 0.14;
+        if (price >= 25000) return 0.168;
+        return 0.168;
+    }
+  }
+
+  /// Get final buyer price with markup
+  double get finalPrice {
+    final markup = _getMarkupPercentage(price, currency);
+    return price + (price * markup);
+  }
+
+  /// Get final compare at price with markup (if exists)
+  double? get finalCompareAtPrice {
+    if (compareAtPrice == null) return null;
+    final markup = _getMarkupPercentage(compareAtPrice!, currency);
+    return compareAtPrice! + (compareAtPrice! * markup);
+  }
 }

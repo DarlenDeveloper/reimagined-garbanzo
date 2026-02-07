@@ -73,8 +73,15 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
     _loadStoreData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload currency when screen comes back into focus
+    _loadUserCurrency();
+  }
+
   Future<void> _loadUserCurrency() async {
-    final currency = await _currencyService.getUserCurrency();
+    final currency = await _currencyService.getUserCurrency(forceRefresh: true);
     if (mounted) {
       setState(() => _userCurrency = currency);
     }

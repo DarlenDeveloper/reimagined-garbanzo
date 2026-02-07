@@ -60,16 +60,90 @@ class OrderService {
       // Generate order number
       final orderNumber = _generateOrderNumber();
 
-      // Prepare order items
-      final orderItems = items.map((item) => {
-            'productId': item.productId,
-            'productName': item.productName,
-            'productImage': item.productImage,
-            'price': item.price,
-            'currency': item.currency,
-            'quantity': item.quantity,
-            'itemTotal': item.itemTotal,
-          }).toList();
+      // Calculate markup percentage based on currency
+      double getMarkupPercentage(double price, String currency) {
+        switch (currency.toUpperCase()) {
+          case 'UGX':
+            if (price >= 500001) return 0.03;
+            if (price >= 260001) return 0.04;
+            if (price >= 125001) return 0.06;
+            if (price >= 100001) return 0.09;
+            if (price >= 75001) return 0.11;
+            if (price >= 50001) return 0.14;
+            if (price >= 25000) return 0.168;
+            return 0.168;
+          case 'KES':
+            if (price >= 17422) return 0.03;
+            if (price >= 9059) return 0.04;
+            if (price >= 4355) return 0.06;
+            if (price >= 3484) return 0.09;
+            if (price >= 2613) return 0.11;
+            if (price >= 1742) return 0.14;
+            if (price >= 871) return 0.168;
+            return 0.168;
+          case 'TZS':
+            if (price >= 337838) return 0.03;
+            if (price >= 175676) return 0.04;
+            if (price >= 84459) return 0.06;
+            if (price >= 67568) return 0.09;
+            if (price >= 50676) return 0.11;
+            if (price >= 33784) return 0.14;
+            if (price >= 16892) return 0.168;
+            return 0.168;
+          case 'USD':
+            if (price >= 135) return 0.03;
+            if (price >= 70) return 0.04;
+            if (price >= 34) return 0.06;
+            if (price >= 27) return 0.09;
+            if (price >= 20) return 0.11;
+            if (price >= 14) return 0.14;
+            if (price >= 7) return 0.168;
+            return 0.168;
+          case 'EUR':
+            if (price >= 124) return 0.03;
+            if (price >= 65) return 0.04;
+            if (price >= 31) return 0.06;
+            if (price >= 25) return 0.09;
+            if (price >= 19) return 0.11;
+            if (price >= 12) return 0.14;
+            if (price >= 6) return 0.168;
+            return 0.168;
+          case 'GBP':
+            if (price >= 107) return 0.03;
+            if (price >= 56) return 0.04;
+            if (price >= 27) return 0.06;
+            if (price >= 21) return 0.09;
+            if (price >= 16) return 0.11;
+            if (price >= 11) return 0.14;
+            if (price >= 5) return 0.168;
+            return 0.168;
+          default:
+            if (price >= 500001) return 0.03;
+            if (price >= 260001) return 0.04;
+            if (price >= 125001) return 0.06;
+            if (price >= 100001) return 0.09;
+            if (price >= 75001) return 0.11;
+            if (price >= 50001) return 0.14;
+            if (price >= 25000) return 0.168;
+            return 0.168;
+        }
+      }
+
+      // Prepare order items (with final prices including markup)
+      final orderItems = items.map((item) {
+        final markup = getMarkupPercentage(item.price, item.currency);
+        final finalPrice = item.price + (item.price * markup);
+        return {
+          'productId': item.productId,
+          'productName': item.productName,
+          'productImage': item.productImage,
+          'sellerPrice': item.price, // Original seller price
+          'price': finalPrice, // Final price with markup
+          'currency': item.currency,
+          'quantity': item.quantity,
+          'itemTotal': finalPrice * item.quantity,
+        };
+      }).toList();
 
       // Create order in store's orders collection
       final orderRef = await _firestore

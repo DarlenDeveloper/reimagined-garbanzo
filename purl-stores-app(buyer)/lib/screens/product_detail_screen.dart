@@ -59,8 +59,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     _loadProduct();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload currency when screen comes back into focus
+    _loadUserCurrency();
+  }
+
   Future<void> _loadUserCurrency() async {
-    final currency = await _currencyService.getUserCurrency();
+    final currency = await _currencyService.getUserCurrency(forceRefresh: true);
     if (mounted) {
       setState(() => _userCurrency = currency);
     }
@@ -326,7 +333,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
   Widget _buildDetailsTab() {
     final product = _product!;
-    final convertedPrice = _currencyService.convertPrice(product.price, product.currency, _userCurrency);
+    final convertedPrice = _currencyService.convertPrice(product.finalPrice, product.currency, _userCurrency);
     final formattedPrice = _currencyService.formatPrice(convertedPrice, _userCurrency);
     
     return SingleChildScrollView(
@@ -871,12 +878,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     return Row(
       children: [
         // Compare price (strikethrough)
-        if (product.compareAtPrice != null && product.compareAtPrice! > product.price)
+        if (product.finalCompareAtPrice != null && product.finalCompareAtPrice! > product.finalPrice)
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Text(
               _currencyService.formatPrice(
-                _currencyService.convertPrice(product.compareAtPrice!, product.currency, _userCurrency),
+                _currencyService.convertPrice(product.finalCompareAtPrice!, product.currency, _userCurrency),
                 _userCurrency,
               ),
               style: GoogleFonts.poppins(
@@ -892,6 +899,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
           child: ElevatedButton(
             onPressed: product.isInStock
                 ? () async {
+                    print('🛒 Add to Cart button pressed!');
+                    print('Product: ${product.name}, InStock: ${product.isInStock}');
                     try {
                       await _cartService.addToCart(
                         productId: widget.productId,
@@ -899,7 +908,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                         storeName: product.storeName,
                         productName: product.name,
                         productImage: product.images.isNotEmpty ? product.images.first.url : '',
-                        price: product.price,
+                        price: product.price, // Store seller's original price
                         currency: product.currency,
                         quantity: 1,
                       );
@@ -921,6 +930,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                         );
                       }
                     } catch (e) {
+                      print('❌ Error adding to cart: $e');
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -952,6 +962,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
             ),
           ),
         ),
+        // Debug info
+        if (!product.isInStock)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              'DEBUG: Stock=${product.stock}, TrackInventory=${product.trackInventory}',
+              style: TextStyle(color: Colors.red, fontSize: 10),
+            ),
+          ),
         
         // Rating
         if (product.rating > 0) ...[

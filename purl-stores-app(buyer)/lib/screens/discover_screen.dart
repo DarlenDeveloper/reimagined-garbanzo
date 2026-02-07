@@ -10,6 +10,7 @@ import '../services/product_service.dart';
 import '../services/currency_service.dart';
 import '../services/messages_service.dart';
 import '../services/wishlist_service.dart';
+import '../services/cart_service.dart';
 import 'product_detail_screen.dart';
 import 'order_history_screen.dart';
 import 'store_map_screen.dart';
@@ -28,6 +29,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   final ProductService _productService = ProductService();
   final CurrencyService _currencyService = CurrencyService();
   final WishlistService _wishlistService = WishlistService();
+  final CartService _cartService = CartService();
   final ScrollController _scrollController = ScrollController();
   
   int _selectedCategoryIndex = 0;
@@ -62,14 +64,20 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadUserCurrency();
     _subscribeToProducts();
     _loadWishlistStatus();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Always reload currency when dependencies change
+    _loadUserCurrency();
+  }
+
   void _loadUserCurrency() async {
-    final currency = await _currencyService.getUserCurrency();
-    if (mounted) {
+    final currency = await _currencyService.getUserCurrency(forceRefresh: true);
+    if (mounted && currency != _userCurrency) {
       setState(() => _userCurrency = currency);
     }
   }
@@ -429,19 +437,24 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Widget _buildProductCard(Product product) {
-    final convertedPrice = _currencyService.convertPrice(product.price, product.currency, _userCurrency);
-    final formattedPrice = _currencyService.formatPrice(convertedPrice, _userCurrency);
-    
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ProductDetailScreen(
-            productId: product.id,
-            productName: product.name,
-            storeName: product.storeName,
-            storeId: product.storeId,
-          ),
+    // Get currency fresh each time to handle updates
+    return FutureBuilder<String>(
+      future: _currencyService.getUserCurrency(forceRefresh: true),
+      builder: (context, snapshot) {
+        final userCurrency = snapshot.data ?? _userCurrency;
+        final convertedPrice = _currencyService.convertPrice(product.finalPrice, product.currency, userCurrency);
+        final formattedPrice = _currencyService.formatPrice(convertedPrice, userCurrency);
+        
+        return GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProductDetailScreen(
+                productId: product.id,
+                productName: product.name,
+                storeName: product.storeName,
+                storeId: product.storeId,
+              ),
         ),
       ),
       child: Container(
@@ -623,7 +636,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   ),
                   const SizedBox(height: 4),
                   // Compare price (strikethrough)
-                  if (product.compareAtPrice != null && product.compareAtPrice! > product.price)
+                  if (product.finalCompareAtPrice != null && product.finalCompareAtPrice! > product.finalPrice)
                     Text(
                       _currencyService.formatPrice(
                         _currencyService.convertPrice(product.compareAtPrice!, product.currency, _userCurrency),
@@ -641,15 +654,48 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: product.isInStock
-                          ? () {
-                              // TODO: Add to cart
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Added to cart', style: GoogleFonts.poppins()),
-                                  backgroundColor: Colors.black,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
+                          ? () async {
+                              print('🛒 Add to Cart button pressed!');
+                              print('Product: ${product.name}, InStock: ${product.isInStock}');
+                              try {
+                                await _cartService.addToCart(
+                                  productId: product.id,
+                                  storeId: product.storeId,
+                                  storeName: product.storeName,
+                                  productName: product.name,
+                                  productImage: product.primaryImageUrl ?? '',
+                                  price: product.price,
+                                  currency: product.currency,
+                                  quantity: 1,
+                                );
+                                
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Added to cart', style: GoogleFonts.poppins()),
+                                      backgroundColor: Colors.black,
+                                      behavior: SnackBarBehavior.floating,
+                                      action: SnackBarAction(
+                                        label: 'View Cart',
+                                        textColor: Colors.white,
+                                        onPressed: () {
+                                          Navigator.pushNamed(context, '/cart');
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                print('❌ Error adding to cart: $e');
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Failed to add to cart', style: GoogleFonts.poppins()),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
                             }
                           : null,
                       style: ElevatedButton.styleFrom(
@@ -684,6 +730,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           ],
         ),
       ),
+        );
+      },
     );
   }
 
@@ -894,7 +942,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         storeId: product.storeId,
         productName: product.name,
         productImage: product.primaryImageUrl,
-        price: product.price,
+        price: product.price, // Store seller's original price
         currency: product.currency,
         storeName: product.storeName,
         isInStock: product.isInStock,

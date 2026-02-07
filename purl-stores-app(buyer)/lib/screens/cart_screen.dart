@@ -29,8 +29,15 @@ class _CartScreenState extends State<CartScreen> {
     _loadUserCurrency();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload currency when screen comes back into focus
+    _loadUserCurrency();
+  }
+
   Future<void> _loadUserCurrency() async {
-    final currency = await _currencyService.getUserCurrency();
+    final currency = await _currencyService.getUserCurrency(forceRefresh: true);
     if (mounted) {
       setState(() => _userCurrency = currency);
     }
@@ -73,16 +80,16 @@ class _CartScreenState extends State<CartScreen> {
                 
                 final userCurrency = currencySnapshot.data!;
                 
-                // Convert all amounts to user's currency
+                // Convert all amounts to user's currency (with markup)
                 double convertedSubtotal = 0;
                 for (var item in allItems) {
-                  final itemTotal = item.price * item.quantity;
+                  final itemTotal = item.finalItemTotal;
                   convertedSubtotal += _currencyService.convertPrice(itemTotal, item.currency, userCurrency);
                 }
                 
                 final promoDiscount = _promoApplied ? 2.20 : 0.0;
                 final delivery = totals.shipping.toDouble();
-                final tax = 2.00;
+                final tax = 0.0;
                 final totalAmount = convertedSubtotal - promoDiscount + delivery + tax;
 
                 return Column(
@@ -180,102 +187,213 @@ class _CartScreenState extends State<CartScreen> {
 
   Widget _buildCartItem(CartItemData item) {
     return FutureBuilder<String>(
-      future: _currencyService.formatPriceWithConversion(item.price, item.currency),
+      future: _currencyService.formatPriceWithConversion(item.finalPrice, item.currency),
       builder: (context, priceSnapshot) {
-        final formattedPrice = priceSnapshot.data ?? '${item.currency} ${item.price.toStringAsFixed(2)}';
+        final formattedPrice = priceSnapshot.data ?? '${item.currency} ${item.finalPrice.toStringAsFixed(2)}';
         
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              // Product Image
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: context.surfaceVariantColor,
-                  borderRadius: BorderRadius.circular(12),
+        return Dismissible(
+          key: Key(item.id),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.only(right: 24),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            alignment: Alignment.centerRight,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.delete_rounded,
+                  color: Colors.white,
+                  size: 32,
                 ),
-                child: item.productImage.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: CachedNetworkImage(
-                          imageUrl: item.productImage,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Center(
-                            child: Icon(Iconsax.box, size: 40, color: context.primaryColor),
-                          ),
-                          errorWidget: (context, url, error) => Center(
-                            child: Icon(Iconsax.box, size: 40, color: context.primaryColor),
-                          ),
+                const SizedBox(height: 4),
+                Text(
+                  'Delete',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          confirmDismiss: (direction) async {
+            return await showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: Text(
+                    'Remove Item',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      color: context.textPrimaryColor,
+                    ),
+                  ),
+                  content: Text(
+                    'Are you sure you want to remove "${item.productName}" from your cart?',
+                    style: GoogleFonts.poppins(
+                      color: context.textSecondaryColor,
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.poppins(
+                          color: context.textSecondaryColor,
                         ),
-                      )
-                    : Center(
-                        child: Icon(Iconsax.box, size: 40, color: context.primaryColor),
-                      ),
-              ),
-              const SizedBox(width: 12),
-              // Product Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.productName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: context.textPrimaryColor,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Iconsax.clock, size: 12, color: context.textSecondaryColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          '15-20 min',
-                          style: GoogleFonts.poppins(fontSize: 11, color: context.textSecondaryColor),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: Text(
+                        'Remove',
+                        style: GoogleFonts.poppins(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w600,
                         ),
-                        const SizedBox(width: 12),
-                        const Icon(Iconsax.star1, size: 12, color: Color(0xFFFFB800)),
-                        const SizedBox(width: 4),
-                        Text(
-                          '4.9',
-                          style: GoogleFonts.poppins(fontSize: 11, color: context.textSecondaryColor),
-                        ),
-                        Text(
-                          ' (1265)',
-                          style: GoogleFonts.poppins(fontSize: 11, color: context.textSecondaryColor.withValues(alpha: 0.6)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Text(
-                          formattedPrice,
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const Spacer(),
-                        _buildQuantitySelector(item),
-                      ],
+                      ),
                     ),
                   ],
+                );
+              },
+            );
+          },
+          onDismissed: (direction) async {
+            try {
+              await _cartService.removeFromCart(item.id);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Removed from cart',
+                      style: GoogleFonts.poppins(),
+                    ),
+                    backgroundColor: Colors.black,
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Failed to remove item',
+                      style: GoogleFonts.poppins(),
+                    ),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            }
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                // Product Image
+                Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: context.surfaceVariantColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: item.productImage.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: CachedNetworkImage(
+                            imageUrl: item.productImage,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Center(
+                              child: Icon(Iconsax.box, size: 40, color: context.primaryColor),
+                            ),
+                            errorWidget: (context, url, error) => Center(
+                              child: Icon(Iconsax.box, size: 40, color: context.primaryColor),
+                            ),
+                          ),
+                        )
+                      : Center(
+                          child: Icon(Iconsax.box, size: 40, color: context.primaryColor),
+                        ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                // Product Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.productName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: context.textPrimaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Iconsax.clock, size: 12, color: context.textSecondaryColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            '15-20 min',
+                            style: GoogleFonts.poppins(fontSize: 11, color: context.textSecondaryColor),
+                          ),
+                          const SizedBox(width: 12),
+                          const Icon(Iconsax.star1, size: 12, color: Color(0xFFFFB800)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '4.9',
+                            style: GoogleFonts.poppins(fontSize: 11, color: context.textSecondaryColor),
+                          ),
+                          Text(
+                            ' (1265)',
+                            style: GoogleFonts.poppins(fontSize: 11, color: context.textSecondaryColor.withValues(alpha: 0.6)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Text(
+                            formattedPrice,
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const Spacer(),
+                          _buildQuantitySelector(item),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -456,6 +574,8 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildSummaryRow(String label, double amount, String currency, {bool isDiscount = false}) {
+    final isFree = amount == 0;
+    
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -469,11 +589,15 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
           Text(
-            '${isDiscount ? "-" : ""}${_currencyService.formatPrice(amount.abs(), currency)}',
+            isFree 
+                ? 'FREE' 
+                : '${isDiscount ? "-" : ""}${_currencyService.formatPrice(amount.abs(), currency)}',
             style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: isDiscount ? context.primaryColor : context.textPrimaryColor,
+              color: isFree 
+                  ? Colors.green 
+                  : (isDiscount ? context.primaryColor : context.textPrimaryColor),
             ),
           ),
         ],

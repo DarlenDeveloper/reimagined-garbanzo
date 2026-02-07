@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/models.dart';
+import '../models/product.dart';
 import '../theme/colors.dart';
 
 class ProductCard extends StatefulWidget {
@@ -22,7 +22,7 @@ class _ProductCardState extends State<ProductCard> {
   @override
   void initState() {
     super.initState();
-    isFavorite = widget.product.isFavorite;
+    isFavorite = false; // TODO: Get from wishlist service
   }
 
   @override
@@ -71,7 +71,7 @@ class _ProductCardState extends State<ProductCard> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        widget.product.category,
+                        widget.product.categoryId,
                         style: TextStyle(
                           color: AppColors.primary,
                           fontSize: 10,
@@ -122,7 +122,7 @@ class _ProductCardState extends State<ProductCard> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      widget.product.vendorName,
+                      widget.product.storeName,
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
@@ -134,7 +134,7 @@ class _ProductCardState extends State<ProductCard> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '\$${widget.product.price.toStringAsFixed(2)}',
+                          '\$${widget.product.finalPrice.toStringAsFixed(2)}',
                           style: TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.bold,

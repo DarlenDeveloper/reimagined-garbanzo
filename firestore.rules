@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Simple rule: Everything requires authentication
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // All reads and writes require authentication
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

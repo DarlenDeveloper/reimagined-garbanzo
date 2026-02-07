@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/colors.dart';
+import '../services/currency_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -19,6 +20,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _bioController = TextEditingController();
+  final _currencyService = CurrencyService();
   
   String _selectedGender = 'Male';
   String _selectedCurrency = 'UGX';
@@ -434,6 +436,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           .collection('users')
           .doc(user.uid)
           .set(userData, SetOptions(merge: true));
+
+      // Update currency service cache immediately
+      await _currencyService.updateUserCurrency(_selectedCurrency);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
