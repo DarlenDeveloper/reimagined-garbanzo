@@ -283,6 +283,9 @@ class ProductService {
   ///   'isActive': true,
   /// });
   /// ```
+  /// 
+  /// NOTE: Low inventory notifications are automatically triggered by Cloud Function
+  /// when stock falls below threshold (no manual trigger needed here).
   Future<void> updateProduct(
     String storeId,
     String productId,
@@ -322,7 +325,15 @@ class ProductService {
       }
     }
 
+    // Add storeId to updates so Cloud Function can access it
+    updates['storeId'] = storeId;
+
     await _productsRef(storeId).doc(productId).update(updates);
+    
+    // Cloud Function onProductStockUpdate will automatically:
+    // - Detect when stock <= lowStockThreshold
+    // - Send low inventory notification to seller
+    // - Save notification to Firestore
   }
 
   /// Update product from a Product object.

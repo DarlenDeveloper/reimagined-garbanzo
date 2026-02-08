@@ -196,9 +196,57 @@ class OrderService {
       });
 
       orderIds.add(orderRef.id);
+      
+      // Send notification to store owner about new order
+      await _sendNewOrderNotification(storeId, orderNumber, totals.total);
     }
 
     return orderIds;
+  }
+
+  /// Send notification to store owner about new order
+  Future<void> _sendNewOrderNotification(
+    String storeId,
+    String orderNumber,
+    double total,
+  ) async {
+    try {
+      final startTime = DateTime.now();
+      
+      // Get store's FCM token
+      final storeDoc = await _firestore.collection('stores').doc(storeId).get();
+      final fcmToken = storeDoc.data()?['fcmToken'] as String?;
+      
+      if (fcmToken == null) {
+        print('⚠️ No FCM token found for store $storeId');
+        return;
+      }
+
+      // TODO: Deploy Cloud Function to europe-west1 region for optimal East Africa latency
+      // For now, save to Firestore (Cloud Function will pick it up)
+      // Future optimization: Call Cloud Function directly for <300ms latency
+      
+      await _firestore
+          .collection('stores')
+          .doc(storeId)
+          .collection('notifications')
+          .add({
+        'title': '🎉 New Order!',
+        'body': 'Order $orderNumber - Total: \$$total',
+        'type': 'new_order',
+        'orderId': orderNumber,
+        'amount': total,
+        'isRead': false,
+        'createdAt': FieldValue.serverTimestamp(),
+        'fcmToken': fcmToken, // For Cloud Function to send FCM
+      });
+
+      final latency = DateTime.now().difference(startTime).inMilliseconds;
+      print('✅ New order notification queued (${latency}ms)');
+    } catch (e) {
+      print('❌ Error sending new order notification: $e');
+      // Don't throw - notification failure shouldn't break order creation
+    }
   }
 
   /// Get user's orders stream

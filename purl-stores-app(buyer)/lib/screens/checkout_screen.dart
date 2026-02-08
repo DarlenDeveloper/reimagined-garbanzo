@@ -3,9 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/colors.dart';
 import '../services/cart_service.dart';
 import '../services/order_service.dart';
+import '../services/currency_service.dart';
+import 'order_history_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -17,12 +20,14 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final CartService _cartService = CartService();
   final OrderService _orderService = OrderService();
+  final CurrencyService _currencyService = CurrencyService();
   
   int _selectedAddressIndex = -1;
   bool _showAddressError = false;
   bool _useMyContactDetails = true;
   bool _isProcessing = false;
   GeoPoint? _currentLocation;
+  String _userCurrency = 'UGX';
   
   // Contact details controllers
   final TextEditingController _nameController = TextEditingController();
@@ -35,6 +40,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void initState() {
     super.initState();
     _loadUserContactDetails();
+    _loadUserCurrency();
+  }
+
+  Future<void> _loadUserCurrency() async {
+    final currency = await _currencyService.getUserCurrency(forceRefresh: true);
+    if (mounted) {
+      setState(() => _userCurrency = currency);
+    }
   }
 
   @override
@@ -139,7 +152,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () => context.pop(),
             child: const Icon(Iconsax.arrow_left, color: AppColors.black),
           ),
           const Spacer(),
@@ -572,7 +585,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('${entry.value.length} items', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600)),
-                    Text('KES ${totals.total.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                    Text(
+                      _currencyService.formatPrice(totals.total, _userCurrency),
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    ),
                   ],
                 ),
               ],
@@ -585,7 +601,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           children: [
             Text('Grand Total', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
             Text(
-              'KES ${grandTotal.toStringAsFixed(2)}',
+              _currencyService.formatPrice(grandTotal, _userCurrency),
               style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700),
             ),
           ],
@@ -610,25 +626,56 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
         ],
       ),
-      child: SizedBox(
-        width: double.infinity,
-        height: 54,
-        child: ElevatedButton(
-          onPressed: _isProcessing ? null : () => _processOrder(itemsByStore, totalsByStore),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.black,
-            foregroundColor: AppColors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // TEST MODE: Skip Payment Button
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton(
+              onPressed: _isProcessing ? null : () => _processOrder(itemsByStore, totalsByStore),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.orange, width: 2),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Skip Payment (Test Mode)',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          child: _isProcessing
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2),
-                )
-              : Text('Place Order', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
-        ),
+          const SizedBox(height: 12),
+          // Regular Pay Button
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: null, // Disabled for now
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.grey300,
+                foregroundColor: AppColors.grey600,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: Text(
+                'Pay with Pesapal (Coming Soon)',
+                style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -637,20 +684,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     Map<String, List<CartItemData>> itemsByStore,
     Map<String, CartTotals> totalsByStore,
   ) async {
-    // Validate
+    // TEST MODE: Skip validation for location and address
+    // Auto-fill with dummy data if missing
     if (_currentLocation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please allow location access', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
+      setState(() {
+        _currentLocation = const GeoPoint(0.3476, 32.5825); // Kampala
+      });
     }
 
-    if (_selectedAddressIndex == -1) {
-      setState(() => _showAddressError = true);
-      return;
+    if (_selectedAddressIndex == -1 && _savedAddresses.isEmpty) {
+      setState(() {
+        _savedAddresses.add(_DeliveryAddress(
+          label: 'Test Address',
+          street: 'Test Street, Building 1',
+          city: 'Kampala, Uganda',
+          icon: Iconsax.location,
+        ));
+        _selectedAddressIndex = 0;
+      });
     }
 
     setState(() => _isProcessing = true);
@@ -730,19 +781,36 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 style: GoogleFonts.poppins(fontSize: 14, color: AppColors.grey600),
               ),
               const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                        context.go('/home');
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.black),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text('Go Home', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.black)),
+                    ),
                   ),
-                  child: Text('Go Home', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop(); // Close dialog
+                        context.go('/orders'); // Replace entire stack with orders screen
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text('View Orders', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

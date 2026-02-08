@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import '../services/order_service.dart';
+import '../services/currency_service.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -10,144 +12,192 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
+  final OrderService _orderService = OrderService();
+  final CurrencyService _currencyService = CurrencyService();
   String _selectedFilter = 'All';
-  
-  final List<Map<String, dynamic>> _orders = [
-    {'orderId': '#GC-1234', 'customer': 'John Doe', 'items': '3 items', 'amount': '\$150.00', 'status': 'Pending', 'time': '2 min ago'},
-    {'orderId': '#GC-1233', 'customer': 'Jane Smith', 'items': '1 item', 'amount': '\$320.00', 'status': 'Shipped', 'time': '1 hour ago'},
-    {'orderId': '#GC-1232', 'customer': 'Mike Johnson', 'items': '5 items', 'amount': '\$85.00', 'status': 'Delivered', 'time': '3 hours ago'},
-    {'orderId': '#GC-1231', 'customer': 'Sarah Williams', 'items': '2 items', 'amount': '\$210.00', 'status': 'Pending', 'time': '5 hours ago'},
-    {'orderId': '#GC-1230', 'customer': 'David Brown', 'items': '4 items', 'amount': '\$445.00', 'status': 'Shipped', 'time': '1 day ago'},
-    {'orderId': '#GC-1229', 'customer': 'Emma Wilson', 'items': '1 item', 'amount': '\$120.00', 'status': 'Delivered', 'time': '2 days ago'},
-  ];
 
-  List<Map<String, dynamic>> get _filteredOrders {
-    if (_selectedFilter == 'All') return _orders;
-    if (_selectedFilter == 'Done') return _orders.where((o) => o['status'] == 'Delivered').toList();
-    return _orders.where((o) => o['status'] == _selectedFilter).toList();
+  List<StoreOrderData> _filterOrders(List<StoreOrderData> orders) {
+    if (_selectedFilter == 'All') return orders;
+    if (_selectedFilter == 'Done') {
+      return orders.where((o) => o.status == 'delivered').toList();
+    }
+    return orders.where((o) => o.status == _selectedFilter.toLowerCase()).toList();
   }
 
-  int _getCount(String filter) {
-    if (filter == 'All') return _orders.length;
-    if (filter == 'Done') return _orders.where((o) => o['status'] == 'Delivered').length;
-    return _orders.where((o) => o['status'] == filter).length;
+  int _getCount(List<StoreOrderData> orders, String filter) {
+    if (filter == 'All') return orders.length;
+    if (filter == 'Done') {
+      return orders.where((o) => o.status == 'delivered').length;
+    }
+    return orders.where((o) => o.status == filter.toLowerCase()).length;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCreateOrderSheet(context),
-        backgroundColor: Colors.black,
-        child: const Icon(Iconsax.add, color: Colors.white),
-      ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Orders', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.black)),
-                  Row(
+        child: StreamBuilder<List<StoreOrderData>>(
+          stream: _orderService.getStoreOrdersStream(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: Colors.black));
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Iconsax.warning_2, size: 48, color: Colors.grey[300]),
+                    const SizedBox(height: 16),
+                    Text('Error loading orders', style: GoogleFonts.poppins(color: Colors.grey[600])),
+                  ],
+                ),
+              );
+            }
+
+            final allOrders = snapshot.data ?? [];
+            final filteredOrders = _filterOrders(allOrders);
+
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Text(
+                        'Orders',
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                      ),
                       GestureDetector(
                         onTap: () => _showSearchSheet(),
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                           child: Icon(Iconsax.search_normal, color: Colors.grey[700], size: 22),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            // Filter Tabs
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: ['All', 'Pending', 'Shipped', 'Done'].map((filter) => 
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedFilter = filter),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: _selectedFilter == filter ? Colors.black : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(10),
+                ),
+                // Filter Tabs
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: ['All', 'Pending', 'Shipped', 'Done'].map((filter) {
+                      final isSelected = _selectedFilter == filter;
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedFilter = filter),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: isSelected ? Colors.black : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  filter,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: isSelected ? Colors.white : Colors.grey[600],
+                                  ),
+                                ),
+                                Text(
+                                  '${_getCount(allOrders, filter)}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: isSelected ? Colors.white : Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        child: Column(
-                          children: [
-                            Text(filter, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: _selectedFilter == filter ? Colors.white : Colors.grey[600])),
-                            Text('${_getCount(filter)}', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: _selectedFilter == filter ? Colors.white : Colors.black)),
-                          ],
-                        ),
-                      ),
-                    ),
+                      );
+                    }).toList(),
                   ),
-                ).toList(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Orders List
-            Expanded(
-              child: _filteredOrders.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Iconsax.shopping_bag, size: 48, color: Colors.grey[300]),
-                          const SizedBox(height: 16),
-                          Text('No $_selectedFilter orders', style: GoogleFonts.poppins(color: Colors.grey[600])),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _filteredOrders.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index == _filteredOrders.length) return const SizedBox(height: 80);
-                        final order = _filteredOrders[index];
-                        return _OrderItem(
-                          orderId: order['orderId'],
-                          customer: order['customer'],
-                          items: order['items'],
-                          amount: order['amount'],
-                          status: order['status'],
-                          time: order['time'],
-                          onAccept: () => _updateOrderStatus(order['orderId'], 'Shipped'),
-                          onReject: () => _removeOrder(order['orderId']),
-                          onView: () => _showOrderDetails(context, order),
-                        );
-                      },
-                    ),
-            ),
-          ],
+                ),
+                const SizedBox(height: 16),
+                // Orders List
+                Expanded(
+                  child: filteredOrders.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Iconsax.shopping_bag, size: 48, color: Colors.grey[300]),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No $_selectedFilter orders',
+                                style: GoogleFonts.poppins(color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: filteredOrders.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index == filteredOrders.length) {
+                              return const SizedBox(height: 80);
+                            }
+                            final order = filteredOrders[index];
+                            return _OrderItem(
+                              order: order,
+                              currencyService: _currencyService,
+                              onAccept: () => _updateOrderStatus(order.id, 'shipped'),
+                              onReject: () => _updateOrderStatus(order.id, 'refunded'),
+                              onView: () => _showOrderDetails(context, order),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  void _updateOrderStatus(String orderId, String newStatus) {
-    setState(() {
-      final index = _orders.indexWhere((o) => o['orderId'] == orderId);
-      if (index != -1) _orders[index]['status'] = newStatus;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Order $orderId updated to $newStatus', style: GoogleFonts.poppins()), backgroundColor: Colors.black),
-    );
-  }
-
-  void _removeOrder(String orderId) {
-    setState(() => _orders.removeWhere((o) => o['orderId'] == orderId));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Order $orderId rejected', style: GoogleFonts.poppins()), backgroundColor: Colors.black),
-    );
+  Future<void> _updateOrderStatus(String orderId, String newStatus) async {
+    try {
+      await _orderService.updateOrderStatus(orderId, newStatus);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Order updated to ${newStatus == 'shipped' ? 'Shipped' : 'Refunded'}',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.black,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update order', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showSearchSheet() {
@@ -156,13 +206,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: TextField(
                 autofocus: true,
                 decoration: InputDecoration(
@@ -181,76 +237,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
-  void _showCreateOrderSheet(BuildContext context) {
+  void _showOrderDetails(BuildContext context, StoreOrderData order) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Create Order', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 20),
-            _buildTextField('Customer Name', Iconsax.user),
-            const SizedBox(height: 16),
-            _buildTextField('Phone Number', Iconsax.call),
-            const SizedBox(height: 16),
-            _buildTextField('Delivery Address', Iconsax.location),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  setState(() {
-                    _orders.insert(0, {
-                      'orderId': '#GC-${1235 + _orders.length}',
-                      'customer': 'New Customer',
-                      'items': '1 item',
-                      'amount': '\$0.00',
-                      'status': 'Pending',
-                      'time': 'Just now',
-                    });
-                  });
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                child: Text('Create Order', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-    );
-  }
-
-  Widget _buildTextField(String label, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-      child: TextField(
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          labelText: label,
-          labelStyle: GoogleFonts.poppins(color: Colors.grey[600]),
-          icon: Icon(icon, color: Colors.grey[600]),
-        ),
-        style: GoogleFonts.poppins(),
-      ),
-    );
-  }
-
-  void _showOrderDetails(BuildContext context, Map<String, dynamic> order) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.7,
         minChildSize: 0.5,
@@ -264,73 +258,158 @@ class _OrdersScreenState extends State<OrdersScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Order ${order['orderId']}', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700)),
+                  Expanded(
+                    child: Text(
+                      'Order ${order.orderNumber}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)),
-                    child: Text(order['status'], style: GoogleFonts.poppins(color: Colors.grey[700], fontWeight: FontWeight.w600, fontSize: 12)),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(order.status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      order.statusDisplay,
+                      style: GoogleFonts.poppins(
+                        color: _getStatusColor(order.status),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
-              _DetailSection(title: 'Customer', children: [
-                _DetailRow(icon: Iconsax.user, label: order['customer']),
-                _DetailRow(icon: Iconsax.call, label: '+233 XX XXX XXXX'),
-                _DetailRow(icon: Iconsax.location, label: 'Accra, Ghana'),
-              ]),
+              _DetailSection(
+                title: 'Customer',
+                children: [
+                  _DetailRow(icon: Iconsax.user, label: order.userName),
+                  _DetailRow(icon: Iconsax.call, label: order.userPhone),
+                  _DetailRow(
+                    icon: Iconsax.location,
+                    label: '${order.deliveryAddress['street'] ?? ''}, ${order.deliveryAddress['city'] ?? ''}',
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
-              _DetailSection(title: 'Items', children: [
-                _ItemRow(name: 'Product Item', qty: 1, price: order['amount']),
-              ]),
+              _DetailSection(
+                title: 'Items',
+                children: order.items.map((item) {
+                  return _ItemRow(
+                    name: item.productName,
+                    qty: item.quantity,
+                    price: _currencyService.formatPriceWithCurrency(
+                      item.sellerPrice * item.quantity,
+                      item.currency,
+                    ),
+                  );
+                }).toList(),
+              ),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
                   children: [
-                    Text('Total', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                    Text(order['amount'], style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Subtotal', style: GoogleFonts.poppins()),
+                        Text(
+                          _currencyService.formatPrice(order.subtotal),
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Shipping', style: GoogleFonts.poppins()),
+                        Text(
+                          _currencyService.formatPrice(order.shipping),
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total',
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          _currencyService.formatPrice(order.total),
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-              if (order['status'] == 'Pending')
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _removeOrder(order['orderId']);
-                        },
-                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), side: BorderSide(color: Colors.grey[400]!), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                        child: Text('Reject', style: GoogleFonts.poppins(color: Colors.grey[700], fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _updateOrderStatus(order['orderId'], 'Shipped');
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                        child: Text('Accept', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                  ],
-                )
-              else if (order['status'] == 'Shipped')
+              if (order.status == 'pending')
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context);
-                      _updateOrderStatus(order['orderId'], 'Delivered');
+                      _updateOrderStatus(order.id, 'shipped');
                     },
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    child: Text('Mark as Delivered', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Mark as Shipped',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                )
+              else if (order.status == 'shipped')
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _updateOrderStatus(order.id, 'delivered');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Mark as Delivered',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -339,13 +418,35 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
     );
   }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'delivered':
+        return const Color(0xFF22C55E);
+      case 'shipped':
+        return Colors.blue;
+      case 'pending':
+        return const Color(0xFFFF9800);
+      case 'refunded':
+        return const Color(0xFFEF4444);
+      default:
+        return Colors.grey;
+    }
+  }
 }
 
 class _OrderItem extends StatelessWidget {
-  final String orderId, customer, items, amount, status, time;
+  final StoreOrderData order;
+  final CurrencyService currencyService;
   final VoidCallback onAccept, onReject, onView;
 
-  const _OrderItem({required this.orderId, required this.customer, required this.items, required this.amount, required this.status, required this.time, required this.onAccept, required this.onReject, required this.onView});
+  const _OrderItem({
+    required this.order,
+    required this.currencyService,
+    required this.onAccept,
+    required this.onReject,
+    required this.onView,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -354,17 +455,42 @@ class _OrderItem extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Column(
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(orderId, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black)),
+                Expanded(
+                  child: Text(
+                    order.orderNumber,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.black,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
-                  child: Text(status, style: GoogleFonts.poppins(color: Colors.grey[700], fontSize: 11, fontWeight: FontWeight.w500)),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    order.statusDisplay,
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey[700],
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -375,29 +501,35 @@ class _OrderItem extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(customer, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[700])),
-                    Text(items, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500])),
+                    Text(
+                      order.userName,
+                      style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[700]),
+                    ),
+                    Text(
+                      order.itemsCount,
+                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500]),
+                    ),
                   ],
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(amount, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black)),
-                    Text(time, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
+                    Text(
+                      currencyService.formatPrice(order.total),
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Colors.black,
+                      ),
+                    ),
+                    Text(
+                      order.timeAgo,
+                      style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500]),
+                    ),
                   ],
                 ),
               ],
             ),
-            if (status == 'Pending') ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: OutlinedButton(onPressed: onReject, style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.grey[400]!)), child: Text('Reject', style: GoogleFonts.poppins(color: Colors.grey[700], fontSize: 12)))),
-                  const SizedBox(width: 12),
-                  Expanded(child: ElevatedButton(onPressed: onAccept, style: ElevatedButton.styleFrom(backgroundColor: Colors.black), child: Text('Accept', style: GoogleFonts.poppins(color: Colors.white, fontSize: 12)))),
-                ],
-              ),
-            ],
           ],
         ),
       ),
@@ -416,11 +548,20 @@ class _DetailSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.grey[600])),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Column(children: children),
         ),
       ],
@@ -438,7 +579,18 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(children: [Icon(icon, size: 18, color: Colors.grey[600]), const SizedBox(width: 12), Text(label, style: GoogleFonts.poppins(fontSize: 14))]),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey[600]),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(fontSize: 14),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -456,8 +608,16 @@ class _ItemRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('$name x$qty', style: GoogleFonts.poppins(fontSize: 14)),
-          Text(price, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          Expanded(
+            child: Text(
+              '$name x$qty',
+              style: GoogleFonts.poppins(fontSize: 14),
+            ),
+          ),
+          Text(
+            price,
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );

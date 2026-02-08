@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/colors.dart';
 import '../services/cart_service.dart';
 import '../services/currency_service.dart';
@@ -612,7 +613,7 @@ class _CartScreenState extends State<CartScreen> {
         width: double.infinity,
         height: 54,
         child: ElevatedButton(
-          onPressed: () => Navigator.pushNamed(context, '/checkout'),
+          onPressed: () => context.go('/checkout'),
           style: ElevatedButton.styleFrom(
             backgroundColor: context.primaryColor,
             foregroundColor: context.isDark ? Colors.black : Colors.white,

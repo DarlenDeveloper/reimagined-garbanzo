@@ -10,6 +10,8 @@ import 'main_screen.dart';
 import 'messages_screen.dart';
 import '../services/store_service.dart';
 import '../services/messages_service.dart';
+import '../services/order_service.dart';
+import '../services/currency_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,6 +26,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   late Animation<Offset> _slideAnimation;
   final _storeService = StoreService();
   final _messagesService = MessagesService();
+  final _orderService = OrderService();
+  final _currencyService = CurrencyService();
   String _storeName = '';
   String? _storeId;
   bool _isLoading = true;
@@ -174,20 +178,55 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _AnalyticCard(title: 'Sales', value: '\$2,450', icon: Iconsax.trend_up, trend: '+12%', delay: 0)),
-            const SizedBox(width: 12),
-            Expanded(child: _AnalyticCard(title: 'Orders', value: '18', icon: Iconsax.shopping_bag, trend: '+5', delay: 100)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _AnalyticCard(title: 'Visitors', value: '342', icon: Iconsax.eye, trend: '+28%', delay: 200)),
-            const SizedBox(width: 12),
-            Expanded(child: _AnalyticCard(title: 'Conversion', value: '5.3%', icon: Iconsax.chart_1, trend: '+0.8%', delay: 300)),
-          ],
+        // TODO: Create AnalyticsService to track and aggregate:
+        // - Daily/weekly/monthly sales
+        // - Order counts and trends
+        // - Visitor tracking (page views, unique visitors)
+        // - Conversion rates
+        // - Product performance
+        // - Customer insights
+        // For now, showing basic order-based metrics
+        StreamBuilder<List<StoreOrderData>>(
+          stream: _orderService.getStoreOrdersStream(),
+          builder: (context, snapshot) {
+            final orders = snapshot.data ?? [];
+            
+            // Calculate today's metrics
+            final today = DateTime.now();
+            final todayOrders = orders.where((order) {
+              return order.createdAt.year == today.year &&
+                     order.createdAt.month == today.month &&
+                     order.createdAt.day == today.day;
+            }).toList();
+
+            final todaySales = todayOrders.fold<double>(
+              0, 
+              (sum, order) => sum + order.total,
+            );
+            final todayOrderCount = todayOrders.length;
+
+            return Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: _AnalyticCard(title: 'Sales', value: _currencyService.formatPrice(todaySales), icon: Iconsax.trend_up, trend: '+12%', delay: 0)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _AnalyticCard(title: 'Orders', value: '$todayOrderCount', icon: Iconsax.shopping_bag, trend: '+5', delay: 100)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    // TODO: Implement visitor tracking with AnalyticsService
+                    Expanded(child: _AnalyticCard(title: 'Visitors', value: '0', icon: Iconsax.eye, trend: '+0%', delay: 200)),
+                    const SizedBox(width: 12),
+                    // TODO: Calculate conversion rate with AnalyticsService
+                    Expanded(child: _AnalyticCard(title: 'Conversion', value: '0%', icon: Iconsax.chart_1, trend: '+0%', delay: 300)),
+                  ],
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -208,11 +247,79 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
         const SizedBox(height: 12),
-        _OrderCard(orderId: '#GC-1234', customer: 'John Doe', amount: '\$150.00', status: 'Pending', time: '2 min ago', delay: 0),
-        const SizedBox(height: 10),
-        _OrderCard(orderId: '#GC-1233', customer: 'Jane Smith', amount: '\$320.00', status: 'Shipped', time: '1 hour ago', delay: 100),
-        const SizedBox(height: 10),
-        _OrderCard(orderId: '#GC-1232', customer: 'Mike Johnson', amount: '\$85.00', status: 'Delivered', time: '3 hours ago', delay: 200),
+        StreamBuilder<List<StoreOrderData>>(
+          stream: _orderService.getStoreOrdersStream(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: CircularProgressIndicator(color: Colors.black),
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  'Error loading orders',
+                  style: GoogleFonts.poppins(color: Colors.grey[600]),
+                ),
+              );
+            }
+
+            final orders = snapshot.data ?? [];
+            
+            if (orders.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Iconsax.shopping_bag, size: 40, color: Colors.grey[400]),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No orders yet',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // Show only the first 3 orders
+            final recentOrders = orders.take(3).toList();
+            
+            return Column(
+              children: recentOrders.asMap().entries.map((entry) {
+                final index = entry.key;
+                final order = entry.value;
+                return Padding(
+                  padding: EdgeInsets.only(bottom: index < recentOrders.length - 1 ? 10 : 0),
+                  child: _OrderCard(
+                    orderId: order.orderNumber,
+                    customer: order.userName,
+                    amount: _currencyService.formatPrice(order.total),
+                    status: order.statusDisplay,
+                    time: order.timeAgo,
+                    delay: index * 100,
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
       ],
     );
   }

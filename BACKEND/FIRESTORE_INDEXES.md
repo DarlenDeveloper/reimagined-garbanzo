@@ -170,6 +170,38 @@ Filters messages by sender (not equal to current user) AND read status (false), 
 
 ---
 
+## Index 8: Store Orders
+
+**Collection ID:** `orders`  
+**Query Scope:** Collection  
+**Fields Indexed:**
+- `createdAt` (Descending)
+
+**Index ID:** Not required (single field)
+
+### Purpose
+Displays all orders for a specific store, sorted by newest first. Sellers can see incoming orders and manage fulfillment.
+
+### Used In
+- `purl-admin-app(seller)/lib/services/order_service.dart` - `getStoreOrdersStream()`
+- Seller app Orders screen
+- Order management and fulfillment
+
+### Why It's Needed
+This is a simple single-field query on a subcollection (`/stores/{storeId}/orders`), so no composite index is required. Firestore automatically indexes single fields.
+
+### Query Structure
+```dart
+_firestore
+  .collection('stores')
+  .doc(storeId)
+  .collection('orders')
+  .orderBy('createdAt', descending: true)
+  .snapshots()
+```
+
+---
+
 ## Index Management
 
 ### Automatic Creation
@@ -230,7 +262,7 @@ Each index consumes storage and affects write performance slightly. However, the
 
 ## Summary
 
-All 7 indexes are essential for the PURL marketplace to function properly:
+All 8 indexes/queries are essential for the PURL marketplace to function properly:
 
 1. ✅ **Products Discovery** - Browse all products
 2. ✅ **Products by Category** - Filter by category
@@ -239,6 +271,7 @@ All 7 indexes are essential for the PURL marketplace to function properly:
 5. ✅ **Conversations** - Messaging system
 6. ✅ **Product Questions** - Q&A on products
 7. 🔄 **Unread Messages** - Read receipts
+8. ✅ **Store Orders** - Seller order management (no index needed)
 
 **Legend:**
 - ✅ Enabled and working
@@ -246,4 +279,4 @@ All 7 indexes are essential for the PURL marketplace to function properly:
 
 ---
 
-*Last Updated: January 26, 2026*
+*Last Updated: February 8, 2026*
