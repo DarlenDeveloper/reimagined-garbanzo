@@ -121,7 +121,7 @@ class NotificationService {
     }
   }
 
-  /// Save FCM token to Firestore
+  /// Save FCM token to Firestore (supports multiple devices)
   Future<void> _saveFCMToken(String token) async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) {
@@ -130,13 +130,34 @@ class NotificationService {
     }
 
     try {
-      await _firestore.collection('users').doc(userId).set({
-        'fcmToken': token,
-        'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
-        'platform': defaultTargetPlatform.name,
-      }, SetOptions(merge: true));
-
-      print('✅ FCM token saved to Firestore');
+      final userRef = _firestore.collection('users').doc(userId);
+      final userDoc = await userRef.get();
+      
+      if (userDoc.exists) {
+        // Get existing tokens array
+        final data = userDoc.data();
+        final List<dynamic> existingTokens = data?['fcmTokens'] ?? [];
+        
+        // Only add if token doesn't exist
+        if (!existingTokens.contains(token)) {
+          await userRef.update({
+            'fcmTokens': FieldValue.arrayUnion([token]),
+            'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+            'platform': defaultTargetPlatform.name,
+          });
+          print('✅ FCM token added to array');
+        } else {
+          print('ℹ️ FCM token already exists');
+        }
+      } else {
+        // Create new user document with tokens array
+        await userRef.set({
+          'fcmTokens': [token],
+          'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+          'platform': defaultTargetPlatform.name,
+        });
+        print('✅ FCM token saved (new user)');
+      }
     } catch (e) {
       print('❌ Error saving FCM token: $e');
     }
@@ -322,18 +343,18 @@ class NotificationService {
     await batch.commit();
   }
 
-  /// Delete FCM token (call on logout)
+  /// Delete FCM token (call on logout) - removes only this device's token
   Future<void> deleteFCMToken() async {
     final userId = _auth.currentUser?.uid;
-    if (userId == null) return;
+    if (userId == null || _fcmToken == null) return;
 
     try {
       await _messaging.deleteToken();
       await _firestore.collection('users').doc(userId).update({
-        'fcmToken': FieldValue.delete(),
+        'fcmTokens': FieldValue.arrayRemove([_fcmToken]),
       });
       _fcmToken = null;
-      print('✅ FCM token deleted');
+      print('✅ FCM token removed from array');
     } catch (e) {
       print('❌ Error deleting FCM token: $e');
     }

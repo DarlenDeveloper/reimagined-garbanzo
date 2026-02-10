@@ -218,23 +218,36 @@ class MessagesService {
     await batch.commit();
   }
 
-  /// Format time ago
+  /// Format time ago with professional format
   String getTimeAgo(Timestamp timestamp) {
     final now = DateTime.now();
     final date = timestamp.toDate();
     final difference = now.difference(date);
 
-    if (difference.inDays > 1) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
+    // Less than 1 hour: show minutes
+    if (difference.inMinutes < 60) {
+      if (difference.inMinutes < 1) return 'Just now';
       return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
     }
+    
+    // Less than 24 hours: show hours
+    if (difference.inHours < 24) {
+      return '${difference.inHours}hr ago';
+    }
+    
+    // Yesterday
+    if (difference.inDays == 1) {
+      return 'Yesterday';
+    }
+    
+    // Less than 7 days: show day name
+    if (difference.inDays < 7) {
+      final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return weekdays[date.weekday - 1];
+    }
+    
+    // More than 7 days: show date
+    return '${date.day}/${date.month.toString().padLeft(2, '0')}/${date.year.toString().substring(2)}';
   }
 
   /// Format message time

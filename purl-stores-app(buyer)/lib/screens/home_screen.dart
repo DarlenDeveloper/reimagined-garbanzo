@@ -201,18 +201,22 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Row(
         children: [
-          Image.asset(
-            'assets/images/logo.png',
-            width: 32,
-            height: 32,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
-                child: Center(child: Text('P', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white))),
-              );
-            },
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              'assets/images/mainpurllogo.png',
+              width: 32,
+              height: 32,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
+                  child: Center(child: Text('P', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white))),
+                );
+              },
+            ),
           ),
           const SizedBox(width: 8),
           Text('Purl Stores', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
@@ -361,10 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxHeight: 400,
-                        ),
+                      child: AspectRatio(
+                        aspectRatio: 16 / 9, // Reserve space for image
                         child: Image.network(
                           (mediaList[0] as Map<String, dynamic>)['thumbnailUrl'] ?? '',
                           width: double.infinity,
@@ -372,9 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) return child;
                             return Container(
-                              height: 200,
-                              width: double.infinity,
-                              color: Colors.grey[100],
+                              color: Colors.grey[200],
                               child: Center(
                                 child: CircularProgressIndicator(
                                   value: loadingProgress.expectedTotalBytes != null
@@ -388,8 +388,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
-                              height: 200,
-                              width: double.infinity,
                               color: Colors.grey[100],
                               child: Center(
                                 child: Column(
@@ -416,8 +414,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildActionBtn(isLiked ? Iconsax.heart5 : Iconsax.heart, '${likes + (isLiked ? 1 : 0)}', () => _toggleLike(postId, storeId), isActive: isLiked),
                       const SizedBox(width: 24),
                       _buildActionBtn(isSaved ? Iconsax.archive_tick : Iconsax.archive_add, '', () => _toggleSave(postId, storeId), isActive: isSaved),
-                      const SizedBox(width: 24),
-                      _buildActionBtn(Iconsax.share, '', () => _sharePost(post)),
+                      // Share button disabled for now
+                      // const SizedBox(width: 24),
+                      // _buildActionBtn(Iconsax.share, '', () => _sharePost(post)),
                       const Spacer(),
                       _buildActionBtn(Iconsax.direct_send, '', () => _sendDM(storeId, storeName)),
                     ],

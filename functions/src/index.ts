@@ -81,13 +81,23 @@ export const onOrderCreated = onDocumentCreated(
     // Get store name
     const storeName = storeDoc.data()?.name || storeDoc.data()?.storeName || "Your store";
     const itemCount = order.items?.length || 1;
+    const total = order.total || 0;
+    // Get currency from first item (all items in an order have same currency)
+    const currency = order.items?.[0]?.currency || "UGX";
 
-    // Get FCM tokens from /users/{userId}
+    // Get FCM tokens from /users/{userId} - supports both old and new format
     const tokens: string[] = [];
     for (const userId of authorizedUsers) {
       const userDoc = await admin.firestore().collection("users").doc(userId).get();
-      if (userDoc.exists && userDoc.data()?.fcmToken) {
-        tokens.push(userDoc.data()!.fcmToken);
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        // Support new array format
+        const userTokens = userData?.fcmTokens || [];
+        tokens.push(...userTokens);
+        // Support old single token format (backward compatibility)
+        if (userData?.fcmToken && !userTokens.includes(userData.fcmToken)) {
+          tokens.push(userData.fcmToken);
+        }
       }
     }
 
@@ -103,7 +113,7 @@ export const onOrderCreated = onDocumentCreated(
       await sendNotification(
         token,
         "🎉 New Order!",
-        `${storeName} has a new order for ${itemCount} item${itemCount > 1 ? 's' : ''} totalling ${order.currency} ${order.total}`,
+        `${storeName} has a new order for ${itemCount} item${itemCount > 1 ? 's' : ''} totalling ${currency} ${total.toFixed(2)}`,
         {type: "new_order", orderId, storeId}
       );
     }
@@ -115,7 +125,7 @@ export const onOrderCreated = onDocumentCreated(
       .collection("notifications")
       .add({
         title: "🎉 New Order!",
-        body: `${storeName} has a new order for ${itemCount} item${itemCount > 1 ? 's' : ''} totalling ${order.currency} ${order.total}`,
+        body: `${storeName} has a new order for ${itemCount} item${itemCount > 1 ? 's' : ''} totalling ${currency} ${total.toFixed(2)}`,
         type: "new_order",
         data: {orderId},
         isRead: false,
@@ -170,45 +180,121 @@ export const onMessageSent = onDocumentCreated(
       ? conversationData?.storeName
       : conversationData?.userName;
 
-    // Get recipient's FCM token (could be seller or buyer)
-    let recipientDoc = await admin.firestore()
-      .collection("stores")
-      .doc(recipientId)
-      .get();
+    // Determine if recipient is a store or user
+    const isRecipientStore = conversationData?.storeId === recipientId;
+    
+    let fcmTokens: string[] = [];
 
-    if (!recipientDoc.exists) {
-      // Try users collection (buyers)
-      recipientDoc = await admin.firestore()
+    if (isRecipientStore) {
+      // Recipient is a store - get FCM tokens from all authorized users
+      const storeDoc = await admin.firestore()
+        .collection("stores")
+        .doc(recipientId)
+        .get();
+      
+      if (!storeDoc.exists) {
+        console.log("Store not found");
+        return;
+      }
+
+      const authorizedUsers = storeDoc.data()?.authorizedUsers || [];
+      
+      // Get FCM tokens from all authorized users
+      for (const userId of authorizedUsers) {
+        const userDoc = await admin.firestore()
+          .collection("users")
+          .doc(userId)
+          .get();
+        
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          const userTokens = userData?.fcmTokens || [];
+          fcmTokens.push(...userTokens);
+          // Support old format
+          if (userData?.fcmToken && !userTokens.includes(userData.fcmToken)) {
+            fcmTokens.push(userData.fcmToken);
+          }
+        }
+      }
+    } else {
+      // Recipient is a user (buyer)
+      const userDoc = await admin.firestore()
         .collection("users")
         .doc(recipientId)
         .get();
-    }
-
-    if (!recipientDoc.exists) {
-      console.log("Recipient not found");
-      return;
-    }
-
-    const recipientData = recipientDoc.data();
-    const fcmToken = recipientData?.fcmToken;
-
-    if (!fcmToken) {
-      console.log("No FCM token for recipient");
-      return;
-    }
-
-    // Send notification
-    await sendNotification(
-      fcmToken,
-      `💬 ${senderName}`,
-      messageText || "Sent you a message",
-      {
-        type: "message",
-        senderId: senderId,
-        messageId: messageId,
-        conversationId: conversationId,
+      
+      if (!userDoc.exists) {
+        console.log("User not found");
+        return;
       }
-    );
+
+      const userData = userDoc.data();
+      fcmTokens = userData?.fcmTokens || [];
+      // Support old format
+      if (userData?.fcmToken && !fcmTokens.includes(userData.fcmToken)) {
+        fcmTokens.push(userData.fcmToken);
+      }
+    }
+
+    if (fcmTokens.length === 0) {
+      console.log("No FCM tokens for recipient");
+      return;
+    }
+
+    // Send notification to all recipient devices
+    for (const token of fcmTokens) {
+      await sendNotification(
+        token,
+        `💬 ${senderName}`,
+        messageText || "Sent you a message",
+        {
+          type: "message",
+          senderId: senderId,
+          messageId: messageId,
+          conversationId: conversationId,
+        }
+      );
+    }
+
+    // Save notification to recipient's notifications collection
+    // Check if recipient is a store (seller) or user (buyer)
+    const isStore = await admin.firestore()
+      .collection("stores")
+      .doc(recipientId)
+      .get()
+      .then((doc) => doc.exists);
+
+    if (isStore) {
+      // Save to store's notifications
+      await admin.firestore()
+        .collection("stores")
+        .doc(recipientId)
+        .collection("notifications")
+        .add({
+          title: `💬 ${senderName}`,
+          body: messageText || "Sent you a message",
+          type: "message",
+          data: {senderId, messageId, conversationId},
+          isRead: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    } else {
+      // Save to user's notifications
+      await admin.firestore()
+        .collection("users")
+        .doc(recipientId)
+        .collection("notifications")
+        .add({
+          title: `💬 ${senderName}`,
+          body: messageText || "Sent you a message",
+          type: "message",
+          data: {senderId, messageId, conversationId},
+          isRead: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    }
+
+    console.log(`✅ Message notification sent and saved`);
   }
 );
 
@@ -234,12 +320,19 @@ export const onProductStockUpdate = onDocumentUpdated(
       const authorizedUsers = storeDoc.data()?.authorizedUsers || [];
       if (authorizedUsers.length === 0) return;
 
-      // Get FCM tokens
+      // Get FCM tokens - supports both old and new format
       const tokens: string[] = [];
       for (const userId of authorizedUsers) {
         const userDoc = await admin.firestore().collection("users").doc(userId).get();
-        if (userDoc.exists && userDoc.data()?.fcmToken) {
-          tokens.push(userDoc.data()!.fcmToken);
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          // Support new array format
+          const userTokens = userData?.fcmTokens || [];
+          tokens.push(...userTokens);
+          // Support old single token format (backward compatibility)
+          if (userData?.fcmToken && !userTokens.includes(userData.fcmToken)) {
+            tokens.push(userData.fcmToken);
+          }
         }
       }
 
@@ -274,7 +367,7 @@ export const sendBulkNotification = onCall(
 
     console.log(`📢 Sending bulk notification from store: ${storeId}`);
 
-    // Get FCM tokens for all target users
+    // Get FCM tokens for all target users - supports both old and new format
     const tokens: string[] = [];
     for (const userId of userIds) {
       const userDoc = await admin.firestore()
@@ -284,7 +377,11 @@ export const sendBulkNotification = onCall(
 
       if (userDoc.exists) {
         const userData = userDoc.data();
-        if (userData?.fcmToken) {
+        // Support new array format
+        const userTokens = userData?.fcmTokens || [];
+        tokens.push(...userTokens);
+        // Support old single token format (backward compatibility)
+        if (userData?.fcmToken && !userTokens.includes(userData.fcmToken)) {
           tokens.push(userData.fcmToken);
         }
       }
