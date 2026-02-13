@@ -51,14 +51,13 @@ out/
 *.swo
 .DS_Store
 
-# Environment & Secrets
-.env
-.env.local
-.env.*.local
+# Private repo - keeping all credentials and configs
 
 # Logs
 *.log
 npm-debug.log*
+firebase-debug.log
+firebase-debug.*.log
 
 # Testing
 coverage/
@@ -74,3 +73,6 @@ Thumbs.db
 .history
 .svn/
 migrate_working_dir/
+
+# Deployment artifacts
+*.zip
