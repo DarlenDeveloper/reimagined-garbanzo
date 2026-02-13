@@ -15,8 +15,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // Initialize Notification Service
-  await NotificationService().initialize();
+  // DON'T initialize notifications here - will be done after login
   
   // Enable Firestore offline persistence
   FirebaseFirestore.instance.settings = const Settings(

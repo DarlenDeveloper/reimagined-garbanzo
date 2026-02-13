@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'notification_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -16,10 +17,15 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    return await _auth.signInWithEmailAndPassword(
+    final credential = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
+    
+    // Initialize notifications after successful login
+    await NotificationService().initialize();
+    
+    return credential;
   }
 
   // Sign up with email
@@ -37,6 +43,9 @@ class AuthService {
       await credential.user!.updateDisplayName(displayName);
     }
     
+    // Initialize notifications after successful signup
+    await NotificationService().initialize();
+    
     return credential;
   }
 
@@ -51,7 +60,12 @@ class AuthService {
       idToken: googleAuth.idToken,
     );
 
-    return await _auth.signInWithCredential(credential);
+    final userCredential = await _auth.signInWithCredential(credential);
+    
+    // Initialize notifications after successful Google sign in
+    await NotificationService().initialize();
+    
+    return userCredential;
   }
 
   // Send email verification
@@ -66,6 +80,9 @@ class AuthService {
 
   // Sign out
   Future<void> signOut() async {
+    // Delete FCM token before signing out
+    await NotificationService().deleteFCMToken();
+    
     await _googleSignIn.signOut();
     await _auth.signOut();
   }

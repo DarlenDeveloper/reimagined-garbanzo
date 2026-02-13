@@ -21,8 +21,7 @@ void main() async {
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
   
-  // Initialize Notification Service
-  await NotificationService().initialize();
+  // DON'T initialize notifications here - will be done after login
   
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,

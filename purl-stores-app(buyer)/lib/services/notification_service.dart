@@ -25,7 +25,7 @@ class NotificationService {
   String? _fcmToken;
   String? get fcmToken => _fcmToken;
 
-  /// Initialize notification service
+  /// Initialize notification service (call after user logs in)
   Future<void> initialize() async {
     print('🔔 Initializing Notification Service...');
 
@@ -45,6 +45,23 @@ class NotificationService {
     _messaging.onTokenRefresh.listen(_onTokenRefresh);
 
     print('✅ Notification Service initialized');
+  }
+
+  /// Initialize without requesting permission (for app startup)
+  /// Call this in main.dart to setup handlers without showing permission dialog
+  Future<void> initializeWithoutPermission() async {
+    print('🔔 Initializing Notification Service (no permission request)...');
+
+    // Initialize local notifications (without requesting permission)
+    await _initializeLocalNotificationsWithoutPermission();
+
+    // Setup message handlers
+    _setupMessageHandlers();
+
+    // Listen for token refresh
+    _messaging.onTokenRefresh.listen(_onTokenRefresh);
+
+    print('✅ Notification Service initialized (no permission)');
   }
 
   /// Request notification permissions
@@ -105,6 +122,43 @@ class NotificationService {
         ?.createNotificationChannel(androidChannel);
 
     print('✅ Local notifications initialized with custom sound');
+  }
+
+  /// Initialize local notifications WITHOUT requesting iOS permissions
+  Future<void> _initializeLocalNotificationsWithoutPermission() async {
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: _onNotificationTapped,
+    );
+
+    // Create notification channel for Android
+    const androidChannel = AndroidNotificationChannel(
+      'purl_seller_channel_v2',
+      'Purl Seller Notifications',
+      description: 'Notifications for store owners',
+      importance: Importance.high,
+      sound: RawResourceAndroidNotificationSound('notification'),
+      playSound: true,
+      enableVibration: true,
+    );
+
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(androidChannel);
+
+    print('✅ Local notifications initialized (no permission request)');
   }
 
   /// Get FCM token and save to Firestore
