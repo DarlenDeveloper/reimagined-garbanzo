@@ -1,45 +1,115 @@
 {
   "project_info": {
-    "project_number": "940343041460",
-    "project_id": "purlstores",
-    "storage_bucket": "purlstores.firebasestorage.app"
+    "project_number": "255612064321",
+    "project_id": "purlstores-za",
+    "storage_bucket": "purlstores-za.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:940343041460:android:303cacad0315bb7326e6e1",
+        "mobilesdk_app_id": "1:255612064321:android:670bf661c73b5635e52cc0",
         "android_client_info": {
-          "package_name": "com.purl.admin"
+          "package_name": "com.example.purl_courier_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "255612064321-8p09as8bg59k9nph3p7n7dp6p1nk50vg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyCYSACIIqAe_N-T5BLgBoJcKZUud8crbHM"
+          "current_key": "AIzaSyCO1HUqVUSODF-TQyRO2xI728mNMOGc6i4"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "255612064321-8p09as8bg59k9nph3p7n7dp6p1nk50vg.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "255612064321-8r11lhup4pgqfn7io55gbv73aht8qs6n.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.purl.stores"
+              }
+            }
+          ]
         }
       }
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:940343041460:android:86640fd5093e869526e6e1",
+        "mobilesdk_app_id": "1:255612064321:android:8cbb3716f545cc39e52cc0",
         "android_client_info": {
-          "package_name": "com.purl.stores"
+          "package_name": "com.purl.admin"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "255612064321-8p09as8bg59k9nph3p7n7dp6p1nk50vg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyCYSACIIqAe_N-T5BLgBoJcKZUud8crbHM"
+          "current_key": "AIzaSyCO1HUqVUSODF-TQyRO2xI728mNMOGc6i4"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "255612064321-8p09as8bg59k9nph3p7n7dp6p1nk50vg.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "255612064321-8r11lhup4pgqfn7io55gbv73aht8qs6n.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.purl.stores"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:255612064321:android:89298bc809fa0914e52cc0",
+        "android_client_info": {
+          "package_name": "com.purl.stores"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "255612064321-8p09as8bg59k9nph3p7n7dp6p1nk50vg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCO1HUqVUSODF-TQyRO2xI728mNMOGc6i4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "255612064321-8p09as8bg59k9nph3p7n7dp6p1nk50vg.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "255612064321-8r11lhup4pgqfn7io55gbv73aht8qs6n.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.purl.stores"
+              }
+            }
+          ]
         }
       }
     }

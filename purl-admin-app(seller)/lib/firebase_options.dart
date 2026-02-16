@@ -50,19 +50,21 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCYSACIIqAe_N-T5BLgBoJcKZUud8crbHM',
-    appId: '1:940343041460:android:303cacad0315bb7326e6e1',
-    messagingSenderId: '940343041460',
-    projectId: 'purlstores',
-    storageBucket: 'purlstores.firebasestorage.app',
+    apiKey: 'AIzaSyCO1HUqVUSODF-TQyRO2xI728mNMOGc6i4',
+    appId: '1:255612064321:android:8cbb3716f545cc39e52cc0',
+    messagingSenderId: '255612064321',
+    projectId: 'purlstores-za',
+    storageBucket: 'purlstores-za.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBslt-aWFfLlP10CEelnIzCRobV6rTBqEk',
-    appId: '1:940343041460:ios:122a48e1f5d3525226e6e1',
-    messagingSenderId: '940343041460',
-    projectId: 'purlstores',
-    storageBucket: 'purlstores.firebasestorage.app',
+    apiKey: 'AIzaSyBwmX4u_27cwgrOu0GTVvRIgJJ3Pu-1Xdg',
+    appId: '1:255612064321:ios:79c043ef49d041ade52cc0',
+    messagingSenderId: '255612064321',
+    projectId: 'purlstores-za',
+    storageBucket: 'purlstores-za.firebasestorage.app',
+    iosClientId: '255612064321-iomrg1dpdocpu108uguohhbcr1cbsi4o.apps.googleusercontent.com',
     iosBundleId: 'com.purl.admin',
   );
+
 }
