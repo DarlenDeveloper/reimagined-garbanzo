@@ -202,6 +202,7 @@ class CartService {
   }
 
   /// Calculate cart totals (with markup applied)
+  /// Delivery is FREE - handled by Purl
   CartTotals calculateTotals(List<CartItemData> items) {
     double subtotal = 0;
     for (var item in items) {
@@ -209,8 +210,8 @@ class CartService {
       subtotal += item.finalItemTotal;
     }
 
-    // Free shipping over 100
-    double shipping = subtotal > 100 ? 0 : 9.99;
+    // Delivery is FREE - Purl handles delivery costs
+    double shipping = 0;
     double total = subtotal + shipping;
 
     return CartTotals(

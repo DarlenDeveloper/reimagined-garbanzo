@@ -184,6 +184,7 @@ class NotificationService {
     }
 
     try {
+      // Save to users collection
       final userRef = _firestore.collection('users').doc(userId);
       final userDoc = await userRef.get();
       
@@ -199,9 +200,9 @@ class NotificationService {
             'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
             'platform': defaultTargetPlatform.name,
           });
-          print('✅ FCM token added to array');
+          print('✅ FCM token added to users collection');
         } else {
-          print('ℹ️ FCM token already exists');
+          print('ℹ️ FCM token already exists in users collection');
         }
       } else {
         // Create new user document with tokens array
@@ -210,7 +211,23 @@ class NotificationService {
           'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
           'platform': defaultTargetPlatform.name,
         });
-        print('✅ FCM token saved (new user)');
+        print('✅ FCM token saved to users collection (new user)');
+      }
+
+      // Also save to store document (for order notifications)
+      final storeQuery = await _firestore
+          .collection('stores')
+          .where('authorizedUsers', arrayContains: userId)
+          .limit(1)
+          .get();
+
+      if (storeQuery.docs.isNotEmpty) {
+        final storeId = storeQuery.docs.first.id;
+        await _firestore.collection('stores').doc(storeId).update({
+          'fcmToken': token,
+          'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+        });
+        print('✅ FCM token saved to store document');
       }
     } catch (e) {
       print('❌ Error saving FCM token: $e');

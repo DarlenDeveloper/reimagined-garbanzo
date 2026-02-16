@@ -47,5 +47,9 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is required to scan store QR codes</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to calculate delivery distance and find the nearest courier for your order</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>We need your location to calculate delivery distance and find the nearest courier for your order</string>
 </dict>
 </plist>

@@ -43,6 +43,8 @@ class OrderService {
     required DeliveryAddress deliveryAddress,
     required ContactDetails contactDetails,
     required GeoPoint? deliveryLocation,
+    String? paymentId,
+    String? paymentHash,
     String paymentMethod = 'Dummy Payment',
   }) async {
     final userId = _auth.currentUser?.uid;
@@ -163,6 +165,8 @@ class OrderService {
         'status': 'pending',
         'paymentStatus': 'paid', // Dummy payment - always paid
         'paymentMethod': paymentMethod,
+        'paymentId': paymentId,
+        'paymentHash': paymentHash,
         'deliveryAddress': {
           'label': deliveryAddress.label,
           'street': deliveryAddress.street,
@@ -190,6 +194,7 @@ class OrderService {
         'storeName': items.first.storeName,
         'orderNumber': orderNumber,
         'total': totals.total,
+        'currency': items.first.currency,
         'status': 'pending',
         'itemCount': items.length,
         'createdAt': FieldValue.serverTimestamp(),
@@ -213,18 +218,16 @@ class OrderService {
     try {
       final startTime = DateTime.now();
       
-      // Get store's FCM token
+      // Get store's FCM token (optional - for push notifications)
       final storeDoc = await _firestore.collection('stores').doc(storeId).get();
       final fcmToken = storeDoc.data()?['fcmToken'] as String?;
       
       if (fcmToken == null) {
-        print('⚠️ No FCM token found for store $storeId');
-        return;
+        print('⚠️ No FCM token for store $storeId - in-app notification only');
       }
 
-      // TODO: Deploy Cloud Function to europe-west1 region for optimal East Africa latency
-      // For now, save to Firestore (Cloud Function will pick it up)
-      // Future optimization: Call Cloud Function directly for <300ms latency
+      // Create in-app notification (always created, regardless of FCM token)
+      // FCM token is optional and only used for push notifications
       
       await _firestore
           .collection('stores')
@@ -238,11 +241,11 @@ class OrderService {
         'amount': total,
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
-        'fcmToken': fcmToken, // For Cloud Function to send FCM
+        'fcmToken': fcmToken, // For Cloud Function to send FCM (optional)
       });
 
       final latency = DateTime.now().difference(startTime).inMilliseconds;
-      print('✅ New order notification queued (${latency}ms)');
+      print('✅ In-app notification created for store $storeId (${latency}ms)');
     } catch (e) {
       print('❌ Error sending new order notification: $e');
       // Don't throw - notification failure shouldn't break order creation
@@ -327,6 +330,7 @@ class UserOrderData {
   final String storeName;
   final String orderNumber;
   final double total;
+  final String? currency;
   final String status;
   final int itemCount;
   final DateTime createdAt;
@@ -338,6 +342,7 @@ class UserOrderData {
     required this.storeName,
     required this.orderNumber,
     required this.total,
+    this.currency,
     required this.status,
     required this.itemCount,
     required this.createdAt,
@@ -352,6 +357,7 @@ class UserOrderData {
       storeName: data['storeName'] ?? '',
       orderNumber: data['orderNumber'] ?? '',
       total: (data['total'] ?? 0).toDouble(),
+      currency: data['currency'] as String?,
       status: data['status'] ?? 'pending',
       itemCount: data['itemCount'] ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),

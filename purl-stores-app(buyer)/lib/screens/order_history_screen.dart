@@ -299,9 +299,17 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                         'Total',
                         style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey.shade600),
                       ),
-                      Text(
-                        _currencyService.formatPrice(order.total, userCurrency),
-                        style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black),
+                      FutureBuilder<String>(
+                        future: _currencyService.formatPriceWithConversion(
+                          order.total,
+                          order.currency ?? userCurrency,
+                        ),
+                        builder: (context, snapshot) {
+                          return Text(
+                            snapshot.data ?? _currencyService.formatPrice(order.total, userCurrency),
+                            style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black),
+                          );
+                        },
                       ),
                     ],
                   ),

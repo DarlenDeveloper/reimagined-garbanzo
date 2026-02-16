@@ -308,6 +308,13 @@ class _CartScreenState extends State<CartScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -457,26 +464,31 @@ class _CartScreenState extends State<CartScreen> {
     return Row(
       children: [
         Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TextField(
-              controller: _promoController,
-              enabled: !_promoApplied,
-              style: GoogleFonts.poppins(color: AppColors.textPrimary),
-              decoration: InputDecoration(
-                hintText: _promoApplied ? _appliedPromo : 'Enter promo code',
-                hintStyle: GoogleFonts.poppins(
-                  color: _promoApplied ? context.textPrimaryColor : context.textSecondaryColor,
-                  fontSize: 14,
-                  fontWeight: _promoApplied ? FontWeight.w500 : FontWeight.w400,
-                ),
-                border: InputBorder.none,
+          child: TextField(
+            controller: _promoController,
+            enabled: !_promoApplied,
+            style: GoogleFonts.poppins(color: AppColors.textPrimary, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: _promoApplied ? _appliedPromo : 'Promo code',
+              hintStyle: GoogleFonts.poppins(
+                color: _promoApplied ? context.textPrimaryColor : Colors.grey.shade400,
+                fontSize: 14,
+                fontWeight: _promoApplied ? FontWeight.w500 : FontWeight.w400,
               ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: const BorderSide(color: Colors.black, width: 1.5),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              filled: false,
             ),
           ),
         ),
@@ -576,6 +588,7 @@ class _CartScreenState extends State<CartScreen> {
 
   Widget _buildSummaryRow(String label, double amount, String currency, {bool isDiscount = false}) {
     final isFree = amount == 0;
+    final isDelivery = label == 'Delivery';
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -589,17 +602,43 @@ class _CartScreenState extends State<CartScreen> {
               color: context.textSecondaryColor,
             ),
           ),
-          Text(
-            isFree 
-                ? 'FREE' 
-                : '${isDiscount ? "-" : ""}${_currencyService.formatPrice(amount.abs(), currency)}',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: isFree 
-                  ? Colors.green 
-                  : (isDiscount ? context.primaryColor : context.textPrimaryColor),
-            ),
+          Row(
+            children: [
+              if (isDelivery && isFree) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.green.shade50, Colors.green.shade100],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade300, width: 1),
+                  ),
+                  child: Text(
+                    'ON US',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green.shade700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                isFree 
+                    ? 'FREE' 
+                    : '${isDiscount ? "-" : ""}${_currencyService.formatPrice(amount.abs(), currency)}',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: isFree 
+                      ? Colors.green 
+                      : (isDiscount ? context.primaryColor : context.textPrimaryColor),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -613,12 +652,12 @@ class _CartScreenState extends State<CartScreen> {
         width: double.infinity,
         height: 54,
         child: ElevatedButton(
-          onPressed: () => context.go('/checkout'),
+          onPressed: () => context.push('/checkout'),
           style: ElevatedButton.styleFrom(
             backgroundColor: context.primaryColor,
             foregroundColor: context.isDark ? Colors.black : Colors.white,
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
           child: Text(
             'Proceed Transactions',

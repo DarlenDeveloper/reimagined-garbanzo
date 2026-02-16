@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
 import '../theme/colors.dart';
 import '../services/cart_service.dart';
 import '../services/order_service.dart';
@@ -28,6 +29,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _isProcessing = false;
   GeoPoint? _currentLocation;
   String _userCurrency = 'UGX';
+  bool _isLoadingLocation = false;
+  String? _locationError;
   
   // Contact details controllers
   final TextEditingController _nameController = TextEditingController();
@@ -61,6 +64,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _loadUserContactDetails() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      // Try to get from Firestore first
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        
+        if (userDoc.exists) {
+          final userData = userDoc.data();
+          setState(() {
+            _nameController.text = userData?['name'] ?? user.displayName ?? '';
+            _emailController.text = userData?['email'] ?? user.email ?? '';
+            _phoneController.text = userData?['phone'] ?? user.phoneNumber ?? '';
+          });
+          return;
+        }
+      } catch (e) {
+        print('Error loading user data from Firestore: $e');
+      }
+      
+      // Fallback to Firebase Auth
       setState(() {
         _nameController.text = user.displayName ?? '';
         _emailController.text = user.email ?? '';
@@ -70,18 +94,138 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _requestLocationPermission() async {
-    // Simulate location permission - in production use geolocator package
     setState(() {
-      _currentLocation = const GeoPoint(0.3476, 32.5825); // Kampala coordinates
+      _isLoadingLocation = true;
+      _locationError = null;
     });
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Location access granted', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.green,
-        ),
+
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _isLoadingLocation = false;
+          _locationError = 'Location services are disabled. Please enable them.';
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Please enable location services', style: GoogleFonts.poppins()),
+              backgroundColor: Colors.orange,
+              action: SnackBarAction(
+                label: 'Settings',
+                textColor: Colors.white,
+                onPressed: () => Geolocator.openLocationSettings(),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _isLoadingLocation = false;
+            _locationError = 'Location permission denied';
+          });
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Location permission is required for delivery', style: GoogleFonts.poppins()),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _isLoadingLocation = false;
+          _locationError = 'Location permission permanently denied';
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Please enable location permission in settings', style: GoogleFonts.poppins()),
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: 'Settings',
+                textColor: Colors.white,
+                onPressed: () => Geolocator.openAppSettings(),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Get current position
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
       );
+
+      setState(() {
+        _currentLocation = GeoPoint(position.latitude, position.longitude);
+        _isLoadingLocation = false;
+        _locationError = null;
+        
+        // Auto-create delivery address from location if none exists
+        if (_savedAddresses.isEmpty) {
+          _savedAddresses.add(_DeliveryAddress(
+            label: 'Current Location',
+            street: 'Lat: ${position.latitude.toStringAsFixed(6)}, Lng: ${position.longitude.toStringAsFixed(6)}',
+            city: 'GPS Location',
+            icon: Iconsax.gps,
+          ));
+          _selectedAddressIndex = 0;
+          _showAddressError = false;
+        }
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Location captured and delivery address set',
+                    style: GoogleFonts.poppins(),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingLocation = false;
+        _locationError = 'Failed to get location: ${e.toString()}';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to get location. Please try again.', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -112,10 +256,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             }
 
             final totalsByStore = _cartService.calculateTotalsByStore(itemsByStore);
-            final grandTotal = totalsByStore.values.fold<double>(
-              0,
-              (sum, totals) => sum + totals.total,
-            );
+            
+            // Calculate grand total from all stores
+            double grandTotal = 0;
+            for (var totals in totalsByStore.values) {
+              grandTotal += totals.total;
+            }
 
             return Column(
               children: [
@@ -151,27 +297,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Row(
         children: [
-          GestureDetector(
+          InkWell(
             onTap: () => context.pop(),
-            child: const Icon(Iconsax.arrow_left, color: AppColors.black),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              child: const Icon(Iconsax.arrow_left, color: AppColors.black, size: 24),
+            ),
           ),
           const Spacer(),
           Text('Checkout', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
           const Spacer(),
-          const SizedBox(width: 24), // Balance the back button
+          const SizedBox(width: 40), // Balance the back button
         ],
       ),
     );
   }
 
   Widget _buildLocationSection() {
+    final hasLocation = _currentLocation != null;
+    final hasError = _locationError != null;
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _currentLocation != null ? Colors.green.shade50 : AppColors.grey100,
+        color: hasLocation 
+            ? Colors.green.shade50 
+            : (hasError ? Colors.red.shade50 : AppColors.grey100),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _currentLocation != null ? Colors.green : AppColors.grey300,
+          color: hasLocation 
+              ? Colors.green 
+              : (hasError ? Colors.red : AppColors.grey300),
         ),
       ),
       child: Column(
@@ -179,32 +336,73 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         children: [
           Row(
             children: [
-              Icon(
-                _currentLocation != null ? Iconsax.tick_circle5 : Iconsax.location,
-                color: _currentLocation != null ? Colors.green : AppColors.black,
-              ),
+              if (_isLoadingLocation)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.black),
+                  ),
+                )
+              else
+                Icon(
+                  hasLocation 
+                      ? Iconsax.tick_circle5 
+                      : (hasError ? Iconsax.close_circle : Iconsax.location),
+                  color: hasLocation 
+                      ? Colors.green 
+                      : (hasError ? Colors.red : AppColors.black),
+                ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  _currentLocation != null ? 'Location Access Granted' : 'Location Permission Required',
+                  _isLoadingLocation
+                      ? 'Getting your location...'
+                      : (hasLocation 
+                          ? 'Location Captured' 
+                          : (hasError ? 'Location Error' : 'Location Required')),
                   style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                 ),
               ),
             ],
           ),
-          if (_currentLocation == null) ...[
+          if (hasLocation) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Iconsax.gps, size: 14, color: Colors.green),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Lat: ${_currentLocation!.latitude.toStringAsFixed(6)}, Lng: ${_currentLocation!.longitude.toStringAsFixed(6)}',
+                    style: GoogleFonts.poppins(fontSize: 11, color: Colors.green.shade700),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (!hasLocation && !_isLoadingLocation) ...[
             const SizedBox(height: 8),
             Text(
-              'We need your location to find the nearest pickup point',
-              style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600),
+              hasError 
+                  ? _locationError! 
+                  : 'We need your location to calculate delivery distance and find the nearest courier',
+              style: GoogleFonts.poppins(
+                fontSize: 12, 
+                color: hasError ? Colors.red.shade700 : AppColors.grey600,
+              ),
             ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _requestLocationPermission,
+                onPressed: _isLoadingLocation ? null : _requestLocationPermission,
                 icon: const Icon(Iconsax.gps, size: 18),
-                label: Text('Allow Location Access', style: GoogleFonts.poppins(fontSize: 14)),
+                label: Text(
+                  hasError ? 'Try Again' : 'Allow Location Access', 
+                  style: GoogleFonts.poppins(fontSize: 14),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.black,
                   foregroundColor: AppColors.white,
@@ -219,6 +417,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Widget _buildContactDetailsSection() {
+    final user = FirebaseAuth.instance.currentUser;
+    final displayName = _nameController.text.isNotEmpty ? _nameController.text : 'Not set';
+    final displayPhone = _phoneController.text.isNotEmpty ? _phoneController.text : 'Not set';
+    final displayEmail = _emailController.text.isNotEmpty ? _emailController.text : user?.email ?? 'Not set';
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -247,6 +450,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                 ],
               ),
+              if (_useMyContactDetails) ...[
+                const SizedBox(height: 12),
+                _buildContactInfoRow(Iconsax.user, 'Name', displayName),
+                const SizedBox(height: 8),
+                _buildContactInfoRow(Iconsax.call, 'Phone', displayPhone),
+                const SizedBox(height: 8),
+                _buildContactInfoRow(Iconsax.sms, 'Email', displayEmail),
+              ],
               if (!_useMyContactDetails) ...[
                 const SizedBox(height: 12),
                 TextField(
@@ -282,6 +493,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ],
             ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildContactInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppColors.grey600),
+        const SizedBox(width: 8),
+        Text('$label: ', style: GoogleFonts.poppins(fontSize: 13, color: AppColors.grey600)),
+        Expanded(
+          child: Text(
+            value,
+            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
           ),
         ),
       ],
@@ -554,60 +781,114 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     Map<String, CartTotals> totalsByStore,
     double grandTotal,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Order Summary', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 16),
-        ...itemsByStore.entries.map((entry) {
-          final storeName = entry.value.first.storeName;
-          final totals = totalsByStore[entry.key]!;
-          
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.grey100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.store, size: 16),
-                    const SizedBox(width: 8),
-                    Text(storeName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-                  ],
+    // Debug logging
+    print('🛒 Order Summary Debug:');
+    itemsByStore.forEach((storeId, items) {
+      print('  Store: $storeId (${items.first.storeName})');
+      print('  Items: ${items.length}');
+      for (var item in items) {
+        print('    - ${item.productName}: ${item.price} x ${item.quantity} = ${item.itemTotal}');
+        print('      With markup: ${item.finalPrice} x ${item.quantity} = ${item.finalItemTotal}');
+      }
+      final totals = totalsByStore[storeId]!;
+      print('  Store Total: ${totals.total}');
+    });
+    print('  Grand Total: $grandTotal');
+    
+    return FutureBuilder<Map<String, String>>(
+      future: _convertAllStoreTotals(itemsByStore, totalsByStore),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator(color: AppColors.black));
+        }
+        
+        final convertedTotals = snapshot.data!;
+        final convertedGrandTotal = convertedTotals['grandTotal']!;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Order Summary', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 16),
+            ...itemsByStore.entries.map((entry) {
+              final storeName = entry.value.first.storeName;
+              final storeId = entry.key;
+              final formattedTotal = convertedTotals[storeId] ?? 'Loading...';
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.grey100,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${entry.value.length} items', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600)),
-                    Text(
-                      _currencyService.formatPrice(totals.total, _userCurrency),
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    Row(
+                      children: [
+                        const Icon(Icons.store, size: 16),
+                        const SizedBox(width: 8),
+                        Text(storeName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('${entry.value.length} items', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600)),
+                        Text(
+                          formattedTotal,
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
                   ],
                 ),
+              );
+            }),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Grand Total', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+                Text(
+                  convertedGrandTotal,
+                  style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700),
+                ),
               ],
             ),
-          );
-        }),
-        const Divider(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Grand Total', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
-            Text(
-              _currencyService.formatPrice(grandTotal, _userCurrency),
-              style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700),
-            ),
           ],
-        ),
-      ],
+        );
+      },
     );
+  }
+  
+  Future<Map<String, String>> _convertAllStoreTotals(
+    Map<String, List<CartItemData>> itemsByStore,
+    Map<String, CartTotals> totalsByStore,
+  ) async {
+    final Map<String, String> result = {};
+    double grandTotalConverted = 0;
+    
+    for (var entry in itemsByStore.entries) {
+      final storeId = entry.key;
+      final storeCurrency = entry.value.first.currency;
+      final storeTotal = totalsByStore[storeId]!.total;
+      
+      // Convert to user currency
+      final convertedAmount = _currencyService.convertPrice(
+        storeTotal,
+        storeCurrency,
+        _userCurrency,
+      );
+      
+      grandTotalConverted += convertedAmount;
+      result[storeId] = _currencyService.formatPrice(convertedAmount, _userCurrency);
+    }
+    
+    result['grandTotal'] = _currencyService.formatPrice(grandTotalConverted, _userCurrency);
+    return result;
   }
 
   Widget _buildPayButton(
@@ -629,50 +910,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // TEST MODE: Skip Payment Button
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: OutlinedButton(
-              onPressed: _isProcessing ? null : () => _processOrder(itemsByStore, totalsByStore),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.orange, width: 2),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Skip Payment (Test Mode)',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Regular Pay Button
+          // Main Pay Button
           SizedBox(
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
-              onPressed: null, // Disabled for now
+              onPressed: _isProcessing ? null : () => _processOrder(itemsByStore, totalsByStore),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.grey300,
-                foregroundColor: AppColors.grey600,
+                backgroundColor: AppColors.black,
+                foregroundColor: AppColors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              child: Text(
-                'Pay with Pesapal (Coming Soon)',
-                style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
+              child: _isProcessing
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : Text(
+                      'Proceed Transactions',
+                      style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
             ),
           ),
         ],
@@ -684,24 +943,45 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     Map<String, List<CartItemData>> itemsByStore,
     Map<String, CartTotals> totalsByStore,
   ) async {
-    // TEST MODE: Skip validation for location and address
-    // Auto-fill with dummy data if missing
+    // Validate location
     if (_currentLocation == null) {
-      setState(() {
-        _currentLocation = const GeoPoint(0.3476, 32.5825); // Kampala
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Please allow location access to continue',
+                  style: GoogleFonts.poppins(),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'Allow',
+            textColor: Colors.white,
+            onPressed: _requestLocationPermission,
+          ),
+        ),
+      );
+      return;
     }
 
-    if (_selectedAddressIndex == -1 && _savedAddresses.isEmpty) {
-      setState(() {
-        _savedAddresses.add(_DeliveryAddress(
-          label: 'Test Address',
-          street: 'Test Street, Building 1',
-          city: 'Kampala, Uganda',
-          icon: Iconsax.location,
-        ));
-        _selectedAddressIndex = 0;
-      });
+    // Validate address
+    if (_selectedAddressIndex == -1) {
+      setState(() => _showAddressError = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please select a delivery address', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
     }
 
     setState(() => _isProcessing = true);
@@ -709,8 +989,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     try {
       final selectedAddress = _savedAddresses[_selectedAddressIndex];
       final user = FirebaseAuth.instance.currentUser!;
+      
+      // Calculate grand total
+      double grandTotal = 0;
+      for (var totals in totalsByStore.values) {
+        grandTotal += totals.total;
+      }
+      
+      // Generate payment hash (dummy for now)
+      final paymentHash = 'PAY_${DateTime.now().millisecondsSinceEpoch}_${user.uid.substring(0, 8)}';
+      
+      // Create payment record
+      final paymentRef = await FirebaseFirestore.instance.collection('payments').add({
+        'hash': paymentHash,
+        'userId': user.uid,
+        'amount': grandTotal,
+        'currency': _userCurrency,
+        'status': 'approved', // Dummy: auto-approve for testing
+        'method': 'dummy_payment',
+        'createdAt': FieldValue.serverTimestamp(),
+        'approvedAt': FieldValue.serverTimestamp(),
+      });
 
-      // Create orders
+      // Create orders with payment reference
       final orderIds = await _orderService.createOrdersFromCart(
         itemsByStore: itemsByStore,
         totalsByStore: totalsByStore,
@@ -725,6 +1026,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           email: _useMyContactDetails ? (user.email ?? _emailController.text) : _emailController.text,
         ),
         deliveryLocation: _currentLocation,
+        paymentId: paymentRef.id,
+        paymentHash: paymentHash,
       );
 
       // Clear cart
