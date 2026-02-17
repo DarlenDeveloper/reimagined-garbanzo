@@ -224,6 +224,7 @@ class StoreOrderData {
   final Map<String, dynamic> contactDetails;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deliveredAt;
 
   StoreOrderData({
     required this.id,
@@ -244,6 +245,7 @@ class StoreOrderData {
     required this.contactDetails,
     required this.createdAt,
     required this.updatedAt,
+    this.deliveredAt,
   });
 
   factory StoreOrderData.fromFirestore(DocumentSnapshot doc, String storeId) {
@@ -269,6 +271,7 @@ class StoreOrderData {
       contactDetails: data['contactDetails'] ?? {},
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      deliveredAt: (data['deliveredAt'] as Timestamp?)?.toDate(),
     );
   }
 

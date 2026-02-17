@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 class EarningsScreen extends StatelessWidget {
   const EarningsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -19,141 +24,204 @@ class EarningsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Total Earnings Card
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    'Total Earnings',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white70,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'UGX 450,000',
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildStatItem(context, 'Today', 'UGX 25,000'),
-                      Container(width: 1, height: 40, color: Colors.white24),
-                      _buildStatItem(context, 'This Week', 'UGX 125,000'),
-                      Container(width: 1, height: 40, color: Colors.white24),
-                      _buildStatItem(context, 'This Month', 'UGX 450,000'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('couriers')
+            .doc(userId)
+            .snapshots(),
+        builder: (context, courierSnapshot) {
+          if (!courierSnapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            // Quick Stats
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildQuickStatCard(
-                      context,
-                      icon: Iconsax.truck_fast,
-                      label: 'Deliveries',
-                      value: '45',
-                      subtitle: 'This month',
+          final courierData = courierSnapshot.data?.data() as Map<String, dynamic>?;
+          final totalEarnings = (courierData?['totalEarnings'] ?? 0.0).toDouble();
+          final totalDeliveries = courierData?['totalDeliveries'] ?? 0;
+          final rating = (courierData?['rating'] ?? 0.0).toDouble();
+
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('deliveries')
+                .where('assignedCourierId', isEqualTo: userId)
+                .where('status', isEqualTo: 'delivered')
+                .orderBy('deliveredAt', descending: true)
+                .limit(50)
+                .snapshots(),
+            builder: (context, deliveriesSnapshot) {
+              final deliveries = deliveriesSnapshot.data?.docs ?? [];
+
+              // Calculate earnings for different periods
+              final now = DateTime.now();
+              final today = DateTime(now.year, now.month, now.day);
+              final weekStart = today.subtract(Duration(days: today.weekday - 1));
+              final monthStart = DateTime(now.year, now.month, 1);
+
+              double todayEarnings = 0;
+              double weekEarnings = 0;
+              double monthEarnings = 0;
+
+              for (var doc in deliveries) {
+                final data = doc.data() as Map<String, dynamic>;
+                final deliveredAt = (data['deliveredAt'] as Timestamp?)?.toDate();
+                final fee = (data['deliveryFee'] ?? 0).toDouble();
+
+                if (deliveredAt != null) {
+                  if (deliveredAt.isAfter(today)) {
+                    todayEarnings += fee;
+                  }
+                  if (deliveredAt.isAfter(weekStart)) {
+                    weekEarnings += fee;
+                  }
+                  if (deliveredAt.isAfter(monthStart)) {
+                    monthEarnings += fee;
+                  }
+                }
+              }
+
+              return SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Total Earnings Card
+                    Container(
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Total Earnings',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white70,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'UGX ${totalEarnings.toStringAsFixed(0)}',
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _buildStatItem(context, 'Today', 'UGX ${todayEarnings.toStringAsFixed(0)}'),
+                              Container(width: 1, height: 40, color: Colors.white24),
+                              _buildStatItem(context, 'This Week', 'UGX ${weekEarnings.toStringAsFixed(0)}'),
+                              Container(width: 1, height: 40, color: Colors.white24),
+                              _buildStatItem(context, 'This Month', 'UGX ${monthEarnings.toStringAsFixed(0)}'),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildQuickStatCard(
-                      context,
-                      icon: Iconsax.star,
-                      label: 'Rating',
-                      value: '4.8',
-                      subtitle: 'Average',
+
+                    // Quick Stats
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildQuickStatCard(
+                              context,
+                              icon: Iconsax.truck_fast,
+                              label: 'Deliveries',
+                              value: '$totalDeliveries',
+                              subtitle: 'This month',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildQuickStatCard(
+                              context,
+                              icon: Iconsax.star,
+                              label: 'Rating',
+                              value: rating.toStringAsFixed(1),
+                              subtitle: 'Average',
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
 
-            const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-            // Recent Transactions
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Recent Transactions',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                    // Recent Transactions
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Recent Transactions',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          TextButton(
+                            onPressed: () {},
+                            child: const Text('See All'),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Transaction List from Firestore
+                    if (deliveries.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          children: [
+                            Icon(Iconsax.wallet, size: 64, color: Colors.grey[300]),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No transactions yet',
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                          ],
                         ),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text('See All'),
-                  ),
-                ],
-              ),
-            ),
+                      )
+                    else
+                      ...deliveries.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        final orderNumber = data['orderNumber'] ?? 'N/A';
+                        final deliveredAt = (data['deliveredAt'] as Timestamp?)?.toDate();
+                        final fee = (data['deliveryFee'] ?? 0).toDouble();
+                        
+                        String dateStr = 'Unknown';
+                        if (deliveredAt != null) {
+                          final diff = now.difference(deliveredAt);
+                          if (diff.inDays == 0) {
+                            dateStr = 'Today, ${DateFormat('HH:mm').format(deliveredAt)}';
+                          } else if (diff.inDays == 1) {
+                            dateStr = 'Yesterday, ${DateFormat('HH:mm').format(deliveredAt)}';
+                          } else {
+                            dateStr = DateFormat('MMM dd, yyyy').format(deliveredAt);
+                          }
+                        }
 
-            const SizedBox(height: 12),
+                        return _buildTransactionItem(
+                          context,
+                          id: orderNumber,
+                          date: dateStr,
+                          amount: '+ UGX ${fee.toStringAsFixed(0)}',
+                          status: 'Completed',
+                        );
+                      }).toList(),
 
-            // Transaction List
-            _buildTransactionItem(
-              context,
-              id: 'DEL-2026-045',
-              date: 'Today, 10:30 AM',
-              amount: '+ UGX 15,000',
-              status: 'Completed',
-            ),
-            _buildTransactionItem(
-              context,
-              id: 'DEL-2026-044',
-              date: 'Today, 08:15 AM',
-              amount: '+ UGX 18,000',
-              status: 'Completed',
-            ),
-            _buildTransactionItem(
-              context,
-              id: 'DEL-2026-043',
-              date: 'Yesterday, 05:45 PM',
-              amount: '+ UGX 10,000',
-              status: 'Completed',
-            ),
-            _buildTransactionItem(
-              context,
-              id: 'DEL-2026-042',
-              date: 'Yesterday, 02:30 PM',
-              amount: '+ UGX 8,000',
-              status: 'Completed',
-            ),
-            _buildTransactionItem(
-              context,
-              id: 'Withdrawal',
-              date: 'Feb 10, 2026',
-              amount: '- UGX 200,000',
-              status: 'Processed',
-              isWithdrawal: true,
-            ),
-
-            const SizedBox(height: 100),
-          ],
-        ),
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              );
+            },
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {},

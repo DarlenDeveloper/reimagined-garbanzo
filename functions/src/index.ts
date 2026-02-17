@@ -535,3 +535,102 @@ function calculateDistance(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
+
+/**
+ * Trigger: Delivery status updated
+ * Sync delivery status with order status in both collections
+ */
+export const onDeliveryStatusChanged = onDocumentUpdated(
+  "deliveries/{deliveryId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    
+    if (!before || !after) return;
+
+    // Check if status changed
+    if (before.status === after.status) return;
+
+    const orderId = after.orderId;
+    const storeId = after.storeId;
+    const newStatus = after.status;
+
+    if (!orderId || !storeId) {
+      console.error("Missing orderId or storeId in delivery document");
+      return;
+    }
+
+    console.log(`📦 Delivery status changed from ${before.status} to ${newStatus} for order ${orderId}`);
+
+    // Map delivery status to order status
+    let orderStatus = "pending";
+    const updateData: any = {
+      status: orderStatus,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    switch (newStatus) {
+      case "searching":
+      case "assigned":
+        orderStatus = "confirmed";
+        break;
+      case "picked_up":
+      case "in_transit":
+        orderStatus = "shipped";
+        break;
+      case "delivered":
+        orderStatus = "delivered";
+        updateData.deliveredAt = admin.firestore.FieldValue.serverTimestamp();
+        break;
+      case "cancelled":
+      case "no_courier_available":
+        orderStatus = "pending"; // Keep as pending if delivery failed
+        break;
+      default:
+        orderStatus = "pending";
+    }
+
+    updateData.status = orderStatus;
+
+    try {
+      // Update order in store's orders collection
+      await admin.firestore()
+        .collection("stores")
+        .doc(storeId)
+        .collection("orders")
+        .doc(orderId)
+        .update(updateData);
+
+      console.log(`✅ Store order ${orderId} updated to ${orderStatus}`);
+
+      // Get the order to find the buyer's userId
+      const orderDoc = await admin.firestore()
+        .collection("stores")
+        .doc(storeId)
+        .collection("orders")
+        .doc(orderId)
+        .get();
+
+      if (orderDoc.exists) {
+        const orderData = orderDoc.data();
+        const buyerId = orderData?.userId;
+
+        if (buyerId) {
+          // Update order in user's orders collection
+          await admin.firestore()
+            .collection("users")
+            .doc(buyerId)
+            .collection("orders")
+            .doc(orderId)
+            .update({
+              status: orderStatus,
+            });
+
+          console.log(`✅ User order ${orderId} updated to ${orderStatus} for buyer ${buyerId}`);
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Error updating order ${orderId}:`, error);
+    }
+  }
+);

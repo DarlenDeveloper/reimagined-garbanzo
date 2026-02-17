@@ -4,7 +4,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../services/delivery_service.dart';
 import '../services/location_service.dart';
 
@@ -108,6 +111,7 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
             style: GoogleFonts.poppins(),
           ),
           backgroundColor: Colors.green,
+          duration: const Duration(minutes: 3),
         ),
       );
 
@@ -613,18 +617,89 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
   Future<void> _openDirectionsToPickup() async {
     if (_delivery == null) return;
     
-    final lat = _delivery!.storeLocation.latitude;
-    final lng = _delivery!.storeLocation.longitude;
-    final Uri googleMapsUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+    // Get directions and draw route on map
+    await _getDirections(_delivery!.storeLocation);
+  }
+
+  Future<void> _openDirectionsToDropoff() async {
+    if (_delivery == null) return;
     
-    if (await canLaunchUrl(googleMapsUri)) {
-      await launchUrl(googleMapsUri, mode: LaunchMode.externalApplication);
-    } else {
+    // Get directions and draw route on map
+    await _getDirections(_delivery!.buyerLocation);
+  }
+
+  Future<void> _getDirections(GeoPoint destination) async {
+    try {
+      // Get current location
+      final position = await Geolocator.getCurrentPosition();
+      final origin = LatLng(position.latitude, position.longitude);
+      final dest = LatLng(destination.latitude, destination.longitude);
+
+      // Fetch directions from Google Directions API
+      const apiKey = 'AIzaSyAkTfLh7iFXsGJ4baSpRtzglNvlHhNmRHY';
+      final url = 'https://maps.googleapis.com/maps/api/directions/json?'
+          'origin=${origin.latitude},${origin.longitude}&'
+          'destination=${dest.latitude},${dest.longitude}&'
+          'key=$apiKey';
+
+      final response = await http.get(Uri.parse(url));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        if (data['routes'].isNotEmpty) {
+          // Decode polyline
+          final polylinePoints = data['routes'][0]['overview_polyline']['points'];
+          final List<LatLng> routeCoords = _decodePolyline(polylinePoints);
+          
+          setState(() {
+            _polylines.clear();
+            _polylines.add(
+              Polyline(
+                polylineId: const PolylineId('route'),
+                points: routeCoords,
+                color: Colors.black,
+                width: 5,
+              ),
+            );
+          });
+
+          // Animate camera to show route
+          _mapController?.animateCamera(
+            CameraUpdate.newLatLngBounds(
+              LatLngBounds(
+                southwest: LatLng(
+                  origin.latitude < dest.latitude ? origin.latitude : dest.latitude,
+                  origin.longitude < dest.longitude ? origin.longitude : dest.longitude,
+                ),
+                northeast: LatLng(
+                  origin.latitude > dest.latitude ? origin.latitude : dest.latitude,
+                  origin.longitude > dest.longitude ? origin.longitude : dest.longitude,
+                ),
+              ),
+              100,
+            ),
+          );
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Route displayed on map',
+                  style: GoogleFonts.poppins(),
+                ),
+                backgroundColor: Colors.black,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Could not open Google Maps',
+              'Could not get directions: $e',
               style: GoogleFonts.poppins(),
             ),
             backgroundColor: Colors.red,
@@ -634,27 +709,34 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
     }
   }
 
-  Future<void> _openDirectionsToDropoff() async {
-    if (_delivery == null) return;
-    
-    final lat = _delivery!.buyerLocation.latitude;
-    final lng = _delivery!.buyerLocation.longitude;
-    final Uri googleMapsUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
-    
-    if (await canLaunchUrl(googleMapsUri)) {
-      await launchUrl(googleMapsUri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Could not open Google Maps',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+  List<LatLng> _decodePolyline(String encoded) {
+    List<LatLng> points = [];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+
+    while (index < len) {
+      int b, shift = 0, result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+
+      points.add(LatLng(lat / 1E5, lng / 1E5));
     }
+
+    return points;
   }
 }

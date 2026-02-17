@@ -513,7 +513,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
       itemBuilder: (context, index) {
         final delivery = completedDeliveries[index];
         final address = '${delivery.deliveryAddress['street'] ?? ''}, ${delivery.deliveryAddress['city'] ?? ''}';
-        final deliveredAt = _getTimeAgo(delivery.createdAt);
+        final deliveredAt = _getTimeAgo(delivery.deliveredAt ?? delivery.updatedAt);
         
         return Container(
           margin: const EdgeInsets.only(bottom: 12),

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:lottie/lottie.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../theme/colors.dart';
 import 'help_support_screen.dart';
 
@@ -14,10 +15,10 @@ class DeliveryScreen extends StatefulWidget {
 
   const DeliveryScreen({
     super.key,
-    this.orderId = 'ORD-2024-001',
-    this.status = 'preparing',
-    this.total = 154.97,
-    this.productName = 'Smart Watch WH22-6',
+    required this.orderId,
+    required this.status,
+    required this.total,
+    required this.productName,
   });
 
   @override
@@ -30,12 +31,20 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
 
   int get _currentStep {
     switch (widget.status) {
-      case 'confirmed': return 0;
-      case 'preparing': return 1;
+      case 'confirmed':
+      case 'pending':
+        return 0;
+      case 'preparing':
+      case 'shipped':
+        return 1;
       case 'picked':
-      case 'in_transit': return 2;
-      case 'delivered': return 3;
-      default: return 1;
+      case 'picked_up':
+      case 'in_transit':
+        return 2;
+      case 'delivered':
+        return 3;
+      default:
+        return 1;
     }
   }
 
@@ -81,36 +90,101 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildStatusHeader(),
-            const SizedBox(height: 24),
-            _buildProgressTracker(),
-            const SizedBox(height: 24),
-            _buildLottieAnimation(),
-            const SizedBox(height: 24),
-            _buildDeliveryDetails(),
-            const SizedBox(height: 24),
-            _buildOrderSummary(),
-            if (_currentStep == 2) ...[const SizedBox(height: 24), _buildDriverInfo()],
-          ],
-        ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collectionGroup('orders')
+            .where('orderNumber', isEqualTo: widget.orderId)
+            .limit(1)
+            .snapshots(),
+        builder: (context, orderSnapshot) {
+          if (orderSnapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (orderSnapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Iconsax.warning_2, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Error loading order', style: GoogleFonts.poppins(fontSize: 16, color: AppColors.textPrimary)),
+                  const SizedBox(height: 8),
+                  Text('${orderSnapshot.error}', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                ],
+              ),
+            );
+          }
+
+          if (!orderSnapshot.hasData || orderSnapshot.data!.docs.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Iconsax.box, size: 48, color: AppColors.textSecondary),
+                  const SizedBox(height: 16),
+                  Text('Order not found', style: GoogleFonts.poppins(fontSize: 16, color: AppColors.textPrimary)),
+                  const SizedBox(height: 8),
+                  Text('Order #${widget.orderId}', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                ],
+              ),
+            );
+          }
+
+          final orderData = orderSnapshot.data!.docs.first.data() as Map<String, dynamic>;
+          final deliveryAddress = orderData['deliveryAddress'] as Map<String, dynamic>? ?? {};
+          final items = (orderData['items'] as List<dynamic>?) ?? [];
+          final total = (orderData['total'] ?? 0).toDouble();
+          final deliveredAt = (orderData['deliveredAt'] as Timestamp?)?.toDate();
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildStatusHeader(deliveredAt),
+                const SizedBox(height: 24),
+                _buildProgressTracker(),
+                const SizedBox(height: 24),
+                _buildLottieAnimation(),
+                const SizedBox(height: 24),
+                _buildDeliveryDetails(deliveryAddress),
+                const SizedBox(height: 24),
+                _buildOrderSummary(items, total),
+                if (_currentStep == 2) ...[const SizedBox(height: 24), _buildDriverInfo()],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildStatusHeader() {
+  Widget _buildStatusHeader(DateTime? deliveredAt) {
     String title;
-    String subtitle = 'Arriving at 10:25 PM';
+    String subtitle;
     switch (_currentStep) {
-      case 0: title = 'Order Confirmed'; break;
-      case 1: title = 'Preparing your order...'; break;
-      case 2: title = 'Your order has been picked'; break;
-      case 3: title = 'Order Delivered!'; subtitle = 'Delivered at 10:22 PM'; break;
-      default: title = 'Processing...';
+      case 0:
+        title = 'Order Confirmed';
+        subtitle = 'Your order is being processed';
+        break;
+      case 1:
+        title = 'Preparing your order...';
+        subtitle = 'Arriving soon';
+        break;
+      case 2:
+        title = 'Your order has been picked';
+        subtitle = 'Arriving soon';
+        break;
+      case 3:
+        title = 'Order Delivered!';
+        subtitle = deliveredAt != null 
+            ? 'Delivered at ${DateFormat('h:mm a').format(deliveredAt)}'
+            : 'Delivered successfully';
+        break;
+      default:
+        title = 'Processing...';
+        subtitle = 'Please wait';
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,7 +220,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
           builder: (context, child) => Transform.scale(
             scale: isCurrent ? _pulseAnimation.value : 1.0,
             child: Container(
-              width: 40, height: 40,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 color: isCompleted ? AppColors.darkGreen : Colors.white,
                 shape: BoxShape.circle,
@@ -169,36 +244,17 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
 
   Widget _buildLottieAnimation() {
     return SizedBox(
-      height: 200, width: double.infinity,
-      child: Stack(
-        children: [
-          Lottie.asset('assets/animations/delivery splash.json', fit: BoxFit.contain, repeat: true, width: double.infinity, height: 200),
-          if (_currentStep == 2)
-            Positioned(
-              bottom: 16, left: 0, right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(color: AppColors.darkGreen, borderRadius: BorderRadius.circular(20)),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Iconsax.clock, size: 16, color: Colors.white),
-                      const SizedBox(width: 6),
-                      Text('Arriving in 4 mins', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
-                      const SizedBox(width: 12),
-                      Text('10:25 PM', style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+      height: 200,
+      width: double.infinity,
+      child: Lottie.asset('assets/animations/delivery splash.json', fit: BoxFit.contain, repeat: true, width: double.infinity, height: 200),
     );
   }
 
-  Widget _buildDeliveryDetails() {
+  Widget _buildDeliveryDetails(Map<String, dynamic> deliveryAddress) {
+    final street = deliveryAddress['street'] ?? '';
+    final city = deliveryAddress['city'] ?? '';
+    final fullAddress = '$street${street.isNotEmpty && city.isNotEmpty ? ', ' : ''}$city';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -209,7 +265,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
           child: Column(
             children: [
-              _buildDetailRow(Iconsax.location, 'Address', '200 w 45th St, New York, NY 19980'),
+              _buildDetailRow(Iconsax.location, 'Address', fullAddress.isNotEmpty ? fullAddress : 'Delivery address'),
               const SizedBox(height: 12),
               _buildDetailRow(Iconsax.user, 'Type', 'Meet at door'),
               const SizedBox(height: 12),
@@ -225,7 +281,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
     return Row(
       children: [
         Container(
-          width: 36, height: 36,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
           child: Icon(icon, size: 18, color: AppColors.darkGreen),
         ),
@@ -243,7 +300,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
     );
   }
 
-  Widget _buildOrderSummary() {
+  Widget _buildOrderSummary(List<dynamic> items, double total) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -254,26 +311,44 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
           child: Column(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 50, height: 50,
-                    decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Iconsax.box, size: 24, color: AppColors.darkGreen),
+              ...items.map((item) {
+                final itemData = item as Map<String, dynamic>;
+                final name = itemData['name'] ?? 'Product';
+                final price = (itemData['price'] ?? 0).toDouble();
+                final quantity = itemData['quantity'] ?? 1;
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12)),
+                        child: const Icon(Iconsax.box, size: 24, color: AppColors.darkGreen),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(name, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                            Text('Qty: $quantity', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      Text('\$${price.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.darkGreen)),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(widget.productName, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary))),
-                  Text('\$${widget.total.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.darkGreen)),
-                ],
-              ),
-              const SizedBox(height: 16),
+                );
+              }).toList(),
               Container(height: 1, color: AppColors.surfaceVariant),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Total paid', style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textSecondary)),
-                  Text('\$${(widget.total + 8).toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.darkGreen)),
+                  Text('\$${total.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.darkGreen)),
                 ],
               ),
             ],
@@ -287,7 +362,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('deliveries')
-          .where('orderId', isEqualTo: widget.orderId)
+          .where('orderNumber', isEqualTo: widget.orderId)
           .limit(1)
           .snapshots(),
       builder: (context, snapshot) {
@@ -295,15 +370,15 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
         String driverPhone = '';
         String vehicleInfo = 'Vehicle';
         String vehiclePlate = '';
-        
+
         if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
           final deliveryData = snapshot.data!.docs.first.data() as Map<String, dynamic>;
           driverName = deliveryData['assignedCourierName'] ?? 'Delivery Person';
           driverPhone = deliveryData['assignedCourierPhone'] ?? '';
-          
+
           final vName = deliveryData['vehicleName'];
           final vPlate = deliveryData['vehiclePlateNumber'];
-          
+
           if (vName != null && vPlate != null) {
             vehicleInfo = vName;
             vehiclePlate = vPlate;
@@ -311,7 +386,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
             vehicleInfo = vPlate;
           }
         }
-        
+
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
@@ -323,8 +398,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
               Row(
                 children: [
                   Container(
-                    width: 48, height: 48,
-                    decoration: BoxDecoration(color: AppColors.darkGreen, shape: BoxShape.circle),
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(color: AppColors.darkGreen, shape: BoxShape.circle),
                     child: Center(
                       child: Text(
                         driverName.substring(0, 1).toUpperCase(),
@@ -366,15 +442,16 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
 
   Widget _buildDriverAction(IconData icon, String label, [String? phone]) {
     return GestureDetector(
-      onTap: phone != null && label == 'Call' ? () {
-        // TODO: Implement phone call functionality
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Call $phone', style: GoogleFonts.poppins()),
-            backgroundColor: AppColors.darkGreen,
-          ),
-        );
-      } : null,
+      onTap: phone != null && label == 'Call'
+          ? () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Call $phone', style: GoogleFonts.poppins()),
+                  backgroundColor: AppColors.darkGreen,
+                ),
+              );
+            }
+          : null,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12)),

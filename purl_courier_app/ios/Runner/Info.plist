@@ -70,5 +70,11 @@
 	<string>We need access to your camera to capture ID photos and face scan for verification</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>We need access to your microphone for video recording</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to track deliveries and provide accurate navigation to pickup and delivery addresses</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We need your location to track deliveries in the background and provide real-time updates to customers</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>We need your location to track deliveries in the background and provide real-time updates to customers</string>
 </dict>
 </plist>
