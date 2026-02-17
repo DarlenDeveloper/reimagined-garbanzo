@@ -10,6 +10,7 @@ import '../services/cart_service.dart';
 import '../services/order_service.dart';
 import '../services/currency_service.dart';
 import 'order_history_screen.dart';
+import 'location_picker_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -76,7 +77,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           setState(() {
             _nameController.text = userData?['name'] ?? user.displayName ?? '';
             _emailController.text = userData?['email'] ?? user.email ?? '';
-            _phoneController.text = userData?['phone'] ?? user.phoneNumber ?? '';
+            _phoneController.text = userData?['phoneNumber'] ?? user.phoneNumber ?? '';
           });
           return;
         }
@@ -223,6 +224,52 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           SnackBar(
             content: Text('Failed to get location. Please try again.', style: GoogleFonts.poppins()),
             backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openMapPicker() async {
+    final result = await Navigator.push<GeoPoint>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialLocation: _currentLocation,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _currentLocation = result;
+        _locationError = null;
+        
+        // Auto-create delivery address from location if none exists
+        if (_savedAddresses.isEmpty) {
+          _savedAddresses.add(_DeliveryAddress(
+            label: 'Selected Location',
+            street: 'Lat: ${result.latitude.toStringAsFixed(6)}, Lng: ${result.longitude.toStringAsFixed(6)}',
+            city: 'Map Location',
+            icon: Iconsax.location,
+          ));
+          _selectedAddressIndex = 0;
+          _showAddressError = false;
+        }
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Iconsax.tick_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Text('Location set successfully', style: GoogleFonts.poppins()),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -397,16 +444,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _isLoadingLocation ? null : _requestLocationPermission,
-                icon: const Icon(Iconsax.gps, size: 18),
+                onPressed: _openMapPicker,
+                icon: const Icon(Iconsax.map, size: 18),
                 label: Text(
-                  hasError ? 'Try Again' : 'Allow Location Access', 
+                  'Set on Map', 
                   style: GoogleFonts.poppins(fontSize: 14),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.black,
                   foregroundColor: AppColors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
+          if (hasLocation) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _openMapPicker,
+                icon: const Icon(Iconsax.map, size: 18),
+                label: Text(
+                  'Change Location on Map', 
+                  style: GoogleFonts.poppins(fontSize: 14),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: const BorderSide(color: AppColors.black),
                 ),
               ),
             ),

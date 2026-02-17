@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:lottie/lottie.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/colors.dart';
 import 'help_support_screen.dart';
 
@@ -283,58 +284,108 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
   }
 
   Widget _buildDriverInfo() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Driver', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-          const SizedBox(height: 12),
-          Row(
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('deliveries')
+          .where('orderId', isEqualTo: widget.orderId)
+          .limit(1)
+          .snapshots(),
+      builder: (context, snapshot) {
+        String driverName = 'Delivery Person';
+        String driverPhone = '';
+        String vehicleInfo = 'Vehicle';
+        String vehiclePlate = '';
+        
+        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+          final deliveryData = snapshot.data!.docs.first.data() as Map<String, dynamic>;
+          driverName = deliveryData['assignedCourierName'] ?? 'Delivery Person';
+          driverPhone = deliveryData['assignedCourierPhone'] ?? '';
+          
+          final vName = deliveryData['vehicleName'];
+          final vPlate = deliveryData['vehiclePlateNumber'];
+          
+          if (vName != null && vPlate != null) {
+            vehicleInfo = vName;
+            vehiclePlate = vPlate;
+          } else if (vPlate != null) {
+            vehicleInfo = vPlate;
+          }
+        }
+        
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48, height: 48,
-                decoration: BoxDecoration(color: AppColors.darkGreen, shape: BoxShape.circle),
-                child: Center(child: Text('NA', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white))),
+              Text('Driver', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    width: 48, height: 48,
+                    decoration: BoxDecoration(color: AppColors.darkGreen, shape: BoxShape.circle),
+                    child: Center(
+                      child: Text(
+                        driverName.substring(0, 1).toUpperCase(),
+                        style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(driverName, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                        if (vehiclePlate.isNotEmpty)
+                          Text('$vehicleInfo • $vehiclePlate', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary))
+                        else
+                          Text(vehicleInfo, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              if (driverPhone.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Row(
                   children: [
-                    Text('Noah Anna', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                    Text('Silver Toyota Prius', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                    Expanded(child: _buildDriverAction(Iconsax.message, 'Message')),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildDriverAction(Iconsax.call, 'Call', driverPhone)),
                   ],
                 ),
-              ),
-              Row(children: [const Icon(Iconsax.star1, size: 16, color: Color(0xFFFFB800)), const SizedBox(width: 4), Text('4.3', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary))]),
+              ],
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: _buildDriverAction(Iconsax.message, 'Message')),
-              const SizedBox(width: 12),
-              Expanded(child: _buildDriverAction(Iconsax.call, 'Call')),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildDriverAction(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 18, color: AppColors.darkGreen),
-          const SizedBox(width: 8),
-          Text(label, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
-        ],
+  Widget _buildDriverAction(IconData icon, String label, [String? phone]) {
+    return GestureDetector(
+      onTap: phone != null && label == 'Call' ? () {
+        // TODO: Implement phone call functionality
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Call $phone', style: GoogleFonts.poppins()),
+            backgroundColor: AppColors.darkGreen,
+          ),
+        );
+      } : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: AppColors.darkGreen),
+            const SizedBox(width: 8),
+            Text(label, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+          ],
+        ),
       ),
     );
   }

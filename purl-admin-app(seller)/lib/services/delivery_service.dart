@@ -24,6 +24,8 @@ import 'dart:math' show cos, sqrt, asin;
 /// ├── assignedCourierId: string?
 /// ├── assignedCourierName: string?
 /// ├── assignedCourierPhone: string?
+/// ├── vehiclePlateNumber: string? (for self-delivery)
+/// ├── vehicleName: string? (for self-delivery)
 /// ├── courierLocation: GeoPoint? (real-time updates)
 /// ├── deliveryFee: number
 /// ├── distance: number (km)
@@ -138,6 +140,8 @@ class DeliveryService {
     required String runnerId,
     required String runnerName,
     required String runnerPhone,
+    required String vehiclePlateNumber,
+    required String vehicleName,
   }) async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) throw Exception('User not authenticated');
@@ -183,6 +187,8 @@ class DeliveryService {
       'assignedCourierId': runnerId,
       'assignedCourierName': runnerName,
       'assignedCourierPhone': runnerPhone,
+      'vehiclePlateNumber': vehiclePlateNumber,
+      'vehicleName': vehicleName,
       'courierLocation': null,
       'deliveryFee': 0, // No fee for self-delivery
       'distance': distance,
@@ -338,6 +344,8 @@ class DeliveryData {
   final String? assignedCourierId;
   final String? assignedCourierName;
   final String? assignedCourierPhone;
+  final String? vehiclePlateNumber;
+  final String? vehicleName;
   final GeoPoint? courierLocation;
   final double deliveryFee;
   final double distance;
@@ -368,6 +376,8 @@ class DeliveryData {
     this.assignedCourierId,
     this.assignedCourierName,
     this.assignedCourierPhone,
+    this.vehiclePlateNumber,
+    this.vehicleName,
     this.courierLocation,
     required this.deliveryFee,
     required this.distance,
@@ -401,6 +411,8 @@ class DeliveryData {
       assignedCourierId: data['assignedCourierId'] as String?,
       assignedCourierName: data['assignedCourierName'] as String?,
       assignedCourierPhone: data['assignedCourierPhone'] as String?,
+      vehiclePlateNumber: data['vehiclePlateNumber'] as String?,
+      vehicleName: data['vehicleName'] as String?,
       courierLocation: data['courierLocation'] as GeoPoint?,
       deliveryFee: (data['deliveryFee'] ?? 0).toDouble(),
       distance: (data['distance'] ?? 0).toDouble(),

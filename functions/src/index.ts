@@ -414,3 +414,124 @@ export const sendBulkNotification = onCall(
     };
   }
 );
+
+
+/**
+ * Notify nearby couriers when a new delivery is created
+ * Triggers when a delivery document is created with status="searching"
+ */
+export const notifyNearbyCouriers = onDocumentCreated(
+  "deliveries/{deliveryId}",
+  async (event) => {
+    const delivery = event.data?.data();
+    if (!delivery || delivery.status !== "searching" || delivery.deliveryType !== "purl_courier") {
+      return;
+    }
+
+    const deliveryId = event.params.deliveryId;
+    const storeLocation = delivery.storeLocation;
+    const deliveryFee = delivery.deliveryFee;
+    const storeName = delivery.storeName;
+
+    console.log(`🔍 Finding couriers near ${storeName} for delivery ${deliveryId}`);
+
+    // Find nearby couriers (within 2km radius)
+    const couriersSnapshot = await admin.firestore()
+      .collection("couriers")
+      .where("verified", "==", true)
+      .where("isOnline", "==", true)
+      .get();
+
+    let notificationsSent = 0;
+
+    for (const courierDoc of couriersSnapshot.docs) {
+      const courier = courierDoc.data();
+      const courierLocation = courier.currentLocation;
+
+      // Skip if courier doesn't have location
+      if (!courierLocation) continue;
+
+      // Calculate distance (simple approximation)
+      const distance = calculateDistance(
+        storeLocation.latitude,
+        storeLocation.longitude,
+        courierLocation.latitude,
+        courierLocation.longitude
+      );
+
+      // Only notify couriers within 2km
+      if (distance > 2) continue;
+
+      // Get courier's FCM tokens
+      const fcmTokens = courier.fcmTokens || [];
+
+      for (const token of fcmTokens) {
+        try {
+          await admin.messaging().send({
+            token,
+            notification: {
+              title: "New Delivery Request",
+              body: `UGX ${deliveryFee.toLocaleString()} • ${distance.toFixed(1)}km away`,
+            },
+            data: {
+              type: "delivery_request",
+              deliveryId: deliveryId,
+              deliveryFee: deliveryFee.toString(),
+              distance: distance.toString(),
+              storeName: storeName,
+            },
+            android: {
+              priority: "high",
+              notification: {
+                sound: "notification",
+                channelId: "purl_courier_delivery_requests",
+                priority: "high",
+              },
+            },
+            apns: {
+              payload: {
+                aps: {
+                  sound: "notification.mp3",
+                  badge: 1,
+                  contentAvailable: true,
+                },
+              },
+            },
+          });
+          notificationsSent++;
+          console.log(`✅ Notified courier ${courierDoc.id}`);
+        } catch (error) {
+          console.error(`❌ Error notifying courier ${courierDoc.id}:`, error);
+        }
+      }
+    }
+
+    console.log(`📤 Sent ${notificationsSent} notifications for delivery ${deliveryId}`);
+
+    // Update delivery with notification count
+    await event.data?.ref.update({
+      notificationsSent: notificationsSent,
+      notifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+);
+
+/**
+ * Calculate distance between two coordinates (Haversine formula)
+ */
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
