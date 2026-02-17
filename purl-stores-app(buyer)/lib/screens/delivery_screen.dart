@@ -5,6 +5,7 @@ import 'package:lottie/lottie.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../theme/colors.dart';
+import '../services/currency_service.dart';
 import 'help_support_screen.dart';
 
 class DeliveryScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class DeliveryScreen extends StatefulWidget {
 class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animController;
   late Animation<double> _pulseAnimation;
+  final CurrencyService _currencyService = CurrencyService();
 
   int get _currentStep {
     switch (widget.status) {
@@ -313,8 +315,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
             children: [
               ...items.map((item) {
                 final itemData = item as Map<String, dynamic>;
-                final name = itemData['name'] ?? 'Product';
+                final name = itemData['productName'] ?? itemData['name'] ?? 'Product';
                 final price = (itemData['price'] ?? 0).toDouble();
+                final currency = itemData['currency'] ?? 'KES';
                 final quantity = itemData['quantity'] ?? 1;
                 
                 return Padding(
@@ -337,7 +340,15 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                           ],
                         ),
                       ),
-                      Text('\$${price.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.darkGreen)),
+                      FutureBuilder<String>(
+                        future: _currencyService.formatPriceWithConversion(price, currency),
+                        builder: (context, priceSnapshot) {
+                          return Text(
+                            priceSnapshot.data ?? _currencyService.formatPrice(price, currency),
+                            style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.darkGreen),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 );
@@ -348,7 +359,18 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Total paid', style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textSecondary)),
-                  Text('\$${total.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.darkGreen)),
+                  FutureBuilder<String>(
+                    future: _currencyService.formatPriceWithConversion(
+                      total,
+                      items.isNotEmpty ? (items.first as Map<String, dynamic>)['currency'] ?? 'KES' : 'KES',
+                    ),
+                    builder: (context, totalSnapshot) {
+                      return Text(
+                        totalSnapshot.data ?? _currencyService.formatPrice(total, 'KES'),
+                        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.darkGreen),
+                      );
+                    },
+                  ),
                 ],
               ),
             ],

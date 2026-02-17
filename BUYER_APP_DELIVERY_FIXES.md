@@ -12,7 +12,14 @@
 
 **Fix**: ✅ Code verified correct - requires app rebuild and reinstall
 
-### 2. Missing Firestore Index Error
+### 2. Currency Formatting Issue
+**Problem**: Prices showing without proper currency symbols and inconsistent formatting ($51.61 vs $210900.00).
+
+**Root Cause**: The delivery screens were using hardcoded `$` symbol and `toStringAsFixed(2)` instead of using the `CurrencyService` which handles proper currency formatting and conversion based on user preferences.
+
+**Fix Applied**: ✅ Updated both `my_orders_screen.dart` and `delivery_screen.dart` to use `CurrencyService.formatPriceWithConversion()` like the order history screen does.
+
+### 3. Missing Firestore Index Error
 **Problem**: Error when opening order details: "The query requires a COLLECTION_GROUP_ASC index for collection orders and field orderNumber"
 
 **Root Cause**: The `delivery_screen.dart` uses a collection group query to find orders by `orderNumber`, but the required Firestore index was missing.
@@ -122,8 +129,8 @@ This will deploy the updated `onDeliveryStatusChanged` function.
 
 1. `firestore.indexes.json` - Added orderNumber index for collection group queries
 2. `functions/src/index.ts` - Replaced `onDeliveryCompleted` with `onDeliveryStatusChanged` for comprehensive status syncing
-3. `purl-stores-app(buyer)/lib/screens/my_orders_screen.dart` - Price display code verified correct (line 220)
-4. `purl-stores-app(buyer)/lib/screens/delivery_screen.dart` - Price display code verified correct (lines 340, 351)
+3. `purl-stores-app(buyer)/lib/screens/my_orders_screen.dart` - Updated to use CurrencyService for proper price formatting
+4. `purl-stores-app(buyer)/lib/screens/delivery_screen.dart` - Updated to use CurrencyService for proper price formatting
 
 ## Verification Checklist
 
