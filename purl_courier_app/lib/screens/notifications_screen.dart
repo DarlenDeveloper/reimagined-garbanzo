@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import '../services/notification_service.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  final NotificationService _notificationService = NotificationService();
 
   @override
   Widget build(BuildContext context) {
@@ -23,131 +31,193 @@ class NotificationsScreen extends StatelessWidget {
           icon: const Icon(Iconsax.arrow_left, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildNotificationItem(
-            icon: Iconsax.box,
-            iconColor: Colors.orange,
-            title: 'New Delivery Request',
-            message: 'Order #ORD-2026-123 from Fresh Mart',
-            time: '2 mins ago',
-            isUnread: true,
-          ),
-          _buildNotificationItem(
-            icon: Iconsax.tick_circle,
-            iconColor: Colors.green,
-            title: 'Delivery Completed',
-            message: 'You earned UGX 12,000 from order #ORD-2026-120',
-            time: '1 hour ago',
-            isUnread: true,
-          ),
-          _buildNotificationItem(
-            icon: Iconsax.wallet_2,
-            iconColor: Colors.blue,
-            title: 'Payment Received',
-            message: 'UGX 45,000 has been added to your wallet',
-            time: '3 hours ago',
-            isUnread: false,
-          ),
-          _buildNotificationItem(
-            icon: Iconsax.star,
-            iconColor: Colors.amber,
-            title: 'New Rating',
-            message: 'You received 5 stars from a customer',
-            time: '5 hours ago',
-            isUnread: false,
-          ),
-          _buildNotificationItem(
-            icon: Iconsax.info_circle,
-            iconColor: Colors.grey,
-            title: 'System Update',
-            message: 'New features available in the app',
-            time: 'Yesterday',
-            isUnread: false,
+        actions: [
+          TextButton(
+            onPressed: () => _notificationService.markAllAsRead(),
+            child: Text(
+              'Mark all read',
+              style: GoogleFonts.poppins(
+                color: Colors.orange,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
+      ),
+      body: StreamBuilder<List<CourierNotification>>(
+        stream: _notificationService.getNotificationsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Colors.orange));
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Iconsax.warning_2, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading notifications',
+                    style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final notifications = snapshot.data ?? [];
+
+          if (notifications.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Iconsax.notification, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No notifications yet',
+                    style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'You\'ll see delivery updates here',
+                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: notifications.length,
+            itemBuilder: (context, index) {
+              final notification = notifications[index];
+              return _buildNotificationItem(notification);
+            },
+          );
+        },
       ),
     );
   }
 
-  Widget _buildNotificationItem({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String message,
-    required String time,
-    required bool isUnread,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isUnread ? Colors.orange.withOpacity(0.05) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: isUnread ? Border.all(color: Colors.orange.withOpacity(0.2)) : null,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+  Widget _buildNotificationItem(CourierNotification notification) {
+    final iconData = _getIconForType(notification.type);
+    final iconColor = _getColorForType(notification.type);
+
+    return GestureDetector(
+      onTap: () {
+        if (!notification.isRead) {
+          _notificationService.markAsRead(notification.id);
+        }
+        // TODO: Navigate to relevant screen based on notification type
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: notification.isRead ? Colors.white : Colors.orange.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: notification.isRead ? null : Border.all(color: Colors.orange.withOpacity(0.2)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(iconData, color: iconColor, size: 24),
             ),
-            child: Icon(icon, color: iconColor, size: 24),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          notification.title,
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
+                      if (!notification.isRead)
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.orange,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    notification.message,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.grey[600],
                     ),
-                    if (isUnread)
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.orange,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  message,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: Colors.grey[600],
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  time,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    color: Colors.grey[500],
+                  const SizedBox(height: 4),
+                  Text(
+                    notification.timeAgo,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: Colors.grey[500],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  IconData _getIconForType(String type) {
+    switch (type) {
+      case 'delivery_request':
+        return Iconsax.box;
+      case 'delivery_completed':
+        return Iconsax.tick_circle;
+      case 'payment':
+        return Iconsax.wallet_2;
+      case 'rating':
+        return Iconsax.star;
+      case 'system':
+        return Iconsax.info_circle;
+      default:
+        return Iconsax.notification;
+    }
+  }
+
+  Color _getColorForType(String type) {
+    switch (type) {
+      case 'delivery_request':
+        return Colors.orange;
+      case 'delivery_completed':
+        return Colors.green;
+      case 'payment':
+        return Colors.blue;
+      case 'rating':
+        return Colors.amber;
+      case 'system':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
   }
 }

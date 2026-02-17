@@ -56,24 +56,18 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             // Purl Logo
             Container(
-              width: 140,
-              height: 140,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
                 color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.white.withOpacity(0.2),
-                    blurRadius: 40,
-                    spreadRadius: 10,
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: ClipOval(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
                 child: Image.asset(
                   'assets/images/purllogo-whitebg.PNG',
-                  width: 140,
-                  height: 140,
+                  width: 100,
+                  height: 100,
                   fit: BoxFit.cover,
                 ),
               ),

@@ -498,6 +498,26 @@ export const notifyNearbyCouriers = onDocumentCreated(
               },
             },
           });
+          
+          // Create in-app notification
+          await admin.firestore()
+            .collection("couriers")
+            .doc(courierDoc.id)
+            .collection("notifications")
+            .add({
+              type: "delivery_request",
+              title: "New Delivery Request",
+              message: `Order from ${storeName} • UGX ${deliveryFee.toLocaleString()} • ${distance.toFixed(1)}km away`,
+              data: {
+                deliveryId: deliveryId,
+                deliveryFee: deliveryFee,
+                distance: distance,
+                storeName: storeName,
+              },
+              isRead: false,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          
           notificationsSent++;
           console.log(`✅ Notified courier ${courierDoc.id}`);
         } catch (error) {
@@ -631,6 +651,91 @@ export const onDeliveryStatusChanged = onDocumentUpdated(
       }
     } catch (error) {
       console.error(`❌ Error updating order ${orderId}:`, error);
+    }
+  }
+);
+
+
+/**
+ * Trigger: Delivery accepted by courier
+ * Create notification for courier
+ */
+export const onDeliveryAccepted = onDocumentUpdated(
+  "deliveries/{deliveryId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    
+    if (!before || !after) return;
+
+    // Check if status changed to "assigned"
+    if (before.status !== "assigned" && after.status === "assigned") {
+      const courierId = after.assignedCourierId;
+      const orderNumber = after.orderNumber;
+      const deliveryFee = after.deliveryFee;
+
+      if (!courierId) return;
+
+      console.log(`📦 Delivery ${event.params.deliveryId} accepted by courier ${courierId}`);
+
+      try {
+        // Create in-app notification for courier
+        await admin.firestore()
+          .collection("couriers")
+          .doc(courierId)
+          .collection("notifications")
+          .add({
+            type: "delivery_accepted",
+            title: "Delivery Accepted",
+            message: `You accepted order ${orderNumber}. Pickup the package and start delivery.`,
+            data: {
+              deliveryId: event.params.deliveryId,
+              orderNumber: orderNumber,
+              deliveryFee: deliveryFee,
+            },
+            isRead: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+        console.log(`✅ Created acceptance notification for courier ${courierId}`);
+      } catch (error) {
+        console.error(`❌ Error creating acceptance notification:`, error);
+      }
+    }
+
+    // Check if status changed to "delivered"
+    if (before.status !== "delivered" && after.status === "delivered") {
+      const courierId = after.assignedCourierId;
+      const orderNumber = after.orderNumber;
+      const deliveryFee = after.deliveryFee;
+
+      if (!courierId) return;
+
+      console.log(`📦 Delivery ${event.params.deliveryId} completed by courier ${courierId}`);
+
+      try {
+        // Create in-app notification for courier
+        await admin.firestore()
+          .collection("couriers")
+          .doc(courierId)
+          .collection("notifications")
+          .add({
+            type: "delivery_completed",
+            title: "Delivery Completed",
+            message: `You earned UGX ${deliveryFee.toLocaleString()} from order ${orderNumber}`,
+            data: {
+              deliveryId: event.params.deliveryId,
+              orderNumber: orderNumber,
+              deliveryFee: deliveryFee,
+            },
+            isRead: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+        console.log(`✅ Created completion notification for courier ${courierId}`);
+      } catch (error) {
+        console.error(`❌ Error creating completion notification:`, error);
+      }
     }
   }
 );
