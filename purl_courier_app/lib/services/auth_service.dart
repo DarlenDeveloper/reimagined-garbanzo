@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'fcm_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -156,6 +157,13 @@ class AuthService {
 
   // Sign out
   Future<void> signOut() async {
+    // Remove FCM token before signing out
+    try {
+      await FCMService().removeToken();
+    } catch (e) {
+      print('Error removing FCM token: $e');
+    }
+    
     await Future.wait([
       _auth.signOut(),
       _googleSignIn.signOut(),

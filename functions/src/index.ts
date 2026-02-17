@@ -679,6 +679,52 @@ export const onDeliveryAccepted = onDocumentUpdated(
       console.log(`📦 Delivery ${event.params.deliveryId} accepted by courier ${courierId}`);
 
       try {
+        // Get courier's FCM tokens
+        const courierDoc = await admin.firestore()
+          .collection("couriers")
+          .doc(courierId)
+          .get();
+        
+        const fcmTokens = courierDoc.data()?.fcmTokens || [];
+
+        // Send push notification to courier
+        for (const token of fcmTokens) {
+          try {
+            await admin.messaging().send({
+              token,
+              notification: {
+                title: "Delivery Accepted",
+                body: `You accepted order ${orderNumber}. Pickup the package and start delivery.`,
+              },
+              data: {
+                type: "delivery_accepted",
+                deliveryId: event.params.deliveryId,
+                orderNumber: orderNumber,
+                deliveryFee: deliveryFee.toString(),
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  sound: "notification",
+                  channelId: "purl_courier_delivery_updates",
+                  priority: "high",
+                },
+              },
+              apns: {
+                payload: {
+                  aps: {
+                    sound: "notification.mp3",
+                    badge: 1,
+                  },
+                },
+              },
+            });
+            console.log(`✅ Sent push notification to courier ${courierId}`);
+          } catch (error) {
+            console.error(`❌ Error sending push notification:`, error);
+          }
+        }
+
         // Create in-app notification for courier
         await admin.firestore()
           .collection("couriers")
@@ -714,6 +760,52 @@ export const onDeliveryAccepted = onDocumentUpdated(
       console.log(`📦 Delivery ${event.params.deliveryId} completed by courier ${courierId}`);
 
       try {
+        // Get courier's FCM tokens
+        const courierDoc = await admin.firestore()
+          .collection("couriers")
+          .doc(courierId)
+          .get();
+        
+        const fcmTokens = courierDoc.data()?.fcmTokens || [];
+
+        // Send push notification to courier
+        for (const token of fcmTokens) {
+          try {
+            await admin.messaging().send({
+              token,
+              notification: {
+                title: "Delivery Completed",
+                body: `You earned UGX ${deliveryFee.toLocaleString()} from order ${orderNumber}`,
+              },
+              data: {
+                type: "delivery_completed",
+                deliveryId: event.params.deliveryId,
+                orderNumber: orderNumber,
+                deliveryFee: deliveryFee.toString(),
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  sound: "notification",
+                  channelId: "purl_courier_delivery_updates",
+                  priority: "high",
+                },
+              },
+              apns: {
+                payload: {
+                  aps: {
+                    sound: "notification.mp3",
+                    badge: 1,
+                  },
+                },
+              },
+            });
+            console.log(`✅ Sent push notification to courier ${courierId}`);
+          } catch (error) {
+            console.error(`❌ Error sending push notification:`, error);
+          }
+        }
+
         // Create in-app notification for courier
         await admin.firestore()
           .collection("couriers")
@@ -739,3 +831,4 @@ export const onDeliveryAccepted = onDocumentUpdated(
     }
   }
 );
+

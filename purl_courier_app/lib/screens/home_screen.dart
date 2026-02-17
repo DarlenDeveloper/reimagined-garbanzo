@@ -85,8 +85,8 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.grey[50],
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection('couriers').doc(userId).snapshots(),
-        builder: (context, snapshot) {
-          final data = snapshot.data?.data() as Map<String, dynamic>?;
+        builder: (context, courierSnapshot) {
+          final data = courierSnapshot.data?.data() as Map<String, dynamic>?;
           final fullName = data?['fullName'] ?? 'Courier';
           final verified = data?['verified'] ?? false;
           
@@ -95,20 +95,53 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 _buildHeader(fullName, verified),
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionTitle('Current Delivery'),
-                        const SizedBox(height: 16),
-                        _buildActiveDeliverySection(),
-                        const SizedBox(height: 32),
-                        _buildSectionTitle('Recent Deliveries', showSeeAll: true),
-                        const SizedBox(height: 16),
-                        _buildRecentDeliveriesSection(),
-                      ],
-                    ),
+                  child: StreamBuilder<List<DeliveryRequest>>(
+                    stream: DeliveryService().getMyDeliveries(),
+                    builder: (context, activeSnapshot) {
+                      return StreamBuilder<List<DeliveryRequest>>(
+                        stream: DeliveryService().getCompletedDeliveries(),
+                        builder: (context, completedSnapshot) {
+                          final activeDeliveries = activeSnapshot.data ?? [];
+                          final completedDeliveries = completedSnapshot.data ?? [];
+                          
+                          return SingleChildScrollView(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Current Delivery - only show if exists
+                                if (activeDeliveries.isNotEmpty) ...[
+                                  _buildSectionTitle('Current Delivery'),
+                                  const SizedBox(height: 16),
+                                  _buildFlightStyleCard(activeDeliveries.first),
+                                  const SizedBox(height: 32),
+                                ],
+                                
+                                // Previous Delivery
+                                _buildSectionTitle('Previous Delivery'),
+                                const SizedBox(height: 16),
+                                completedDeliveries.isEmpty
+                                    ? _buildEmptyPreviousDeliveryCard()
+                                    : _buildPreviousDeliveryCard(completedDeliveries.first),
+                                const SizedBox(height: 32),
+                                
+                                // Recent Deliveries
+                                _buildSectionTitle('Recent Deliveries', showSeeAll: true),
+                                const SizedBox(height: 16),
+                                completedDeliveries.isEmpty
+                                    ? _buildEmptyRecentDeliveriesCard()
+                                    : Column(
+                                        children: completedDeliveries
+                                            .take(3)
+                                            .map((delivery) => _buildRecentDeliveryItem(delivery))
+                                            .toList(),
+                                      ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
               ],
@@ -231,25 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildActiveDeliverySection() {
-    return StreamBuilder<List<DeliveryRequest>>(
-      stream: DeliveryService().getMyDeliveries(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Colors.black));
-        }
-
-        final activeDeliveries = snapshot.data ?? [];
-        if (activeDeliveries.isEmpty) {
-          return _buildEmptyDeliveryCard();
-        }
-
-        return _buildFlightStyleCard(activeDeliveries.first);
-      },
-    );
-  }
-
-  Widget _buildEmptyDeliveryCard() {
+  Widget _buildEmptyPreviousDeliveryCard() {
     return Container(
       padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
@@ -265,15 +280,15 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Column(
         children: [
-          Icon(Iconsax.truck_fast, size: 48, color: Colors.grey[300]),
+          Icon(Iconsax.clock, size: 48, color: Colors.grey[300]),
           const SizedBox(height: 16),
           Text(
-            'No active delivery',
+            'No previous delivery',
             style: GoogleFonts.poppins(color: Colors.grey[600], fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           Text(
-            'Accept a delivery to start earning',
+            'Complete a delivery to see history',
             style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500]),
           ),
         ],
@@ -281,10 +296,29 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildEmptyRecentDeliveriesCard() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Icon(Iconsax.box, size: 48, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          Text(
+            'No recent deliveries',
+            style: GoogleFonts.poppins(color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFlightStyleCard(DeliveryRequest delivery) {
-    String statusText = 'Arrive in 30 Min';
-    String pickupCode = delivery.storeName.substring(0, 3).toUpperCase();
-    String dropoffCode = delivery.buyerName.substring(0, 3).toUpperCase();
+    String pickupCode = 'START';
+    String dropoffCode = 'END';
     
     return GestureDetector(
       onTap: () {
@@ -357,7 +391,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         pickupCode,
                         style: GoogleFonts.poppins(
                           color: Colors.white,
-                          fontSize: 32,
+                          fontSize: 28,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -412,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         dropoffCode,
                         style: GoogleFonts.poppins(
                           color: Colors.white,
-                          fontSize: 32,
+                          fontSize: 28,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -448,10 +482,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Iconsax.clock, color: Colors.white, size: 14),
+                          const Icon(Iconsax.routing_2, color: Colors.white, size: 14),
                           const SizedBox(width: 6),
                           Text(
-                            statusText,
+                            delivery.status == 'assigned' ? 'Go to Pickup' : 'In Transit',
                             style: GoogleFonts.poppins(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
@@ -488,6 +522,251 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPreviousDeliveryCard(DeliveryRequest delivery) {
+    String pickupCode = 'START';
+    String dropoffCode = 'END';
+    
+    // Calculate real duration from assignedAt to deliveredAt
+    String duration = 'N/A';
+    if (delivery.assignedAt != null && delivery.deliveredAt != null) {
+      final startTime = delivery.assignedAt!.toDate();
+      final endTime = delivery.deliveredAt!.toDate();
+      final difference = endTime.difference(startTime);
+      
+      if (difference.inHours > 0) {
+        duration = '${difference.inHours}h ${difference.inMinutes % 60}m';
+      } else {
+        duration = '${difference.inMinutes}m';
+      }
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1a1a1a), Color(0xFF2d2d2d)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header
+          Row(
+            children: [
+              const Icon(Iconsax.tick_circle, color: Colors.white, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  delivery.orderNumber,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Completed',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Route
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      pickupCode,
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      delivery.storeName,
+                      style: GoogleFonts.poppins(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 2,
+                            color: Colors.white.withOpacity(0.3),
+                          ),
+                        ),
+                        const Icon(Iconsax.tick_circle, color: Colors.white, size: 16),
+                        Expanded(
+                          child: Container(
+                            height: 2,
+                            color: Colors.white.withOpacity(0.3),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${delivery.distance.toStringAsFixed(1)} km',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white70,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      dropoffCode,
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      delivery.buyerName,
+                      style: GoogleFonts.poppins(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Duration, Payment, and Rating
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Duration',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white60,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Iconsax.clock, color: Colors.white, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          duration,
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      'Payment',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white60,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'UGX ${delivery.deliveryFee.toStringAsFixed(0)}',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Rating',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white60,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        const Icon(Iconsax.star1, color: Colors.white70, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'N/A',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

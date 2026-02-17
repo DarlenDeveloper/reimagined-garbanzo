@@ -3,12 +3,17 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'navigation/router.dart';
 import 'theme/theme.dart';
+import 'services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Initialize FCM and request notification permissions
+  await FCMService().initialize();
+  
   runApp(const PurlCourierApp());
 }
 

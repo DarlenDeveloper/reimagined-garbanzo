@@ -37,7 +37,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             child: Text(
               'Mark all read',
               style: GoogleFonts.poppins(
-                color: Colors.orange,
+                color: Colors.black,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -119,9 +119,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: notification.isRead ? Colors.white : Colors.orange.withOpacity(0.05),
+          color: notification.isRead ? Colors.white : Colors.grey.withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
-          border: notification.isRead ? null : Border.all(color: Colors.orange.withOpacity(0.2)),
+          border: notification.isRead ? null : Border.all(color: Colors.grey.withOpacity(0.2)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,7 +156,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           width: 8,
                           height: 8,
                           decoration: const BoxDecoration(
-                            color: Colors.orange,
+                            color: Colors.black,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -207,13 +207,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Color _getColorForType(String type) {
     switch (type) {
       case 'delivery_request':
-        return Colors.orange;
+        return Colors.black;
       case 'delivery_completed':
-        return Colors.green;
+        return Colors.black;
       case 'payment':
-        return Colors.blue;
+        return Colors.black;
       case 'rating':
-        return Colors.amber;
+        return Colors.black;
       case 'system':
         return Colors.grey;
       default:

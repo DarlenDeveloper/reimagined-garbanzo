@@ -79,7 +79,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -87,7 +87,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           icon: const Icon(Iconsax.arrow_left, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Notifications', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w700)),
+        title: Text('Notifications', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
         actions: [
           StreamBuilder<int>(
             stream: _notificationService.getUnreadCount(),
@@ -106,7 +106,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       );
                     }
                   },
-                  child: Text('Mark all read', style: GoogleFonts.poppins(color: Colors.black)),
+                  child: Text('Mark all read', style: GoogleFonts.poppins(color: Colors.black, fontSize: 14)),
                 );
               }
               return const SizedBox.shrink();
@@ -172,122 +172,108 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 );
               }
 
-              final unreadCount = notifications.where((doc) => !(doc.data() as Map)['isRead']).length;
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: notifications.length,
+                itemBuilder: (context, index) {
+                  final doc = notifications[index];
+                  final data = doc.data() as Map<String, dynamic>;
+                  final isRead = data['isRead'] ?? false;
+                  final type = data['type'] ?? 'general';
+                  final title = data['title'] ?? 'Notification';
+                  final body = data['body'] ?? '';
+                  final createdAt = data['createdAt'] as Timestamp?;
 
-              return Column(
-                children: [
-                  if (unreadCount > 0)
-                    Container(
-                      margin: const EdgeInsets.all(16),
-                      padding: const EdgeInsets.all(12),
+                  return GestureDetector(
+                    onTap: () async {
+                      if (!isRead) {
+                        await _firestore
+                            .collection('stores')
+                            .doc(storeId)
+                            .collection('notifications')
+                            .doc(doc.id)
+                            .update({'isRead': true});
+                      }
+                      // TODO: Navigate based on type
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withAlpha(25),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Iconsax.notification, color: Colors.blue, size: 20),
-                          const SizedBox(width: 12),
-                          Text(
-                            '$unreadCount unread notification${unreadCount > 1 ? 's' : ''}',
-                            style: GoogleFonts.poppins(color: Colors.blue, fontWeight: FontWeight.w500),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
-                    ),
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: notifications.length,
-                      itemBuilder: (context, index) {
-                        final doc = notifications[index];
-                        final data = doc.data() as Map<String, dynamic>;
-                        final isRead = data['isRead'] ?? false;
-                        final type = data['type'] ?? 'general';
-                        final title = data['title'] ?? 'Notification';
-                        final body = data['body'] ?? '';
-                        final createdAt = data['createdAt'] as Timestamp?;
-
-                        return GestureDetector(
-                          onTap: () async {
-                            if (!isRead) {
-                              await _firestore
-                                  .collection('stores')
-                                  .doc(storeId)
-                                  .collection('notifications')
-                                  .doc(doc.id)
-                                  .update({'isRead': true});
-                            }
-                            // TODO: Navigate based on type
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: isRead ? Colors.grey[100] : Colors.blue.withAlpha(15),
-                              borderRadius: BorderRadius.circular(12),
-                              border: isRead ? null : Border.all(color: Colors.blue.withAlpha(50)),
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Row(
+                            child: Icon(_getIconForType(type), color: Colors.black, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(_getIconForType(type), color: Colors.black, size: 20),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              title,
-                                              style: GoogleFonts.poppins(
-                                                fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
-                                              ),
-                                            ),
-                                          ),
-                                          if (!isRead) ...[
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              width: 8,
-                                              height: 8,
-                                              decoration: const BoxDecoration(
-                                                color: Colors.blue,
-                                                shape: BoxShape.circle,
-                                              ),
-                                            ),
-                                          ],
-                                        ],
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        title,
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                        ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        body,
-                                        style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        _formatTimestamp(createdAt),
-                                        style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500]),
+                                    ),
+                                    if (!isRead) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.black,
+                                          shape: BoxShape.circle,
+                                        ),
                                       ),
                                     ],
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  body,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _formatTimestamp(createdAt),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    color: Colors.grey[500],
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        );
-                      },
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  );
+                },
               );
             },
           );

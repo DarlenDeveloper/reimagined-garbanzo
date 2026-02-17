@@ -59,6 +59,19 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
         _currentStatus = _delivery!.status;
       });
       _updateMarkers();
+      // Automatically show route based on status
+      _showAutomaticRoute();
+    }
+  }
+
+  Future<void> _showAutomaticRoute() async {
+    if (_delivery == null) return;
+    
+    // Show route to pickup if assigned, or to dropoff if picked up
+    if (_currentStatus == 'assigned') {
+      await _getDirections(_delivery!.storeLocation);
+    } else if (_currentStatus == 'picked_up') {
+      await _getDirections(_delivery!.buyerLocation);
     }
   }
 
@@ -82,7 +95,7 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
           _delivery!.storeLocation.latitude,
           _delivery!.storeLocation.longitude,
         ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
         infoWindow: InfoWindow(title: _delivery!.storeName),
       ));
 
@@ -93,7 +106,7 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
           _delivery!.buyerLocation.latitude,
           _delivery!.buyerLocation.longitude,
         ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
         infoWindow: InfoWindow(title: _delivery!.buyerName),
       ));
     });
@@ -104,14 +117,17 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
       await _deliveryService.updateDeliveryStatus(widget.deliveryId, newStatus);
       setState(() => _currentStatus = newStatus);
       
+      // Show new route after status change
+      _showAutomaticRoute();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             'Status updated to ${_getStatusText(newStatus)}',
             style: GoogleFonts.poppins(),
           ),
-          backgroundColor: Colors.green,
-          duration: const Duration(minutes: 3),
+          backgroundColor: Colors.black,
+          duration: const Duration(seconds: 2),
         ),
       );
 
@@ -332,7 +348,7 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
                           _delivery!.storeName,
                           _delivery!.pickupAddress,
                           _delivery!.storePhone,
-                          Colors.orange,
+                          Colors.black,
                           true,
                         ),
                         const SizedBox(height: 20),
@@ -343,7 +359,7 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
                           _delivery!.buyerName,
                           _delivery!.dropoffAddress,
                           _delivery!.buyerPhone,
-                          Colors.red,
+                          Colors.black,
                           false,
                         ),
                         const SizedBox(height: 24),
@@ -473,8 +489,8 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
           onPressed: () => _makePhoneCall(phone),
           icon: Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.orange,
+            decoration: const BoxDecoration(
+              color: Colors.black,
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -490,121 +506,67 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
 
   Widget _buildActionButtons() {
     if (_currentStatus == 'assigned') {
-      // Show directions to pickup + Start Journey button
-      return Column(
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _openDirectionsToPickup,
-              icon: const Icon(Iconsax.routing_2),
-              label: Text(
-                'Directions to Pickup',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.black,
-                side: const BorderSide(color: Colors.black, width: 2),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+      // Show only Start Journey button (route shows automatically)
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () => _updateStatus('picked_up'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.black,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _updateStatus('picked_up'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                'Start Journey',
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
+          child: Text(
+            'Start Journey',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
             ),
           ),
-        ],
+        ),
       );
     } else if (_currentStatus == 'picked_up') {
-      // Show directions to dropoff + Complete Delivery button
-      return Column(
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _openDirectionsToDropoff,
-              icon: const Icon(Iconsax.routing_2),
-              label: Text(
-                'Directions to Dropoff',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.green,
-                side: const BorderSide(color: Colors.green, width: 2),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+      // Show only Complete Delivery button (route shows automatically)
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () => _updateStatus('delivered'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.black,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _updateStatus('delivered'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                'Complete Delivery',
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
+          child: Text(
+            'Complete Delivery',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
             ),
           ),
-        ],
+        ),
       );
     } else {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.green.withOpacity(0.1),
+          color: Colors.black.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.tick_circle, color: Colors.green),
+            const Icon(Iconsax.tick_circle, color: Colors.black),
             const SizedBox(width: 8),
             Text(
               'Delivery Completed',
               style: GoogleFonts.poppins(
-                color: Colors.green,
+                color: Colors.black,
                 fontWeight: FontWeight.w600,
               ),
             ),

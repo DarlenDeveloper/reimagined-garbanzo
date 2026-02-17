@@ -214,7 +214,7 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
                     
                     _buildMenuItem(Iconsax.chart_2, 'Analytics', () => widget.onNavigateScreen(const AnalyticsScreen())),
                     _buildMenuItem(Iconsax.wallet_2, 'Payments', () => widget.onNavigateScreen(const PaymentsScreen())),
-                    _buildMenuItem(Iconsax.discount_shape, 'Discounts', () => widget.onNavigateScreen(const DiscountsScreen())),
+                    _buildMenuItem(Iconsax.discount_shape, 'Discounts', () => widget.onNavigateScreen(DiscountsScreen())),
                     _buildMenuItem(Iconsax.magicpen, 'Marketing', () => widget.onNavigateScreen(const MarketingScreen())),
                     _buildMenuItem(Iconsax.chart_215, 'Ads', () => widget.onNavigateScreen(const AdsScreen())),
                     

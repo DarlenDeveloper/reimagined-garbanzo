@@ -160,6 +160,9 @@ class DeliveryRequest {
   final List<Map<String, dynamic>> items;
   final double totalAmount;
   final Timestamp createdAt;
+  final Timestamp? assignedAt;
+  final Timestamp? pickedUpAt;
+  final Timestamp? deliveredAt;
 
   DeliveryRequest({
     required this.id,
@@ -181,6 +184,9 @@ class DeliveryRequest {
     required this.items,
     required this.totalAmount,
     required this.createdAt,
+    this.assignedAt,
+    this.pickedUpAt,
+    this.deliveredAt,
   });
 
   factory DeliveryRequest.fromFirestore(DocumentSnapshot doc) {
@@ -205,6 +211,9 @@ class DeliveryRequest {
       items: List<Map<String, dynamic>>.from(data['items'] ?? []),
       totalAmount: (data['totalAmount'] ?? 0).toDouble(),
       createdAt: data['createdAt'] as Timestamp? ?? Timestamp.now(),
+      assignedAt: data['assignedAt'] as Timestamp?,
+      pickedUpAt: data['pickedUpAt'] as Timestamp?,
+      deliveredAt: data['deliveredAt'] as Timestamp?,
     );
   }
 

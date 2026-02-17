@@ -336,7 +336,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             const SizedBox(width: 12),
             Expanded(child: _ActionButton(icon: Iconsax.truck_fast, label: 'New Delivery', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RequestDeliveryScreen())))),
             const SizedBox(width: 12),
-            Expanded(child: _ActionButton(icon: Iconsax.ticket_discount, label: 'Discounts', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DiscountsScreen())))),
+            Expanded(child: _ActionButton(icon: Iconsax.ticket_discount, label: 'Discounts', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DiscountsScreen())))),
           ],
         ),
       ],
