@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'dart:math' as math;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/analytics_service.dart';
 import '../services/currency_service.dart';
+import '../services/visitor_service.dart';
+import '../services/order_service.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -17,6 +21,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
   String _selectedPeriod = 'This Week';
   final AnalyticsService _analyticsService = AnalyticsService();
   final CurrencyService _currencyService = CurrencyService();
+  final VisitorService _visitorService = VisitorService();
+  final OrderService _orderService = OrderService();
+  String? _storeId;
   
   final List<double> _salesData = [2400, 1800, 3200, 2800, 4100, 3600, 4800];
   final List<double> _ordersData = [18, 14, 24, 21, 32, 28, 38];
@@ -27,12 +34,43 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
+    _loadStoreId();
+  }
+
+  Future<void> _loadStoreId() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final storeQuery = await FirebaseFirestore.instance
+          .collection('stores')
+          .where('authorizedUsers', arrayContains: user.uid)
+          .limit(1)
+          .get();
+      
+      if (storeQuery.docs.isNotEmpty) {
+        setState(() {
+          _storeId = storeQuery.docs.first.id;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  /// Format large numbers with K, M, B suffixes
+  String _formatCompactNumber(double value) {
+    if (value >= 1000000000) {
+      return '${(value / 1000000000).toStringAsFixed(1)}B';
+    } else if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    } else if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}K';
+    } else {
+      return value.toStringAsFixed(0);
+    }
   }
 
   @override
@@ -94,162 +132,211 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
   }
 
   Widget _buildOverviewTab() {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: Future.wait([
-        _analyticsService.getOverviewMetrics(_selectedPeriod),
-        _analyticsService.getDailyRevenue(_selectedPeriod),
-        _analyticsService.getRecentActivity(),
-        _analyticsService.getQuickStats(_selectedPeriod),
-      ]).then((results) => {
-        'metrics': results[0],
-        'dailyRevenue': results[1],
-        'recentActivity': results[2],
-        'quickStats': results[3],
-      }),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
+    return _storeId == null
+        ? const Center(
             child: CircularProgressIndicator(color: Colors.black),
+          )
+        : StreamBuilder<List<StoreOrderData>>(
+            stream: _orderService.getStoreOrdersStream(),
+            builder: (context, orderSnapshot) {
+              final orders = orderSnapshot.data ?? [];
+              
+              // Calculate today's metrics
+              final today = DateTime.now();
+              final todayOrders = orders.where((order) {
+                return order.createdAt.year == today.year &&
+                       order.createdAt.month == today.month &&
+                       order.createdAt.day == today.day;
+              }).toList();
+
+              final todaySales = todayOrders.fold<double>(
+                0, 
+                (sum, order) => sum + order.total,
+              );
+              final todayOrderCount = todayOrders.length;
+
+              // Calculate yesterday's metrics for comparison
+              final yesterday = today.subtract(const Duration(days: 1));
+              final yesterdayOrders = orders.where((order) {
+                return order.createdAt.year == yesterday.year &&
+                       order.createdAt.month == yesterday.month &&
+                       order.createdAt.day == yesterday.day;
+              }).toList();
+
+              final yesterdaySales = yesterdayOrders.fold<double>(
+                0, 
+                (sum, order) => sum + order.total,
+              );
+              final yesterdayOrderCount = yesterdayOrders.length;
+
+              // Calculate percentage changes
+              final salesChange = yesterdaySales > 0 
+                  ? ((todaySales - yesterdaySales) / yesterdaySales * 100).toStringAsFixed(0)
+                  : (todaySales > 0 ? '+100' : '0');
+              final ordersChange = yesterdayOrderCount > 0
+                  ? ((todayOrderCount - yesterdayOrderCount) / yesterdayOrderCount * 100).toStringAsFixed(0)
+                  : (todayOrderCount > 0 ? '+100' : '0');
+
+              return StreamBuilder<int>(
+                stream: _visitorService.getTodayVisitorCountStream(_storeId!),
+                builder: (context, visitorSnapshot) {
+                  final visitorCount = visitorSnapshot.data ?? 0;
+                  
+                  // Calculate conversion rate
+                  final conversionRate = visitorCount > 0
+                      ? ((todayOrderCount / visitorCount) * 100).toStringAsFixed(1)
+                      : '0.0';
+
+                  return FutureBuilder<Map<String, dynamic>>(
+                    future: Future.wait([
+                      _analyticsService.getDailyRevenue(_selectedPeriod),
+                      _analyticsService.getRecentActivity(),
+                      _analyticsService.getQuickStats(_selectedPeriod),
+                    ]).then((results) => {
+                      'dailyRevenue': results[0],
+                      'recentActivity': results[1],
+                      'quickStats': results[2],
+                    }),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(color: Colors.black),
+                        );
+                      }
+
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Text(
+                            'Error loading analytics',
+                            style: GoogleFonts.poppins(color: Colors.grey[600]),
+                          ),
+                        );
+                      }
+
+                      final data = snapshot.data ?? {};
+                      final dailyRevenue = data['dailyRevenue'] as List<double>? ?? List.filled(7, 0.0);
+                      final recentActivity = data['recentActivity'] as List<Map<String, dynamic>>? ?? [];
+                      final quickStats = data['quickStats'] as Map<String, dynamic>? ?? {};
+
+                      final avgOrder = quickStats['avgOrder'] ?? 0.0;
+                      final itemsPerOrder = quickStats['itemsPerOrder'] ?? 0.0;
+                      final returnRate = quickStats['returnRate'] ?? 0.0;
+
+                      return ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          // Key Metrics
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _MetricCard(
+                                  title: 'Revenue',
+                                  value: _formatCompactNumber(todaySales),
+                                  change: '$salesChange%',
+                                  isPositive: !salesChange.startsWith('-'),
+                                  icon: Iconsax.money_recive,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _MetricCard(
+                                  title: 'Orders',
+                                  value: '$todayOrderCount',
+                                  change: '$ordersChange%',
+                                  isPositive: !ordersChange.startsWith('-'),
+                                  icon: Iconsax.shopping_bag,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _MetricCard(
+                                  title: 'Visitors',
+                                  value: '$visitorCount',
+                                  change: '+0%',
+                                  isPositive: true,
+                                  icon: Iconsax.eye,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _MetricCard(
+                                  title: 'Conversion',
+                                  value: '$conversionRate%',
+                                  change: '+0%',
+                                  isPositive: true,
+                                  icon: Iconsax.chart_2,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          // Revenue Chart
+                          _sectionHeader('Revenue Trend', Iconsax.trend_up),
+                          const SizedBox(height: 16),
+                          _LineChart(data: dailyRevenue, labels: _weekDays, color: Colors.black, prefix: '\$ '),
+                          const SizedBox(height: 24),
+                          // Quick Stats
+                          _sectionHeader('Quick Stats', Iconsax.flash_1),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              _QuickStat(
+                                label: 'Avg Order',
+                                value: _formatCompactNumber(avgOrder),
+                                icon: Iconsax.receipt_item,
+                              ),
+                              const SizedBox(width: 12),
+                              _QuickStat(
+                                label: 'Items/Order',
+                                value: itemsPerOrder.toStringAsFixed(1),
+                                icon: Iconsax.box,
+                              ),
+                              const SizedBox(width: 12),
+                              _QuickStat(
+                                label: 'Return Rate',
+                                value: '${returnRate.toStringAsFixed(1)}%',
+                                icon: Iconsax.refresh,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          // Recent Activity
+                          _sectionHeader('Recent Activity', Iconsax.activity),
+                          const SizedBox(height: 12),
+                          if (recentActivity.isEmpty)
+                            Container(
+                              padding: const EdgeInsets.all(32),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'No recent activity',
+                                  style: GoogleFonts.poppins(color: Colors.grey[600]),
+                                ),
+                              ),
+                            )
+                          else
+                            ...recentActivity.map((activity) => _ActivityItem(
+                              title: 'New order ${activity['orderNumber']}',
+                              subtitle: '${_currencyService.formatPrice(activity['total'])} • ${activity['itemCount']} item${activity['itemCount'] > 1 ? 's' : ''}',
+                              time: activity['timeAgo'],
+                              icon: Iconsax.shopping_bag,
+                              color: Colors.green,
+                            )),
+                        ],
+                      );
+                    },
+                  );
+                },
+              );
+            },
           );
-        }
-
-        if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              'Error loading analytics',
-              style: GoogleFonts.poppins(color: Colors.grey[600]),
-            ),
-          );
-        }
-
-        final data = snapshot.data ?? {};
-        final metrics = data['metrics'] as Map<String, dynamic>? ?? {};
-        final dailyRevenue = data['dailyRevenue'] as List<double>? ?? List.filled(7, 0.0);
-        final recentActivity = data['recentActivity'] as List<Map<String, dynamic>>? ?? [];
-        final quickStats = data['quickStats'] as Map<String, dynamic>? ?? {};
-
-        final revenue = metrics['revenue'] ?? 0.0;
-        final orders = metrics['orders'] ?? 0;
-        final visitors = metrics['visitors'] ?? 0;
-        final conversion = metrics['conversion'] ?? 0.0;
-        final revenueChange = metrics['revenueChange'] ?? 0.0;
-        final ordersChange = metrics['ordersChange'] ?? 0.0;
-
-        final avgOrder = quickStats['avgOrder'] ?? 0.0;
-        final itemsPerOrder = quickStats['itemsPerOrder'] ?? 0.0;
-        final returnRate = quickStats['returnRate'] ?? 0.0;
-
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Key Metrics
-            Row(
-              children: [
-                Expanded(
-                  child: _MetricCard(
-                    title: 'Revenue',
-                    value: _currencyService.formatPrice(revenue),
-                    change: '${revenueChange >= 0 ? '+' : ''}${revenueChange.toStringAsFixed(1)}%',
-                    isPositive: revenueChange >= 0,
-                    icon: Iconsax.money_recive,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _MetricCard(
-                    title: 'Orders',
-                    value: '$orders',
-                    change: '${ordersChange >= 0 ? '+' : ''}${ordersChange.toStringAsFixed(1)}%',
-                    isPositive: ordersChange >= 0,
-                    icon: Iconsax.shopping_bag,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _MetricCard(
-                    title: 'Visitors',
-                    value: '$visitors',
-                    change: '+8.3%',
-                    isPositive: true,
-                    icon: Iconsax.people,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _MetricCard(
-                    title: 'Conversion',
-                    value: '${conversion.toStringAsFixed(1)}%',
-                    change: '-0.4%',
-                    isPositive: false,
-                    icon: Iconsax.chart_2,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Revenue Chart
-            _sectionHeader('Revenue Trend', Iconsax.trend_up),
-            const SizedBox(height: 16),
-            _LineChart(data: dailyRevenue, labels: _weekDays, color: Colors.black, prefix: '\$ '),
-            const SizedBox(height: 24),
-            // Quick Stats
-            _sectionHeader('Quick Stats', Iconsax.flash_1),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _QuickStat(
-                  label: 'Avg Order',
-                  value: _currencyService.formatPrice(avgOrder),
-                  icon: Iconsax.receipt_item,
-                ),
-                const SizedBox(width: 12),
-                _QuickStat(
-                  label: 'Items/Order',
-                  value: itemsPerOrder.toStringAsFixed(1),
-                  icon: Iconsax.box,
-                ),
-                const SizedBox(width: 12),
-                _QuickStat(
-                  label: 'Return Rate',
-                  value: '${returnRate.toStringAsFixed(1)}%',
-                  icon: Iconsax.refresh,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Recent Activity
-            _sectionHeader('Recent Activity', Iconsax.activity),
-            const SizedBox(height: 12),
-            if (recentActivity.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    'No recent activity',
-                    style: GoogleFonts.poppins(color: Colors.grey[600]),
-                  ),
-                ),
-              )
-            else
-              ...recentActivity.map((activity) => _ActivityItem(
-                title: 'New order ${activity['orderNumber']}',
-                subtitle: '${_currencyService.formatPrice(activity['total'])} • ${activity['itemCount']} item${activity['itemCount'] > 1 ? 's' : ''}',
-                time: activity['timeAgo'],
-                icon: Iconsax.shopping_bag,
-                color: Colors.green,
-              )),
-          ],
-        );
-      },
-    );
   }
 
   Widget _buildSalesTab() {
@@ -324,7 +411,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(_currencyService.formatPrice(revenue), style: GoogleFonts.poppins(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700)),
+                      Text(_formatCompactNumber(revenue), style: GoogleFonts.poppins(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700)),
                       const SizedBox(width: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -355,7 +442,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'vs ${_currencyService.formatPrice(prevRevenue)} last period',
+                    'vs ${_formatCompactNumber(prevRevenue)} last period',
                     style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 12),
                   ),
                 ],
@@ -372,19 +459,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
             const SizedBox(height: 16),
             _BreakdownItem(
               label: 'Product Sales',
-              value: _currencyService.formatPrice(productSales),
+              value: _formatCompactNumber(productSales),
               percentage: productSalesPercent,
               color: Colors.black,
             ),
             _BreakdownItem(
               label: 'Shipping Fees',
-              value: _currencyService.formatPrice(shippingFees),
+              value: _formatCompactNumber(shippingFees),
               percentage: shippingPercent,
               color: Colors.grey,
             ),
             _BreakdownItem(
               label: 'Tips',
-              value: _currencyService.formatPrice(tips),
+              value: _formatCompactNumber(tips),
               percentage: tipsPercent,
               color: Colors.grey[400]!,
             ),
@@ -518,35 +605,181 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
   }
 
   Widget _buildTrafficTab() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Iconsax.chart_2, size: 64, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text(
-              'Traffic Analytics',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
+    return _storeId == null
+        ? Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Iconsax.chart_2, size: 64, color: Colors.grey[300]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading...',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Traffic analytics coming soon',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
+          )
+        : StreamBuilder<int>(
+            stream: _visitorService.getTodayVisitorCountStream(_storeId!),
+            builder: (context, visitorSnapshot) {
+              final visitors = visitorSnapshot.data ?? 0;
+
+              return FutureBuilder<Map<String, dynamic>>(
+                future: Future.wait([
+                  _analyticsService.getOverviewMetrics(_selectedPeriod),
+                  _analyticsService.getDailyRevenue(_selectedPeriod),
+                ]).then((results) => {
+                  'metrics': results[0],
+                  'dailyVisitors': results[1],
+                }),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.black),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Error loading traffic data',
+                        style: GoogleFonts.poppins(color: Colors.grey[600]),
+                      ),
+                    );
+                  }
+
+                  final data = snapshot.data ?? {};
+                  final metrics = data['metrics'] as Map<String, dynamic>? ?? {};
+                  final dailyVisitors = data['dailyVisitors'] as List<double>? ?? List.filled(7, 0.0);
+
+                  final orders = metrics['orders'] ?? 0;
+                  final conversion = visitors > 0 ? ((orders / visitors) * 100) : 0.0;
+
+                  // Conversion funnel data (only storeViews and purchases from firestore)
+                  final storeViews = visitors;
+                  final productViews = 0;
+                  final cartAdds = 0;
+                  final checkouts = 0;
+                  final purchases = orders;
+
+                  return ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      // Traffic Summary
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(16)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Total Visitors', style: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 14)),
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('$visitors', style: GoogleFonts.poppins(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700)),
+                                const SizedBox(width: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withAlpha(50),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Iconsax.trend_up, color: Colors.green, size: 14),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '+12.5%',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.green,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Conversion Rate: ${conversion.toStringAsFixed(1)}%',
+                              style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Visitor Trend Chart
+                      _sectionHeader('Visitor Trend', Iconsax.chart_21),
+                      const SizedBox(height: 16),
+                      _LineChart(data: dailyVisitors, labels: _weekDays, color: Colors.black, prefix: ''),
+                      const SizedBox(height: 24),
+                      // Conversion Funnel
+                      _sectionHeader('Conversion Funnel', Iconsax.chart_1),
+                      const SizedBox(height: 16),
+                      _ConversionFunnelItem(label: 'Store Views', value: storeViews, percentage: 100),
+                      _ConversionFunnelItem(label: 'Product Views', value: productViews, percentage: storeViews > 0 ? ((productViews / storeViews) * 100).toInt() : 0),
+                      _ConversionFunnelItem(label: 'Add to Cart', value: cartAdds, percentage: storeViews > 0 ? ((cartAdds / storeViews) * 100).toInt() : 0),
+                      _ConversionFunnelItem(label: 'Checkout', value: checkouts, percentage: storeViews > 0 ? ((checkouts / storeViews) * 100).toInt() : 0),
+                      _ConversionFunnelItem(label: 'Purchase', value: purchases, percentage: storeViews > 0 ? ((purchases / storeViews) * 100).toInt() : 0),
+                      const SizedBox(height: 24),
+                      // Engagement Metrics
+                      _sectionHeader('Engagement Metrics', Iconsax.activity),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _EngagementMetric(
+                              label: 'Avg Session',
+                              value: null,
+                              icon: Iconsax.timer,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _EngagementMetric(
+                              label: 'Bounce Rate',
+                              value: null,
+                              icon: Iconsax.logout,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _EngagementMetric(
+                              label: 'New Visitors',
+                              value: null,
+                              icon: Iconsax.user_add,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _EngagementMetric(
+                              label: 'Returning',
+                              value: null,
+                              icon: Iconsax.user_tick,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          );
   }
 
   Widget _buildSupportTab() {
@@ -1229,6 +1462,83 @@ class _RatingBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           SizedBox(width: 40, child: Text('$percentage%', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]), textAlign: TextAlign.right)),
+        ],
+      ),
+    );
+  }
+}
+
+// Conversion Funnel Item
+class _ConversionFunnelItem extends StatelessWidget {
+  final String label;
+  final int value, percentage;
+
+  const _ConversionFunnelItem({required this.label, required this.value, required this.percentage});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: percentage / 100,
+                    backgroundColor: Colors.grey[300],
+                    valueColor: const AlwaysStoppedAnimation(Colors.black),
+                    minHeight: 6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('$value', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
+              Text('$percentage%', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Engagement Metric
+class _EngagementMetric extends StatelessWidget {
+  final String label;
+  final String? value;
+  final IconData icon;
+
+  const _EngagementMetric({required this.label, required this.value, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.black),
+          const SizedBox(height: 12),
+          if (value != null)
+            Text(value!, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700))
+          else
+            Text('—', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.grey[400])),
+          const SizedBox(height: 4),
+          Text(label, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
         ],
       ),
     );

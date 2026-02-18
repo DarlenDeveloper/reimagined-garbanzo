@@ -287,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               children: [
                 Row(
                   children: [
-                    Expanded(child: _AnalyticCard(title: 'Sales', value: _currencyService.formatPrice(todaySales), icon: Iconsax.trend_up, trend: '$salesChange%', delay: 0)),
+                    Expanded(child: _AnalyticCard(title: 'Sales', value: _formatCompactNumber(todaySales), icon: Iconsax.trend_up, trend: '$salesChange%', delay: 0)),
                     const SizedBox(width: 12),
                     Expanded(child: _AnalyticCard(title: 'Orders', value: '$todayOrderCount', icon: Iconsax.shopping_bag, trend: '$ordersChange%', delay: 100)),
                   ],
