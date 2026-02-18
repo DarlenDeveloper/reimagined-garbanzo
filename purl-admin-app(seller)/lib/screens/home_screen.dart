@@ -114,6 +114,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return 'Good Evening';
   }
 
+  /// Format large numbers with K, M, B suffixes
+  String _formatCompactNumber(double value) {
+    if (value >= 1000000000) {
+      return '${(value / 1000000000).toStringAsFixed(1)}B';
+    } else if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    } else if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}K';
+    } else {
+      return value.toStringAsFixed(0);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -248,13 +261,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             );
             final todayOrderCount = todayOrders.length;
 
+            // Calculate yesterday's metrics for comparison
+            final yesterday = today.subtract(const Duration(days: 1));
+            final yesterdayOrders = orders.where((order) {
+              return order.createdAt.year == yesterday.year &&
+                     order.createdAt.month == yesterday.month &&
+                     order.createdAt.day == yesterday.day;
+            }).toList();
+
+            final yesterdaySales = yesterdayOrders.fold<double>(
+              0, 
+              (sum, order) => sum + order.total,
+            );
+            final yesterdayOrderCount = yesterdayOrders.length;
+
+            // Calculate percentage changes
+            final salesChange = yesterdaySales > 0 
+                ? ((todaySales - yesterdaySales) / yesterdaySales * 100).toStringAsFixed(0)
+                : (todaySales > 0 ? '+100' : '0');
+            final ordersChange = yesterdayOrderCount > 0
+                ? ((todayOrderCount - yesterdayOrderCount) / yesterdayOrderCount * 100).toStringAsFixed(0)
+                : (todayOrderCount > 0 ? '+100' : '0');
+
             return Column(
               children: [
                 Row(
                   children: [
-                    Expanded(child: _AnalyticCard(title: 'Sales', value: _currencyService.formatPrice(todaySales), icon: Iconsax.trend_up, trend: '+12%', delay: 0)),
+                    Expanded(child: _AnalyticCard(title: 'Sales', value: _currencyService.formatPrice(todaySales), icon: Iconsax.trend_up, trend: '$salesChange%', delay: 0)),
                     const SizedBox(width: 12),
-                    Expanded(child: _AnalyticCard(title: 'Orders', value: '$todayOrderCount', icon: Iconsax.shopping_bag, trend: '+5', delay: 100)),
+                    Expanded(child: _AnalyticCard(title: 'Orders', value: '$todayOrderCount', icon: Iconsax.shopping_bag, trend: '$ordersChange%', delay: 100)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -269,13 +304,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               builder: (context, snapshot) {
                                 final visitorCount = snapshot.data ?? 0;
                                 print('👥 Visitor count stream: $visitorCount');
-                                return _AnalyticCard(title: 'Visitors', value: '$visitorCount', icon: Iconsax.eye, trend: '+0%', delay: 200);
+                                
+                                // Calculate conversion rate
+                                final conversionRate = visitorCount > 0
+                                    ? ((todayOrderCount / visitorCount) * 100).toStringAsFixed(1)
+                                    : '0.0';
+                                
+                                return Row(
+                                  children: [
+                                    Expanded(child: _AnalyticCard(title: 'Visitors', value: '$visitorCount', icon: Iconsax.eye, trend: '+0%', delay: 200)),
+                                    const SizedBox(width: 12),
+                                    Expanded(child: _AnalyticCard(title: 'Conversion', value: '$conversionRate%', icon: Iconsax.chart_1, trend: '+0%', delay: 300)),
+                                  ],
+                                );
                               },
                             ),
                           ),
-                    const SizedBox(width: 12),
-                    // TODO: Calculate conversion rate with AnalyticsService
-                    Expanded(child: _AnalyticCard(title: 'Conversion', value: '0%', icon: Iconsax.chart_1, trend: '+0%', delay: 300)),
                   ],
                 ),
               ],
