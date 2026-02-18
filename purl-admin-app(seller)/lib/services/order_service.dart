@@ -225,6 +225,8 @@ class StoreOrderData {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deliveredAt;
+  final String? promoCode;
+  final double? promoDiscount;
 
   StoreOrderData({
     required this.id,
@@ -246,6 +248,8 @@ class StoreOrderData {
     required this.createdAt,
     required this.updatedAt,
     this.deliveredAt,
+    this.promoCode,
+    this.promoDiscount,
   });
 
   factory StoreOrderData.fromFirestore(DocumentSnapshot doc, String storeId) {
@@ -272,6 +276,8 @@ class StoreOrderData {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       deliveredAt: (data['deliveredAt'] as Timestamp?)?.toDate(),
+      promoCode: data['promoCode'] as String?,
+      promoDiscount: (data['promoDiscount'] ?? 0).toDouble(),
     );
   }
 

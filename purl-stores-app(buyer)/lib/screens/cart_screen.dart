@@ -25,6 +25,9 @@ class _CartScreenState extends State<CartScreen> {
   bool _promoApplied = false;
   String _appliedPromo = '';
   Discount? _appliedDiscount;
+  String? _appliedDiscountId;
+  String? _appliedDiscountStoreId;
+  double _appliedDiscountAmount = 0.0;
   bool _isValidatingPromo = false;
   String _userCurrency = 'KES';
   
@@ -76,6 +79,20 @@ class _CartScreenState extends State<CartScreen> {
             final allItems = itemsByStore.values.expand((items) => items).toList();
 
             if (allItems.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
+              // Reset promo state when cart is empty
+              if (_promoApplied) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  setState(() {
+                    _promoApplied = false;
+                    _appliedPromo = '';
+                    _appliedDiscount = null;
+                    _appliedDiscountId = null;
+                    _appliedDiscountStoreId = null;
+                    _appliedDiscountAmount = 0.0;
+                    _promoController.clear();
+                  });
+                });
+              }
               return _buildEmptyCart();
             }
             
@@ -100,6 +117,12 @@ class _CartScreenState extends State<CartScreen> {
               if (promoDiscount > convertedSubtotal) {
                 promoDiscount = convertedSubtotal;
               }
+              // Update state with calculated discount amount
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (_appliedDiscountAmount != promoDiscount) {
+                  setState(() => _appliedDiscountAmount = promoDiscount);
+                }
+              });
             }
             
             final delivery = totals.shipping.toDouble();
@@ -598,6 +621,8 @@ class _CartScreenState extends State<CartScreen> {
         _promoApplied = true;
         _appliedPromo = code.toUpperCase();
         _appliedDiscount = discount;
+        _appliedDiscountId = discount.id;
+        _appliedDiscountStoreId = storeId;
         _isValidatingPromo = false;
       });
 
@@ -733,7 +758,22 @@ class _CartScreenState extends State<CartScreen> {
         width: double.infinity,
         height: 54,
         child: ElevatedButton(
-          onPressed: () => context.push('/checkout'),
+          onPressed: () {
+            // Pass promo data to checkout via route parameters
+            final extra = <String, dynamic>{};
+            if (_promoApplied && _appliedDiscount != null) {
+              extra['promoCode'] = _appliedPromo;
+              extra['promoDiscount'] = _appliedDiscountAmount;
+              extra['discountId'] = _appliedDiscountId;
+              extra['discountStoreId'] = _appliedDiscountStoreId;
+              print('🎟️ Cart sending promo data:');
+              print('   Code: ${extra['promoCode']}');
+              print('   Discount: ${extra['promoDiscount']}');
+              print('   Discount ID: ${extra['discountId']}');
+              print('   Store ID: ${extra['discountStoreId']}');
+            }
+            context.push('/checkout', extra: extra.isNotEmpty ? extra : null);
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: context.primaryColor,
             foregroundColor: context.isDark ? Colors.black : Colors.white,

@@ -15,7 +15,18 @@ import 'location_picker_screen.dart';
 import 'main_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  const CheckoutScreen({super.key});
+  final String? promoCode;
+  final double? promoDiscount;
+  final String? discountId;
+  final String? discountStoreId;
+
+  const CheckoutScreen({
+    super.key,
+    this.promoCode,
+    this.promoDiscount,
+    this.discountId,
+    this.discountStoreId,
+  });
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -38,6 +49,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   List<DeliveryFeeEstimate> _deliveryEstimates = [];
   bool _isCalculatingFees = false;
   
+  // Promo code fields
+  late String? _promoCode;
+  late double? _promoDiscount;
+  late String? _discountId;
+  late String? _discountStoreId;
+  
   // Contact details controllers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -48,6 +65,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   void initState() {
     super.initState();
+    _promoCode = widget.promoCode;
+    _promoDiscount = widget.promoDiscount;
+    _discountId = widget.discountId;
+    _discountStoreId = widget.discountStoreId;
+    print('🎟️ Checkout received promo data:');
+    print('   Code: $_promoCode');
+    print('   Discount: $_promoDiscount');
+    print('   Discount ID: $_discountId');
+    print('   Store ID: $_discountStoreId');
     _loadUserContactDetails();
     _loadUserCurrency();
     _fixCartStoreNames();
@@ -1058,6 +1084,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ],
             ),
+            if (_promoDiscount != null && _promoDiscount! > 0) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.local_offer, size: 14, color: Colors.green.shade700),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Promo ($_promoCode)',
+                        style: GoogleFonts.poppins(fontSize: 14, color: Colors.green.shade700),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    '-${_currencyService.formatPrice(_promoDiscount!, _userCurrency)}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             if (_totalDeliveryFee > 0) ...[
               const SizedBox(height: 8),
               Row(
@@ -1079,7 +1131,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 Text('Grand Total', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
                 Text(
                   _currencyService.formatPrice(
-                    double.parse(convertedGrandTotal.replaceAll(RegExp(r'[^0-9.]'), '')) + _totalDeliveryFee,
+                    double.parse(convertedGrandTotal.replaceAll(RegExp(r'[^0-9.]'), '')) - (_promoDiscount ?? 0) + _totalDeliveryFee,
                     _userCurrency,
                   ),
                   style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700),
@@ -1262,6 +1314,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         deliveryFeesByStore: deliveryFeesByStore,
         paymentId: paymentRef.id,
         paymentHash: paymentHash,
+        promoCode: _promoCode,
+        promoDiscount: _promoDiscount,
+        discountId: _discountId,
+        discountStoreId: _discountStoreId,
       );
 
       // Clear cart

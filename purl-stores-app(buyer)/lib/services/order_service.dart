@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'cart_service.dart';
+import 'discount_service.dart';
 
 /// OrderService manages order creation and tracking
 /// 
@@ -47,6 +48,10 @@ class OrderService {
     String? paymentId,
     String? paymentHash,
     String paymentMethod = 'Dummy Payment',
+    String? promoCode,
+    double? promoDiscount,
+    String? discountId,
+    String? discountStoreId,
   }) async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) throw Exception('User not authenticated');
@@ -77,11 +82,39 @@ class OrderService {
         };
       }).toList();
 
-      // Calculate commission: 3% + $0.50 flat fee
-      final commissionPercentage = totals.total * 0.03;
-      final commissionFlat = 0.50;
+      // Calculate tiered commission based on order total
+      // Tiered commission structure (based on UGX equivalent):
+      // 15k-49k UGX: 10% + 0.50
+      // 50k-99k UGX: 7.5% + 0.50
+      // 100k-499k UGX: 5.5% + 0.50
+      // 500k+ UGX: 3% (no flat fee)
+      
+      double commissionRate;
+      double commissionFlat;
+      // Subtract promo discount from total
+      final total = totals.total - (promoDiscount ?? 0);
+      
+      if (total >= 500000) {
+        commissionRate = 0.03;
+        commissionFlat = 0;
+      } else if (total >= 100000) {
+        commissionRate = 0.055;
+        commissionFlat = 0.50;
+      } else if (total >= 50000) {
+        commissionRate = 0.075;
+        commissionFlat = 0.50;
+      } else if (total >= 15000) {
+        commissionRate = 0.10;
+        commissionFlat = 0.50;
+      } else {
+        // Below 15k, use 10% + 0.50 as well
+        commissionRate = 0.10;
+        commissionFlat = 0.50;
+      }
+      
+      final commissionPercentage = total * commissionRate;
       final totalCommission = commissionPercentage + commissionFlat;
-      final sellerPayout = totals.total - totalCommission;
+      final sellerPayout = total - totalCommission;
 
       // Create order in store's orders collection
       final orderRef = await _firestore
@@ -98,11 +131,13 @@ class OrderService {
         'subtotal': totals.subtotal,
         'shipping': totals.shipping,
         'deliveryFee': deliveryFee,
-        'total': totals.total,
+        'total': total,
         'commission': totalCommission,
-        'commissionRate': 0.03,
+        'commissionRate': commissionRate,
         'commissionFlat': commissionFlat,
         'sellerPayout': sellerPayout,
+        'promoCode': promoCode,
+        'promoDiscount': promoDiscount ?? 0,
         'status': 'pending',
         'paymentStatus': 'paid', // Dummy payment - always paid
         'paymentMethod': paymentMethod,
@@ -144,11 +179,49 @@ class OrderService {
 
       orderIds.add(orderRef.id);
       
+      // Increment discount usage if promo code was applied
+      if (promoCode != null && promoCode.isNotEmpty && discountId != null && discountStoreId != null) {
+        final discountService = DiscountService();
+        await discountService.incrementUsage(discountStoreId, discountId);
+      }
+      
       // Send notification to store owner about new order
       await _sendNewOrderNotification(storeId, orderNumber, totals.total);
     }
 
     return orderIds;
+  }
+
+  /// Increment the usage count for a discount code
+  Future<void> _incrementDiscountUsage(String storeId, String promoCode) async {
+    try {
+      // Find the discount by code
+      final snapshot = await _firestore
+          .collection('stores')
+          .doc(storeId)
+          .collection('discounts')
+          .where('code', isEqualTo: promoCode.toUpperCase())
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        final discountId = snapshot.docs.first.id;
+        // Increment usage count using FieldValue.increment
+        await _firestore
+            .collection('stores')
+            .doc(storeId)
+            .collection('discounts')
+            .doc(discountId)
+            .update({
+          'usageCount': FieldValue.increment(1),
+        });
+        print('✅ Discount usage incremented for code: $promoCode');
+      } else {
+        print('⚠️ Discount code not found: $promoCode');
+      }
+    } catch (e) {
+      print('❌ Error incrementing discount usage: $e');
+    }
   }
 
   /// Send notification to store owner about new order

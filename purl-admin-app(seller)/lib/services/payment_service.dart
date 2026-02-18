@@ -48,7 +48,7 @@ class PaymentService {
         final orderNumber = data['orderNumber'] ?? '';
         final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
         
-        // Get commission from order (3% + $0.50)
+        // Get commission from order (tiered: 10%-3% based on order total)
         final commission = (data['commission'] ?? 0).toDouble();
         final sellerPayout = (data['sellerPayout'] ?? (total - commission)).toDouble();
 

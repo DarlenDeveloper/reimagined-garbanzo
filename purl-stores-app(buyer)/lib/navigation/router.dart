@@ -68,7 +68,15 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/checkout',
-      builder: (context, state) => const CheckoutScreen(),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return CheckoutScreen(
+          promoCode: extra?['promoCode'] as String?,
+          promoDiscount: extra?['promoDiscount'] as double?,
+          discountId: extra?['discountId'] as String?,
+          discountStoreId: extra?['discountStoreId'] as String?,
+        );
+      },
     ),
   ],
 );

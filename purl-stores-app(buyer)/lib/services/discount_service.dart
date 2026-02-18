@@ -99,6 +99,28 @@ class DiscountService {
   /// Increment usage count when discount is applied
   Future<void> incrementUsage(String storeId, String discountId) async {
     try {
+      // First, get the current discount to check if it's still valid
+      final discountDoc = await _firestore
+          .collection('stores')
+          .doc(storeId)
+          .collection('discounts')
+          .doc(discountId)
+          .get();
+
+      if (!discountDoc.exists) {
+        print('⚠️ Discount not found: $discountId');
+        return;
+      }
+
+      final discount = Discount.fromFirestore(discountDoc, storeId);
+
+      // Check if usage limit has been reached
+      if (discount.usageLimit != null && discount.usageCount >= discount.usageLimit!) {
+        print('⚠️ Discount usage limit reached: ${discount.usageCount}/${discount.usageLimit}');
+        return;
+      }
+
+      // Increment usage count
       await _firestore
           .collection('stores')
           .doc(storeId)
@@ -107,6 +129,7 @@ class DiscountService {
           .update({
         'usageCount': FieldValue.increment(1),
       });
+      print('✅ Discount usage incremented: ${discount.usageCount + 1}/${discount.usageLimit ?? '∞'}');
     } catch (e) {
       print('Error incrementing discount usage: $e');
     }
