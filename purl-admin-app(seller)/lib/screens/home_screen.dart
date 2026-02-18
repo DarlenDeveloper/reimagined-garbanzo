@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'notifications_screen.dart';
 import 'analytics_screen.dart';
 import 'discounts_screen.dart';
@@ -12,6 +13,7 @@ import '../services/store_service.dart';
 import '../services/messages_service.dart';
 import '../services/order_service.dart';
 import '../services/currency_service.dart';
+import '../services/visitor_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final _messagesService = MessagesService();
   final _orderService = OrderService();
   final _currencyService = CurrencyService();
+  final _visitorService = VisitorService();
   String _storeName = '';
   String? _storeId;
   bool _isLoading = true;
@@ -45,13 +48,53 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     try {
       // Get user's first name and store ID
       final user = FirebaseAuth.instance.currentUser;
+      print('👤 Current user: ${user?.uid}');
+      
       if (user != null) {
         setState(() {
           _storeName = user.displayName?.split(' ').first ?? 'there';
-          _storeId = user.uid;
         });
+        
+        // Get the actual store ID from the stores collection
+        final storeQuery = await FirebaseFirestore.instance
+            .collection('stores')
+            .where('authorizedUsers', arrayContains: user.uid)
+            .limit(1)
+            .get();
+        
+        print('🔍 Store query results: ${storeQuery.docs.length} stores found');
+        
+        if (storeQuery.docs.isNotEmpty) {
+          final storeId = storeQuery.docs.first.id;
+          setState(() {
+            _storeId = storeId;
+          });
+          print('🏪 Store ID loaded: $storeId');
+          
+          // Debug: Check if visitors collection exists
+          final visitorsSnapshot = await FirebaseFirestore.instance
+              .collection('stores')
+              .doc(storeId)
+              .collection('visitors')
+              .get();
+          print('👥 Total visitors in collection: ${visitorsSnapshot.docs.length}');
+          
+          // Debug: Check today's visitors
+          final today = DateTime.now();
+          final dateKey = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+          final todayVisitors = await FirebaseFirestore.instance
+              .collection('stores')
+              .doc(storeId)
+              .collection('visitors')
+              .where('lastVisitDate', isEqualTo: dateKey)
+              .get();
+          print('📅 Today\'s visitors ($dateKey): ${todayVisitors.docs.length}');
+        } else {
+          print('⚠️ No store found for user: ${user.uid}');
+        }
       }
     } catch (e) {
+      print('❌ Error loading store data: $e');
       setState(() => _storeName = 'there');
     }
     setState(() => _isLoading = false);
@@ -217,8 +260,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    // TODO: Implement visitor tracking with AnalyticsService
-                    Expanded(child: _AnalyticCard(title: 'Visitors', value: '0', icon: Iconsax.eye, trend: '+0%', delay: 200)),
+                    // Visitor tracking
+                    _storeId == null
+                        ? Expanded(child: _AnalyticCard(title: 'Visitors', value: '0', icon: Iconsax.eye, trend: '+0%', delay: 200))
+                        : Expanded(
+                            child: StreamBuilder<int>(
+                              stream: _visitorService.getTodayVisitorCountStream(_storeId!),
+                              builder: (context, snapshot) {
+                                final visitorCount = snapshot.data ?? 0;
+                                print('👥 Visitor count stream: $visitorCount');
+                                return _AnalyticCard(title: 'Visitors', value: '$visitorCount', icon: Iconsax.eye, trend: '+0%', delay: 200);
+                              },
+                            ),
+                          ),
                     const SizedBox(width: 12),
                     // TODO: Calculate conversion rate with AnalyticsService
                     Expanded(child: _AnalyticCard(title: 'Conversion', value: '0%', icon: Iconsax.chart_1, trend: '+0%', delay: 300)),

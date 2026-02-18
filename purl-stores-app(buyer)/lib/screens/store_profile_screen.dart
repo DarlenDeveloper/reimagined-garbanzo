@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/followers_service.dart';
 import '../services/messages_service.dart';
 import '../services/currency_service.dart';
+import '../services/visitor_service.dart';
 import 'product_detail_screen.dart';
 import 'chat_detail_screen.dart';
 
@@ -25,6 +26,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
   final FollowersService _followersService = FollowersService();
   final MessagesService _messagesService = MessagesService();
   final CurrencyService _currencyService = CurrencyService();
+  final VisitorService _visitorService = VisitorService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
   bool _isFollowing = false;
@@ -71,6 +73,8 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
     _tabController = TabController(length: 3, vsync: this);
     _loadUserCurrency();
     _loadStoreData();
+    // Record store visit
+    _visitorService.recordStoreVisit(widget.storeId);
   }
 
   @override
