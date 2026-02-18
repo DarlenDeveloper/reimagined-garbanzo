@@ -134,7 +134,7 @@ class _ProductCardState extends State<ProductCard> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '\$${widget.product.finalPrice.toStringAsFixed(2)}',
+                          '\$${widget.product.price.toStringAsFixed(2)}',
                           style: TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.bold,

@@ -16,6 +16,7 @@ import 'order_history_screen.dart';
 import 'store_map_screen.dart';
 import 'categories_screen.dart';
 import 'store_profile_screen.dart';
+import 'main_screen.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
@@ -442,7 +443,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       future: _currencyService.getUserCurrency(forceRefresh: true),
       builder: (context, snapshot) {
         final userCurrency = snapshot.data ?? _userCurrency;
-        final convertedPrice = _currencyService.convertPrice(product.finalPrice, product.currency, userCurrency);
+        final convertedPrice = _currencyService.convertPrice(product.price, product.currency, userCurrency);
         final formattedPrice = _currencyService.formatPrice(convertedPrice, userCurrency);
         
         return GestureDetector(
@@ -636,7 +637,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   ),
                   const SizedBox(height: 4),
                   // Compare price (strikethrough)
-                  if (product.finalCompareAtPrice != null && product.finalCompareAtPrice! > product.finalPrice)
+                  if (product.compareAtPrice != null && product.compareAtPrice! > product.price)
                     Text(
                       _currencyService.formatPrice(
                         _currencyService.convertPrice(product.compareAtPrice!, product.currency, _userCurrency),
@@ -679,7 +680,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                                         label: 'View Cart',
                                         textColor: Colors.white,
                                         onPressed: () {
-                                          Navigator.pushNamed(context, '/cart');
+                                          MainScreen.navigateToCart(context);
                                         },
                                       ),
                                     ),

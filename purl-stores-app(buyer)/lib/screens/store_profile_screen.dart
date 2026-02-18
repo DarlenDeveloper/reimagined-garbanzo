@@ -688,7 +688,10 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
     }
     
     final bio = _storeData?['bio'] ?? 'No description available';
-    final location = _storeData?['location'] ?? 'Location not specified';
+    final locationData = _storeData?['location'];
+    final location = locationData is GeoPoint 
+        ? 'GPS: ${locationData.latitude.toStringAsFixed(4)}, ${locationData.longitude.toStringAsFixed(4)}'
+        : (locationData is String ? locationData : 'Location not specified');
     final createdAt = _storeData?['createdAt'] as Timestamp?;
     final joinedDate = createdAt != null 
         ? '${_getMonthName(createdAt.toDate().month)} ${createdAt.toDate().year}'
@@ -904,7 +907,18 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(_storeData?['name'] ?? widget.storeName, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
-                              Text(_storeData?['location'] ?? 'Location not specified', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
+                              Text(
+                                () {
+                                  final loc = _storeData?['location'];
+                                  if (loc is GeoPoint) {
+                                    return 'GPS Location';
+                                  } else if (loc is String) {
+                                    return loc;
+                                  }
+                                  return 'Location not specified';
+                                }(),
+                                style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+                              ),
                             ],
                           ),
                         ),

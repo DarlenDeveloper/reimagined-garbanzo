@@ -20,6 +20,8 @@ import 'settings_screen.dart';
 import 'messages_screen.dart';
 import 'ads_screen.dart';
 import 'access_screen.dart';
+import '../services/location_service.dart';
+import '../widgets/location_update_dialog.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -35,6 +37,29 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  final LocationService _locationService = LocationService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLocationUpdate();
+  }
+
+  Future<void> _checkLocationUpdate() async {
+    // Wait a bit for the screen to settle
+    await Future.delayed(const Duration(seconds: 2));
+    
+    if (!mounted) return;
+    
+    final shouldUpdate = await _locationService.shouldUpdateLocation();
+    if (shouldUpdate && mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const LocationUpdateDialog(),
+      );
+    }
+  }
 
   void setTab(int index) {
     setState(() => _currentIndex = index);

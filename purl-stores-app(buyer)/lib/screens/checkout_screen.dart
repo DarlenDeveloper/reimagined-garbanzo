@@ -9,8 +9,10 @@ import '../theme/colors.dart';
 import '../services/cart_service.dart';
 import '../services/order_service.dart';
 import '../services/currency_service.dart';
+import '../services/delivery_fee_service.dart';
 import 'order_history_screen.dart';
 import 'location_picker_screen.dart';
+import 'main_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -23,6 +25,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final CartService _cartService = CartService();
   final OrderService _orderService = OrderService();
   final CurrencyService _currencyService = CurrencyService();
+  final DeliveryFeeService _deliveryFeeService = DeliveryFeeService();
   
   int _selectedAddressIndex = -1;
   bool _showAddressError = false;
@@ -32,6 +35,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String _userCurrency = 'UGX';
   bool _isLoadingLocation = false;
   String? _locationError;
+  List<DeliveryFeeEstimate> _deliveryEstimates = [];
+  bool _isCalculatingFees = false;
   
   // Contact details controllers
   final TextEditingController _nameController = TextEditingController();
@@ -45,6 +50,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     super.initState();
     _loadUserContactDetails();
     _loadUserCurrency();
+    _fixCartStoreNames();
+    // Calculate delivery fees if location is already set
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_currentLocation != null) {
+        _calculateDeliveryFees();
+      }
+    });
+  }
+
+  Future<void> _fixCartStoreNames() async {
+    try {
+      await _cartService.fixMissingStoreNames();
+    } catch (e) {
+      print('Error fixing cart store names: $e');
+    }
   }
 
   Future<void> _loadUserCurrency() async {
@@ -193,6 +213,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
       });
 
+      // Calculate delivery fees
+      _calculateDeliveryFees();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -258,6 +281,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
       });
 
+      // Calculate delivery fees after state is updated
+      await _calculateDeliveryFees();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -274,6 +300,52 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
       }
     }
+  }
+
+  Future<void> _calculateDeliveryFees() async {
+    if (_currentLocation == null) {
+      print('⚠️ Cannot calculate delivery fees: location is null');
+      return;
+    }
+
+    print('📍 Calculating delivery fees for location: ${_currentLocation!.latitude}, ${_currentLocation!.longitude}');
+    setState(() => _isCalculatingFees = true);
+
+    try {
+      // Get all store IDs from cart
+      final cartItems = await _cartService.getCartItemsByStoreStream().first;
+      final storeIds = cartItems.keys.toList();
+      
+      print('🛒 Store IDs in cart: $storeIds');
+
+      // Calculate delivery fees for all stores
+      final estimates = await _deliveryFeeService.calculateDeliveryFeesForStores(
+        storeIds: storeIds,
+        buyerLocation: _currentLocation!,
+      );
+
+      print('💰 Delivery estimates calculated: ${estimates.length}');
+      for (var estimate in estimates) {
+        print('  - ${estimate.storeName ?? estimate.storeId}: ${estimate.distance.toStringAsFixed(1)} km = ${estimate.fee.toStringAsFixed(0)} UGX');
+        if (estimate.hasError) {
+          print('    ❌ Error: ${estimate.error}');
+        }
+      }
+
+      setState(() {
+        _deliveryEstimates = estimates;
+        _isCalculatingFees = false;
+      });
+      
+      print('✅ Delivery estimates updated in state');
+    } catch (e) {
+      print('❌ Error calculating delivery fees: $e');
+      setState(() => _isCalculatingFees = false);
+    }
+  }
+
+  double get _totalDeliveryFee {
+    return _deliveryEstimates.fold(0.0, (sum, estimate) => sum + estimate.fee);
   }
 
   @override
@@ -854,12 +926,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       print('  Items: ${items.length}');
       for (var item in items) {
         print('    - ${item.productName}: ${item.price} x ${item.quantity} = ${item.itemTotal}');
-        print('      With markup: ${item.finalPrice} x ${item.quantity} = ${item.finalItemTotal}');
       }
       final totals = totalsByStore[storeId]!;
       print('  Store Total: ${totals.total}');
     });
     print('  Grand Total: $grandTotal');
+    print('  Delivery Estimates Count: ${_deliveryEstimates.length}');
+    print('  Total Delivery Fee: $_totalDeliveryFee');
+    for (var estimate in _deliveryEstimates) {
+      print('    - ${estimate.storeName ?? estimate.storeId}: ${estimate.fee} UGX (${estimate.distance} km)');
+    }
     
     return FutureBuilder<Map<String, String>>(
       future: _convertAllStoreTotals(itemsByStore, totalsByStore),
@@ -880,6 +956,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               final storeName = entry.value.first.storeName;
               final storeId = entry.key;
               final formattedTotal = convertedTotals[storeId] ?? 'Loading...';
+              
+              // Find delivery estimate for this store
+              final deliveryEstimate = _deliveryEstimates.firstWhere(
+                (e) => e.storeId == storeId,
+                orElse: () => DeliveryFeeEstimate(storeId: storeId, storeName: storeName, distance: 0, fee: 0),
+              );
               
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -909,17 +991,97 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                       ],
                     ),
+                    if (deliveryEstimate.fee > 0) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Iconsax.truck_fast, size: 12, color: AppColors.grey600),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Delivery (${deliveryEstimate.distance.toStringAsFixed(1)} km)',
+                                style: GoogleFonts.poppins(fontSize: 11, color: AppColors.grey600),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            _currencyService.formatPrice(deliveryEstimate.fee, 'UGX'),
+                            style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey700, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               );
             }),
+            if (_deliveryEstimates.isNotEmpty && _totalDeliveryFee > 0) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Iconsax.truck_fast, size: 16, color: Colors.orange.shade700),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Total Delivery Fee',
+                          style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.orange.shade900),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      _currencyService.formatPrice(_totalDeliveryFee, 'UGX'),
+                      style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.orange.shade900),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Subtotal', style: GoogleFonts.poppins(fontSize: 14, color: AppColors.grey600)),
+                Text(
+                  convertedGrandTotal,
+                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            if (_totalDeliveryFee > 0) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Delivery', style: GoogleFonts.poppins(fontSize: 14, color: AppColors.grey600)),
+                  Text(
+                    _currencyService.formatPrice(_totalDeliveryFee, 'UGX'),
+                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              const Divider(height: 16),
+            ],
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Grand Total', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
                 Text(
-                  convertedGrandTotal,
+                  _currencyService.formatPrice(
+                    double.parse(convertedGrandTotal.replaceAll(RegExp(r'[^0-9.]'), '')) + _totalDeliveryFee,
+                    _userCurrency,
+                  ),
                   style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700),
                 ),
               ],
@@ -1078,6 +1240,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       });
 
       // Create orders with payment reference
+      final deliveryFeesByStore = <String, double>{};
+      for (var estimate in _deliveryEstimates) {
+        deliveryFeesByStore[estimate.storeId] = estimate.fee;
+      }
+      
       final orderIds = await _orderService.createOrdersFromCart(
         itemsByStore: itemsByStore,
         totalsByStore: totalsByStore,
@@ -1092,6 +1259,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           email: _useMyContactDetails ? (user.email ?? _emailController.text) : _emailController.text,
         ),
         deliveryLocation: _currentLocation,
+        deliveryFeesByStore: deliveryFeesByStore,
         paymentId: paymentRef.id,
         paymentHash: paymentHash,
       );
@@ -1170,7 +1338,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.of(dialogContext).pop(); // Close dialog
-                        context.go('/orders'); // Replace entire stack with orders screen
+                        Navigator.of(context).popUntil((route) => route.isFirst); // Go back to MainScreen
+                        MainScreen.navigateToOrders(context); // Navigate to orders tab
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.black,

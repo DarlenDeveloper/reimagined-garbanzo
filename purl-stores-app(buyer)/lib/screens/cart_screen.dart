@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../theme/colors.dart';
 import '../services/cart_service.dart';
 import '../services/currency_service.dart';
+import '../services/discount_service.dart';
 import 'order_history_screen.dart';
 
 class CartScreen extends StatefulWidget {
@@ -18,11 +19,17 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   final CartService _cartService = CartService();
   final CurrencyService _currencyService = CurrencyService();
+  final DiscountService _discountService = DiscountService();
   final TextEditingController _promoController = TextEditingController();
   
   bool _promoApplied = false;
   String _appliedPromo = '';
+  Discount? _appliedDiscount;
+  bool _isValidatingPromo = false;
   String _userCurrency = 'KES';
+  
+  // Cache the last known cart data to prevent flickering
+  Map<String, List<CartItemData>>? _cachedCartData;
 
   @override
   void initState() {
@@ -58,63 +65,67 @@ class _CartScreenState extends State<CartScreen> {
         child: StreamBuilder<Map<String, List<CartItemData>>>(
           stream: _cartService.getCartItemsByStoreStream(),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+            // Use cached data if available to prevent flickering
+            final itemsByStore = snapshot.hasData ? snapshot.data! : (_cachedCartData ?? {});
+            
+            // Update cache when new data arrives
+            if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+              _cachedCartData = snapshot.data;
             }
-
-            final itemsByStore = snapshot.data ?? {};
+            
             final allItems = itemsByStore.values.expand((items) => items).toList();
 
-            if (allItems.isEmpty) {
+            if (allItems.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
               return _buildEmptyCart();
+            }
+            
+            if (allItems.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
             }
 
             final totals = _cartService.calculateTotals(allItems);
             
-            // Get user currency for conversion
-            return FutureBuilder<String>(
-              future: _currencyService.getUserCurrency(),
-              builder: (context, currencySnapshot) {
-                if (!currencySnapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                
-                final userCurrency = currencySnapshot.data!;
-                
-                // Convert all amounts to user's currency (with markup)
-                double convertedSubtotal = 0;
-                for (var item in allItems) {
-                  final itemTotal = item.finalItemTotal;
-                  convertedSubtotal += _currencyService.convertPrice(itemTotal, item.currency, userCurrency);
-                }
-                
-                final promoDiscount = _promoApplied ? 2.20 : 0.0;
-                final delivery = totals.shipping.toDouble();
-                final tax = 0.0;
-                final totalAmount = convertedSubtotal - promoDiscount + delivery + tax;
+            // Convert all amounts to user's currency (use cached currency)
+            double convertedSubtotal = 0;
+            for (var item in allItems) {
+              final itemTotal = item.itemTotal;
+              convertedSubtotal += _currencyService.convertPrice(itemTotal, item.currency, _userCurrency);
+            }
+            
+            // Calculate discount
+            double promoDiscount = 0.0;
+            if (_promoApplied && _appliedDiscount != null) {
+              promoDiscount = _appliedDiscount!.calculateDiscount(convertedSubtotal);
+              // Ensure discount doesn't exceed subtotal
+              if (promoDiscount > convertedSubtotal) {
+                promoDiscount = convertedSubtotal;
+              }
+            }
+            
+            final delivery = totals.shipping.toDouble();
+            final tax = 0.0;
+            final totalAmount = convertedSubtotal - promoDiscount + delivery + tax;
 
-                return Column(
-                  children: [
-                    _buildHeader(),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ...allItems.map((item) => _buildCartItem(item)),
-                            const SizedBox(height: 20),
-                            _buildPromoCode(),
-                            const SizedBox(height: 24),
-                            _buildOrderSummary(convertedSubtotal, promoDiscount, delivery, tax, totalAmount, userCurrency),
-                          ],
-                        ),
-                      ),
+            return Column(
+              children: [
+                _buildHeader(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ...allItems.map((item) => _buildCartItem(item)),
+                        const SizedBox(height: 20),
+                        _buildPromoCode(),
+                        const SizedBox(height: 24),
+                        _buildOrderSummary(convertedSubtotal, promoDiscount, delivery, tax, totalAmount, _userCurrency),
+                      ],
                     ),
-                    _buildBottomButton(),
-                  ],
-                );
-              },
+                  ),
+                ),
+                _buildBottomButton(),
+              ],
             );
           },
         ),
@@ -188,9 +199,9 @@ class _CartScreenState extends State<CartScreen> {
 
   Widget _buildCartItem(CartItemData item) {
     return FutureBuilder<String>(
-      future: _currencyService.formatPriceWithConversion(item.finalPrice, item.currency),
+      future: _currencyService.formatPriceWithConversion(item.price, item.currency),
       builder: (context, priceSnapshot) {
-        final formattedPrice = priceSnapshot.data ?? '${item.currency} ${item.finalPrice.toStringAsFixed(2)}';
+        final formattedPrice = priceSnapshot.data ?? '${item.currency} ${item.price.toStringAsFixed(2)}';
         
         return Dismissible(
           key: Key(item.id),
@@ -511,33 +522,103 @@ class _CartScreenState extends State<CartScreen> {
           )
         else
           GestureDetector(
-            onTap: _applyPromo,
+            onTap: _isValidatingPromo ? null : _applyPromo,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
-                color: context.primaryColor,
+                color: _isValidatingPromo ? Colors.grey : context.primaryColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                'Apply',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: context.isDark ? Colors.black : Colors.white,
-                ),
-              ),
+              child: _isValidatingPromo
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      'Apply',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: context.isDark ? Colors.black : Colors.white,
+                      ),
+                    ),
             ),
           ),
       ],
     );
   }
 
-  void _applyPromo() {
-    if (_promoController.text.isNotEmpty) {
+  void _applyPromo() async {
+    final code = _promoController.text.trim();
+    if (code.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter a promo code', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isValidatingPromo = true);
+
+    try {
+      // Get cart items to find store IDs
+      final itemsByStore = await _cartService.getCartItemsByStoreStream().first;
+      
+      if (itemsByStore.isEmpty) {
+        throw Exception('Cart is empty');
+      }
+
+      // For now, we'll validate against the first store in cart
+      // In a multi-store cart, you'd need to handle this differently
+      final storeId = itemsByStore.keys.first;
+      
+      final discount = await _discountService.validateDiscountCode(storeId, code);
+
+      if (discount == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Invalid or expired promo code', style: GoogleFonts.poppins()),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        setState(() => _isValidatingPromo = false);
+        return;
+      }
+
+      // Apply discount
       setState(() {
         _promoApplied = true;
-        _appliedPromo = _promoController.text.toUpperCase();
+        _appliedPromo = code.toUpperCase();
+        _appliedDiscount = discount;
+        _isValidatingPromo = false;
       });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Promo code applied successfully!', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error applying promo code', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      setState(() => _isValidatingPromo = false);
     }
   }
 

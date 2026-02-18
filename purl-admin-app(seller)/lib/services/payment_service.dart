@@ -48,15 +48,9 @@ class PaymentService {
         final orderNumber = data['orderNumber'] ?? '';
         final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
         
-        // Calculate commission (using same markup logic from order_service)
-        final items = (data['items'] as List<dynamic>?) ?? [];
-        double commission = 0;
-        for (var item in items) {
-          final sellerPrice = (item['sellerPrice'] ?? 0).toDouble();
-          final finalPrice = (item['price'] ?? 0).toDouble();
-          final quantity = item['quantity'] ?? 1;
-          commission += (finalPrice - sellerPrice) * quantity;
-        }
+        // Get commission from order (3% + $0.50)
+        final commission = (data['commission'] ?? 0).toDouble();
+        final sellerPayout = (data['sellerPayout'] ?? (total - commission)).toDouble();
 
         // Add sale transaction
         transactions.add(PaymentTransaction(
@@ -80,8 +74,8 @@ class PaymentService {
           ));
         }
 
-        // Calculate balance (sale - commission)
-        balance += (total - commission);
+        // Calculate balance (seller payout)
+        balance += sellerPayout;
       }
 
       yield PaymentData(balance: balance, transactions: transactions, currency: storeCurrency);

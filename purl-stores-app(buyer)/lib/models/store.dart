@@ -34,13 +34,22 @@ class Store {
   factory Store.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
     
+    // Handle location field - can be String or GeoPoint
+    String? locationStr;
+    final locationData = data['location'];
+    if (locationData is String) {
+      locationStr = locationData;
+    } else if (locationData is GeoPoint) {
+      locationStr = '${locationData.latitude}, ${locationData.longitude}';
+    }
+    
     return Store(
       id: doc.id,
       name: data['name'] as String? ?? 'Unknown Store',
       description: data['description'] as String?,
       logoUrl: data['logoUrl'] as String?,
       bannerUrl: data['bannerUrl'] as String?,
-      location: data['location'] as String?,
+      location: locationStr,
       isVerified: data['isVerified'] as bool? ?? false,
       rating: (data['rating'] as num?)?.toDouble() ?? 0.0,
       reviewCount: data['reviewCount'] as int? ?? 0,

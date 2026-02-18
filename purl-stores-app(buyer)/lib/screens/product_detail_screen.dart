@@ -12,6 +12,7 @@ import '../services/messages_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/cart_service.dart';
 import 'store_profile_screen.dart';
+import 'main_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final String productId;
@@ -333,7 +334,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
   Widget _buildDetailsTab() {
     final product = _product!;
-    final convertedPrice = _currencyService.convertPrice(product.finalPrice, product.currency, _userCurrency);
+    final convertedPrice = _currencyService.convertPrice(product.price, product.currency, _userCurrency);
     final formattedPrice = _currencyService.formatPrice(convertedPrice, _userCurrency);
     
     return SingleChildScrollView(
@@ -878,12 +879,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     return Row(
       children: [
         // Compare price (strikethrough)
-        if (product.finalCompareAtPrice != null && product.finalCompareAtPrice! > product.finalPrice)
+        if (product.compareAtPrice != null && product.compareAtPrice! > product.price)
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Text(
               _currencyService.formatPrice(
-                _currencyService.convertPrice(product.finalCompareAtPrice!, product.currency, _userCurrency),
+                _currencyService.convertPrice(product.compareAtPrice!, product.currency, _userCurrency),
                 _userCurrency,
               ),
               style: GoogleFonts.poppins(
@@ -923,7 +924,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                               label: 'View Cart',
                               textColor: Colors.white,
                               onPressed: () {
-                                Navigator.pushNamed(context, '/cart');
+                                MainScreen.navigateToCart(context);
                               },
                             ),
                           ),

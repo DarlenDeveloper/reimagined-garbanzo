@@ -43,6 +43,7 @@ class OrderService {
     required DeliveryAddress deliveryAddress,
     required ContactDetails contactDetails,
     required GeoPoint? deliveryLocation,
+    Map<String, double>? deliveryFeesByStore,
     String? paymentId,
     String? paymentHash,
     String paymentMethod = 'Dummy Payment',
@@ -58,94 +59,29 @@ class OrderService {
       final storeId = entry.key;
       final items = entry.value;
       final totals = totalsByStore[storeId]!;
+      final deliveryFee = deliveryFeesByStore?[storeId] ?? 0.0;
 
       // Generate order number
       final orderNumber = _generateOrderNumber();
 
-      // Calculate markup percentage based on currency
-      double getMarkupPercentage(double price, String currency) {
-        switch (currency.toUpperCase()) {
-          case 'UGX':
-            if (price >= 500001) return 0.03;
-            if (price >= 260001) return 0.04;
-            if (price >= 125001) return 0.06;
-            if (price >= 100001) return 0.09;
-            if (price >= 75001) return 0.11;
-            if (price >= 50001) return 0.14;
-            if (price >= 25000) return 0.168;
-            return 0.168;
-          case 'KES':
-            if (price >= 17422) return 0.03;
-            if (price >= 9059) return 0.04;
-            if (price >= 4355) return 0.06;
-            if (price >= 3484) return 0.09;
-            if (price >= 2613) return 0.11;
-            if (price >= 1742) return 0.14;
-            if (price >= 871) return 0.168;
-            return 0.168;
-          case 'TZS':
-            if (price >= 337838) return 0.03;
-            if (price >= 175676) return 0.04;
-            if (price >= 84459) return 0.06;
-            if (price >= 67568) return 0.09;
-            if (price >= 50676) return 0.11;
-            if (price >= 33784) return 0.14;
-            if (price >= 16892) return 0.168;
-            return 0.168;
-          case 'USD':
-            if (price >= 135) return 0.03;
-            if (price >= 70) return 0.04;
-            if (price >= 34) return 0.06;
-            if (price >= 27) return 0.09;
-            if (price >= 20) return 0.11;
-            if (price >= 14) return 0.14;
-            if (price >= 7) return 0.168;
-            return 0.168;
-          case 'EUR':
-            if (price >= 124) return 0.03;
-            if (price >= 65) return 0.04;
-            if (price >= 31) return 0.06;
-            if (price >= 25) return 0.09;
-            if (price >= 19) return 0.11;
-            if (price >= 12) return 0.14;
-            if (price >= 6) return 0.168;
-            return 0.168;
-          case 'GBP':
-            if (price >= 107) return 0.03;
-            if (price >= 56) return 0.04;
-            if (price >= 27) return 0.06;
-            if (price >= 21) return 0.09;
-            if (price >= 16) return 0.11;
-            if (price >= 11) return 0.14;
-            if (price >= 5) return 0.168;
-            return 0.168;
-          default:
-            if (price >= 500001) return 0.03;
-            if (price >= 260001) return 0.04;
-            if (price >= 125001) return 0.06;
-            if (price >= 100001) return 0.09;
-            if (price >= 75001) return 0.11;
-            if (price >= 50001) return 0.14;
-            if (price >= 25000) return 0.168;
-            return 0.168;
-        }
-      }
-
-      // Prepare order items (with final prices including markup)
+      // Prepare order items
       final orderItems = items.map((item) {
-        final markup = getMarkupPercentage(item.price, item.currency);
-        final finalPrice = item.price + (item.price * markup);
         return {
           'productId': item.productId,
           'productName': item.productName,
           'productImage': item.productImage,
-          'sellerPrice': item.price, // Original seller price
-          'price': finalPrice, // Final price with markup
+          'price': item.price,
           'currency': item.currency,
           'quantity': item.quantity,
-          'itemTotal': finalPrice * item.quantity,
+          'itemTotal': item.price * item.quantity,
         };
       }).toList();
+
+      // Calculate commission: 3% + $0.50 flat fee
+      final commissionPercentage = totals.total * 0.03;
+      final commissionFlat = 0.50;
+      final totalCommission = commissionPercentage + commissionFlat;
+      final sellerPayout = totals.total - totalCommission;
 
       // Create order in store's orders collection
       final orderRef = await _firestore
@@ -161,7 +97,12 @@ class OrderService {
         'items': orderItems,
         'subtotal': totals.subtotal,
         'shipping': totals.shipping,
+        'deliveryFee': deliveryFee,
         'total': totals.total,
+        'commission': totalCommission,
+        'commissionRate': 0.03,
+        'commissionFlat': commissionFlat,
+        'sellerPayout': sellerPayout,
         'status': 'pending',
         'paymentStatus': 'paid', // Dummy payment - always paid
         'paymentMethod': paymentMethod,
@@ -194,6 +135,7 @@ class OrderService {
         'storeName': items.first.storeName,
         'orderNumber': orderNumber,
         'total': totals.total,
+        'deliveryFee': deliveryFee,
         'currency': items.first.currency,
         'status': 'pending',
         'itemCount': items.length,

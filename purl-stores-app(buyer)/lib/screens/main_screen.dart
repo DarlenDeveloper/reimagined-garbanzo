@@ -11,6 +11,20 @@ import 'profile_screen.dart';
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
+  static void navigateToCart(BuildContext context) {
+    final state = context.findAncestorStateOfType<_MainScreenState>();
+    if (state != null) {
+      state.setState(() => state._currentIndex = 2);
+    }
+  }
+
+  static void navigateToOrders(BuildContext context) {
+    final state = context.findAncestorStateOfType<_MainScreenState>();
+    if (state != null) {
+      state.setState(() => state._currentIndex = 3);
+    }
+  }
+
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
