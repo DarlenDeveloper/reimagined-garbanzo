@@ -5,48 +5,33 @@ import 'package:iconsax/iconsax.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 
-class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
+class SignScreen extends StatefulWidget {
+  const SignScreen({super.key});
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  State<SignScreen> createState() => _SignScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignScreenState extends State<SignScreen> {
   final _authService = AuthService();
-  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
-  Future<void> _signUpWithEmail() async {
-    final name = _nameController.text.trim();
+  Future<void> _signInWithEmail() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-    final confirmPassword = _confirmPasswordController.text;
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+    if (email.isEmpty || password.isEmpty) {
       _showError('Please fill in all fields');
-      return;
-    }
-    if (password.length < 6) {
-      _showError('Password must be at least 6 characters');
-      return;
-    }
-    if (password != confirmPassword) {
-      _showError('Passwords do not match');
       return;
     }
 
     setState(() => _isLoading = true);
     try {
-      await _authService.signUpWithEmail(email: email, password: password);
-      await _authService.updateDisplayName(name);
-      await _authService.sendEmailVerification();
-      if (mounted) context.go('/verify-email');
+      await _authService.signInWithEmail(email: email, password: password);
+      if (mounted) context.go('/home');
     } on FirebaseAuthException catch (e) {
       _showError(_getErrorMessage(e.code));
     } catch (e) {
@@ -56,15 +41,11 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  Future<void> _signUpWithGoogle() async {
+  Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
       final result = await _authService.signInWithGoogle();
-      if (result != null && mounted) {
-        context.go('/account-type');
-      }
-    } on FirebaseAuthException catch (e) {
-      _showError(_getErrorMessage(e.code));
+      if (result != null && mounted) context.go('/interests');
     } catch (e) {
       _showError('Google sign in failed. Please try again.');
     } finally {
@@ -74,16 +55,11 @@ class _SignupScreenState extends State<SignupScreen> {
 
   String _getErrorMessage(String code) {
     switch (code) {
-      case 'email-already-in-use':
-        return 'An account already exists with this email';
-      case 'invalid-email':
-        return 'Invalid email address';
-      case 'weak-password':
-        return 'Password is too weak';
-      case 'operation-not-allowed':
-        return 'Email/password accounts are not enabled';
-      default:
-        return 'An error occurred. Please try again';
+      case 'user-not-found': return 'No account found with this email';
+      case 'wrong-password': return 'Incorrect password';
+      case 'invalid-email': return 'Invalid email address';
+      case 'invalid-credential': return 'Invalid email or password';
+      default: return 'An error occurred. Please try again';
     }
   }
 
@@ -93,18 +69,14 @@ class _SignupScreenState extends State<SignupScreen> {
         content: Text(message, style: GoogleFonts.poppins()),
         backgroundColor: Colors.red[600],
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -122,56 +94,51 @@ class _SignupScreenState extends State<SignupScreen> {
               Center(
                 child: Column(
                   children: [
-                    Container(
-                      width: 70,
-                      height: 70,
-                      decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(18)),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(18),
-                        child: Image.asset('assets/images/mainlogo.png', fit: BoxFit.cover),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset(
+                        'assets/images/mainpurllogo.png',
+                        width: 70,
+                        height: 70,
+                        fit: BoxFit.cover,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Text('Create Account', style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.black)),
-                    const SizedBox(height: 4),
-                    Text('Join Purl today', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600])),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Purl Stores',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 32),
               _SocialButton(
                 icon: Icons.g_mobiledata,
                 label: 'Continue with Google',
-                onTap: _isLoading ? null : _signUpWithGoogle,
+                onTap: _isLoading ? null : _signInWithGoogle,
+              ),
+              const SizedBox(height: 12),
+              _SocialButton(
+                icon: Icons.apple,
+                label: 'Continue with Apple',
+                onTap: _isLoading ? null : () {},
               ),
               const SizedBox(height: 24),
               Row(
                 children: [
                   Expanded(child: Divider(color: Colors.grey[300])),
-                  Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text('or', style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 13))),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('or', style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 13)),
+                  ),
                   Expanded(child: Divider(color: Colors.grey[300])),
                 ],
               ),
               const SizedBox(height: 24),
-              Text('Full Name', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _nameController,
-                textCapitalization: TextCapitalization.words,
-                enabled: !_isLoading,
-                keyboardAppearance: Brightness.light,
-                style: GoogleFonts.poppins(fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'Enter your full name',
-                  hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 1.5)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                ),
-              ),
-              const SizedBox(height: 20),
               Text('Email', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
               const SizedBox(height: 8),
               TextField(
@@ -200,7 +167,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 keyboardAppearance: Brightness.light,
                 style: GoogleFonts.poppins(fontSize: 15),
                 decoration: InputDecoration(
-                  hintText: 'Create a password',
+                  hintText: 'Enter your password',
                   hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
                   filled: true,
                   fillColor: Colors.grey[100],
@@ -213,43 +180,28 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              Text('Confirm Password', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _confirmPasswordController,
-                obscureText: _obscureConfirmPassword,
-                enabled: !_isLoading,
-                keyboardAppearance: Brightness.light,
-                style: GoogleFonts.poppins(fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'Confirm your password',
-                  hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 1.5)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscureConfirmPassword ? Iconsax.eye_slash : Iconsax.eye, color: Colors.grey[500], size: 20),
-                    onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                  ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () => context.push('/forgot-password'),
+                  child: Text('Forgot Password?', style: GoogleFonts.poppins(color: Colors.black, fontSize: 13, fontWeight: FontWeight.w500)),
                 ),
               ),
               const SizedBox(height: 28),
               GestureDetector(
-                onTap: _isLoading ? null : _signUpWithEmail,
+                onTap: _isLoading ? null : _signInWithEmail,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   decoration: BoxDecoration(
-                    color: _isLoading ? Colors.grey : Colors.black,
+                    color: Colors.black,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: _isLoading
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text('Create Account', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                        : Text('Sign In', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
                 ),
               ),
@@ -258,10 +210,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Already have an account? ', style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 14)),
+                    Text("Don't have an account? ", style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 14)),
                     GestureDetector(
-                      onTap: () => context.go('/login'),
-                      child: Text('Sign In', style: GoogleFonts.poppins(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w600)),
+                      onTap: () => context.push('/signup'),
+                      child: Text('Sign Up', style: GoogleFonts.poppins(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),

@@ -123,6 +123,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        bottom: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(

@@ -17,21 +17,29 @@ class _SignupScreenState extends State<SignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
   Future<void> _signUpWithEmail() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+    if (name.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
       _showError('Please fill in all fields');
       return;
     }
 
     if (password.length < 6) {
       _showError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (password != confirmPassword) {
+      _showError('Passwords do not match');
       return;
     }
 
@@ -101,14 +109,17 @@ class _SignupScreenState extends State<SignupScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: Colors.white,
       body: SafeArea(
+        bottom: false,
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
@@ -183,6 +194,13 @@ class _SignupScreenState extends State<SignupScreen> {
               Text('Password', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
               const SizedBox(height: 8),
               _buildTextField(_passwordController, 'Enter your password', true, TextInputType.visiblePassword),
+              
+              const SizedBox(height: 20),
+              
+              // Confirm Password field
+              Text('Confirm Password', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
+              const SizedBox(height: 8),
+              _buildConfirmPasswordField(),
               
               const SizedBox(height: 28),
               
@@ -272,6 +290,29 @@ class _SignupScreenState extends State<SignupScreen> {
                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               )
             : null,
+      ),
+    );
+  }
+
+  Widget _buildConfirmPasswordField() {
+    return TextField(
+      controller: _confirmPasswordController,
+      obscureText: _obscureConfirmPassword,
+      keyboardType: TextInputType.visiblePassword,
+      enabled: !_isLoading,
+      style: GoogleFonts.poppins(fontSize: 15),
+      decoration: InputDecoration(
+        hintText: 'Confirm your password',
+        hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 1.5)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        suffixIcon: IconButton(
+          icon: Icon(_obscureConfirmPassword ? Iconsax.eye_slash : Iconsax.eye, color: Colors.grey[500], size: 20),
+          onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+        ),
       ),
     );
   }
