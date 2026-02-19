@@ -7,7 +7,6 @@ import '../screens/verify_code_screen.dart';
 import '../screens/subscription_screen.dart';
 import '../screens/store_setup_screen.dart';
 import '../screens/main_screen.dart';
-import '../screens/access_screen.dart';
 import '../screens/ads_screen.dart';
 import '../screens/runner_code_screen.dart';
 import '../screens/account_type_screen.dart';
@@ -67,10 +66,6 @@ final router = GoRouter(
     GoRoute(
       path: '/ads',
       builder: (context, state) => const AdsScreen(),
-    ),
-    GoRoute(
-      path: '/access',
-      builder: (context, state) => const AccessScreen(),
     ),
   ],
 );

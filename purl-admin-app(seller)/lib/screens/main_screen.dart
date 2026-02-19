@@ -19,7 +19,6 @@ import 'discounts_screen.dart';
 import 'settings_screen.dart';
 import 'messages_screen.dart';
 import 'ads_screen.dart';
-import 'access_screen.dart';
 import '../services/location_service.dart';
 import '../widgets/location_update_dialog.dart';
 
@@ -255,7 +254,6 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
                     _buildSectionHeader('Settings'),
                     
                     _buildMenuItem(Iconsax.people, 'Team', () => widget.onNavigateScreen(const UsersScreen())),
-                    _buildMenuItem(Iconsax.shield_tick, 'Access Control', () => widget.onNavigateScreen(const AccessScreen())),
                     _buildMenuItem(Iconsax.shop, 'Store Profile', () => widget.onNavigateTab(4)),
                     
                     const SizedBox(height: 100),
