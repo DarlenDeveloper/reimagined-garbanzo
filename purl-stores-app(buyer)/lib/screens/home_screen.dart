@@ -34,13 +34,25 @@ class _HomeScreenState extends State<HomeScreen> {
   
   List<Map<String, dynamic>> _posts = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
   int _unreadMessageCount = 0;
+  DocumentSnapshot? _lastDocument;
+  static const int _pageSize = 5;
 
   @override
   void initState() {
     super.initState();
     _loadFeed();
     _loadUnreadCount();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 500) {
+      if (!_isLoadingMore) {
+        _loadMorePosts();
+      }
+    }
   }
 
   @override
@@ -51,66 +63,107 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadFeed() async {
     setState(() => _isLoading = true);
-    
-    // Artificial delay for smooth UX
-    await Future.delayed(const Duration(milliseconds: 500));
+    _lastDocument = null;
+    _posts.clear();
     
     try {
       final snapshot = await FirebaseFirestore.instance
           .collectionGroup('posts')
           .orderBy('createdAt', descending: true)
-          .limit(20)
+          .limit(_pageSize)
           .get();
 
-      final posts = <Map<String, dynamic>>[];
-      
-      for (final doc in snapshot.docs) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        data['storeId'] = doc.reference.parent.parent!.id;
-        
-        // If storeName is missing, fetch from store document
-        if (data['storeName'] == null || (data['storeName'] as String).isEmpty) {
-          try {
-            final storeDoc = await FirebaseFirestore.instance
-                .collection('stores')
-                .doc(data['storeId'])
-                .get();
-            
-            if (storeDoc.exists) {
-              final storeData = storeDoc.data();
-              data['storeName'] = storeData?['name'] ?? 'Store';
-              data['storeLogoUrl'] = storeData?['logoUrl'];
-            }
-          } catch (e) {
-            data['storeName'] = 'Store';
-          }
-        }
-        
-        posts.add(data);
+      if (snapshot.docs.isNotEmpty) {
+        _lastDocument = snapshot.docs.last;
+        await _enrichPostsWithStoreData(snapshot.docs);
       }
 
-      setState(() {
-        _posts = posts;
-        _isLoading = false;
-        
-        // Initialize liked and saved from Firestore data
-        for (final post in _posts) {
-          if (_postsService.hasUserLiked(post, _auth.currentUser?.uid ?? '')) {
-            _likedPosts.add(post['id']);
-          }
-          final savedBy = List<String>.from(post['savedBy'] ?? []);
-          if (savedBy.contains(_auth.currentUser?.uid ?? '')) {
-            _savedPosts.add(post['id']);
-          }
-        }
-      });
-      
-      // Load following status for all stores in the feed
+      setState(() => _isLoading = false);
       await _loadFollowingStatus();
     } catch (e) {
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _loadMorePosts() async {
+    if (_lastDocument == null) return;
+    
+    setState(() => _isLoadingMore = true);
+    
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collectionGroup('posts')
+          .orderBy('createdAt', descending: true)
+          .startAfterDocument(_lastDocument!)
+          .limit(_pageSize)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        _lastDocument = snapshot.docs.last;
+        await _enrichPostsWithStoreData(snapshot.docs);
+      }
+
+      setState(() => _isLoadingMore = false);
+    } catch (e) {
+      setState(() => _isLoadingMore = false);
+    }
+  }
+
+  Future<void> _enrichPostsWithStoreData(List<QueryDocumentSnapshot> docs) async {
+    final newPosts = <Map<String, dynamic>>[];
+    final storeIds = <String>{};
+    
+    for (final doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      data['storeId'] = doc.reference.parent.parent!.id;
+      storeIds.add(data['storeId'] as String);
+      newPosts.add(data);
+    }
+
+    final storeDataMap = <String, Map<String, dynamic>>{};
+    await Future.wait(
+      storeIds.map((storeId) async {
+        try {
+          final storeDoc = await FirebaseFirestore.instance
+              .collection('stores')
+              .doc(storeId)
+              .get();
+          
+          if (storeDoc.exists) {
+            storeDataMap[storeId] = storeDoc.data() ?? {};
+          }
+        } catch (e) {
+          print('Error fetching store $storeId: $e');
+        }
+      }),
+    );
+
+    for (final post in newPosts) {
+      final storeId = post['storeId'] as String;
+      final storeData = storeDataMap[storeId];
+      
+      if (storeData != null) {
+        post['storeName'] = storeData['name'] ?? 'Store';
+        post['storeLogoUrl'] = storeData['logoUrl'];
+      } else {
+        post['storeName'] = 'Store';
+      }
+    }
+
+    setState(() {
+      _posts.addAll(newPosts);
+      
+      for (final post in newPosts) {
+        if (_postsService.hasUserLiked(post, _auth.currentUser?.uid ?? '')) {
+          _likedPosts.add(post['id']);
+        }
+        final savedBy = List<String>.from(post['savedBy'] ?? []);
+        if (savedBy.contains(_auth.currentUser?.uid ?? '')) {
+          _savedPosts.add(post['id']);
+        }
+      }
+    });
   }
 
   Future<void> _loadFollowingStatus() async {
@@ -159,8 +212,11 @@ class _HomeScreenState extends State<HomeScreen> {
             slivers: [
               SliverToBoxAdapter(child: _buildTopBar()),
               _isLoading
-                  ? const SliverFillRemaining(
-                      child: Center(child: CircularProgressIndicator(color: Colors.black)),
+                  ? SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildSkeletonPostCard(),
+                        childCount: 5,
+                      ),
                     )
                   : _posts.isEmpty
                       ? SliverFillRemaining(
@@ -178,10 +234,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       : SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
+                              if (index == _posts.length) {
+                                return _isLoadingMore
+                                    ? Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Center(
+                                          child: CircularProgressIndicator(color: Colors.black),
+                                        ),
+                                      )
+                                    : const SizedBox.shrink();
+                              }
                               final post = _posts[index];
                               return _buildPostCard(post);
                             },
-                            childCount: _posts.length,
+                            childCount: _posts.length + (_isLoadingMore ? 1 : 0),
                           ),
                         ),
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -422,6 +488,88 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonPostCard() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey[200]!))),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Skeleton avatar
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Skeleton content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header skeleton
+                Row(
+                  children: [
+                    Container(
+                      width: 100,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      width: 60,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Text skeleton
+                Container(
+                  width: double.infinity,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: 200,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Image skeleton
+                Container(
+                  width: double.infinity,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                const SizedBox(height: 12),
               ],
             ),
           ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/sign_screen.dart';
 import '../screens/onboarding_screen.dart';
 import '../screens/privacy_consent_screen.dart';
@@ -17,6 +18,25 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final router = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/',
+  redirect: (context, state) {
+    final user = FirebaseAuth.instance.currentUser;
+    final isAuthRoute = state.matchedLocation == '/' || 
+                        state.matchedLocation == '/signup' ||
+                        state.matchedLocation == '/forgot-password' ||
+                        state.matchedLocation == '/verify-email' ||
+                        state.matchedLocation == '/verify-reset-code' ||
+                        state.matchedLocation == '/reset-password' ||
+                        state.matchedLocation == '/auth' ||
+                        state.matchedLocation == '/onboarding';
+    
+    if (user == null && !isAuthRoute) {
+      return '/';
+    }
+    if (user != null && state.matchedLocation == '/') {
+      return '/home';
+    }
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/',
