@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import '../services/store_service.dart';
 import '../services/followers_service.dart';
+import '../services/order_service.dart';
 import 'qr_code_screen.dart';
 import 'socials_screen.dart';
 
@@ -19,10 +20,12 @@ class StoreScreen extends StatefulWidget {
 class _StoreScreenState extends State<StoreScreen> {
   final _storeService = StoreService();
   final _followersService = FollowersService();
+  final _orderService = OrderService();
 
   String? _storeId;
   Map<String, dynamic>? _storeData;
   int _followersCount = 0;
+  int _salesCount = 0;
   bool _isLoading = true;
 
   @override
@@ -41,6 +44,15 @@ class _StoreScreenState extends State<StoreScreen> {
 
       final storeData = await _storeService.getStore(storeId);
       final followersCount = await _followersService.getFollowerCount(storeId);
+      
+      // Get sales count from orders
+      _orderService.getStoreOrdersStream().listen((orders) {
+        if (mounted) {
+          setState(() {
+            _salesCount = orders.length;
+          });
+        }
+      });
 
       setState(() {
         _storeId = storeId;
@@ -160,29 +172,16 @@ class _StoreScreenState extends State<StoreScreen> {
               ),
               const SizedBox(height: 16),
               Text(storeName, style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.black)),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(20)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Iconsax.tick_circle, color: Colors.grey[700], size: 14),
-                    const SizedBox(width: 6),
-                    Text('Online', style: GoogleFonts.poppins(color: Colors.grey[700], fontSize: 12, fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ),
               const SizedBox(height: 32),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    Expanded(child: _StoreStatCard(icon: Iconsax.star_1, value: '4.8', label: 'Rating')),
+                    Expanded(child: _StoreStatCard(icon: Iconsax.star_1, value: '0', label: 'Rating')),
                     const SizedBox(width: 12),
                     Expanded(child: _StoreStatCard(icon: Iconsax.people, value: _formatCount(_followersCount), label: 'Followers')),
                     const SizedBox(width: 12),
-                    Expanded(child: _StoreStatCard(icon: Iconsax.shopping_bag, value: '856', label: 'Sales')),
+                    Expanded(child: _StoreStatCard(icon: Iconsax.shopping_bag, value: _formatCount(_salesCount), label: 'Sales')),
                   ],
                 ),
               ),

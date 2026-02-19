@@ -156,6 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
+                keyboardAppearance: Brightness.light,
                 style: GoogleFonts.poppins(fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'Enter your email',
@@ -175,6 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
+                keyboardAppearance: Brightness.light,
                 style: GoogleFonts.poppins(fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'Enter your password',

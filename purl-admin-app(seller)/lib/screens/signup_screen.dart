@@ -151,6 +151,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: _nameController,
                 textCapitalization: TextCapitalization.words,
                 enabled: !_isLoading,
+                keyboardAppearance: Brightness.light,
                 style: GoogleFonts.poppins(fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'Enter your full name',
@@ -169,6 +170,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 enabled: !_isLoading,
+                keyboardAppearance: Brightness.light,
                 style: GoogleFonts.poppins(fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'Enter your email',
@@ -187,6 +189,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 enabled: !_isLoading,
+                keyboardAppearance: Brightness.light,
                 style: GoogleFonts.poppins(fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'Create a password',

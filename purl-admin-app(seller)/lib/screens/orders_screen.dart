@@ -19,21 +19,82 @@ class _OrdersScreenState extends State<OrdersScreen> {
   final CurrencyService _currencyService = CurrencyService();
   final DeliveryService _deliveryService = DeliveryService();
   String _selectedFilter = 'All';
+  String _selectedTimeFilter = 'This Month';
 
   List<StoreOrderData> _filterOrders(List<StoreOrderData> orders) {
-    if (_selectedFilter == 'All') return orders;
+    // First filter by time
+    final timeFiltered = _filterOrdersByTime(orders);
+    
+    // Then filter by status
+    if (_selectedFilter == 'All') return timeFiltered;
     if (_selectedFilter == 'Done') {
-      return orders.where((o) => o.status == 'delivered').toList();
+      return timeFiltered.where((o) => o.status == 'delivered').toList();
     }
-    return orders.where((o) => o.status == _selectedFilter.toLowerCase()).toList();
+    return timeFiltered.where((o) => o.status == _selectedFilter.toLowerCase()).toList();
+  }
+
+  List<StoreOrderData> _filterOrdersByTime(List<StoreOrderData> orders) {
+    final now = DateTime.now();
+    switch (_selectedTimeFilter) {
+      case 'Today':
+        return orders.where((o) {
+          final orderDate = o.createdAt;
+          return orderDate.year == now.year &&
+                 orderDate.month == now.month &&
+                 orderDate.day == now.day;
+        }).toList();
+      case 'This Week':
+        final weekAgo = now.subtract(const Duration(days: 7));
+        return orders.where((o) => o.createdAt.isAfter(weekAgo)).toList();
+      case 'This Month':
+        return orders.where((o) {
+          return o.createdAt.year == now.year &&
+                 o.createdAt.month == now.month;
+        }).toList();
+      case 'All Time':
+      default:
+        return orders;
+    }
   }
 
   int _getCount(List<StoreOrderData> orders, String filter) {
-    if (filter == 'All') return orders.length;
+    final timeFiltered = _filterOrdersByTime(orders);
+    if (filter == 'All') return timeFiltered.length;
     if (filter == 'Done') {
-      return orders.where((o) => o.status == 'delivered').length;
+      return timeFiltered.where((o) => o.status == 'delivered').length;
     }
-    return orders.where((o) => o.status == filter.toLowerCase()).length;
+    return timeFiltered.where((o) => o.status == filter.toLowerCase()).length;
+  }
+
+  void _showTimeFilterMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Filter by Time', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+            ...['Today', 'This Week', 'This Month', 'All Time'].map((filter) {
+              return ListTile(
+                title: Text(filter, style: GoogleFonts.poppins()),
+                trailing: _selectedTimeFilter == filter ? const Icon(Iconsax.tick_circle) : null,
+                onTap: () {
+                  setState(() => _selectedTimeFilter = filter);
+                  Navigator.pop(context);
+                },
+              );
+            }),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -80,14 +141,26 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => _showSearchSheet(),
+                        onTap: _showTimeFilterMenu,
                         child: Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.grey[100],
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(Iconsax.search_normal, color: Colors.grey[700], size: 22),
+                          child: Row(
+                            children: [
+                              Text(
+                                _selectedTimeFilter,
+                                style: GoogleFonts.poppins(
+                                  color: Colors.grey[700],
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(Iconsax.arrow_down_1, color: Colors.grey[700], size: 18),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -202,43 +275,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
         );
       }
     }
-  }
-
-  void _showSearchSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: TextField(
-                autofocus: true,
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  hintText: 'Search orders...',
-                  hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-                  icon: Icon(Iconsax.search_normal, color: Colors.grey[600]),
-                ),
-                style: GoogleFonts.poppins(),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showOrderDetails(BuildContext context, StoreOrderData order) {
@@ -901,3 +937,4 @@ class _CourierSearchDialogState extends State<_CourierSearchDialog> {
     );
   }
 }
+

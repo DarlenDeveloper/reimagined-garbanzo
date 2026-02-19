@@ -23,59 +23,66 @@ import 'package:firebase_auth/firebase_auth.dart';
 class OrderService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  
+  Stream<List<StoreOrderData>>? _cachedStream;
+  String? _cachedUserId;
 
-  /// Get store's orders stream
-  Stream<List<StoreOrderData>> getStoreOrdersStream() async* {
+  /// Get store's orders stream with offline persistence and caching
+  Stream<List<StoreOrderData>> getStoreOrdersStream() {
     final userId = _auth.currentUser?.uid;
-    print('🔍 OrderService: Current user ID: $userId');
+    
+    // Return cached stream if user hasn't changed
+    if (_cachedStream != null && _cachedUserId == userId) {
+      return _cachedStream!;
+    }
+    
+    // Create new stream
+    _cachedUserId = userId;
+    _cachedStream = _createOrdersStream().asBroadcastStream();
+    return _cachedStream!;
+  }
+  
+  Stream<List<StoreOrderData>> _createOrdersStream() async* {
+    final userId = _auth.currentUser?.uid;
     
     if (userId == null) {
-      print('❌ OrderService: No user logged in');
       yield [];
       return;
     }
 
     try {
       // First get the store ID (using authorizedUsers array)
-      print('🔍 OrderService: Querying stores for authorizedUsers containing: $userId');
       final storeSnapshot = await _firestore
           .collection('stores')
           .where('authorizedUsers', arrayContains: userId)
           .limit(1)
-          .get();
-
-      print('🔍 OrderService: Found ${storeSnapshot.docs.length} stores');
+          .get(const GetOptions(source: Source.cache))
+          .catchError((_) => _firestore
+              .collection('stores')
+              .where('authorizedUsers', arrayContains: userId)
+              .limit(1)
+              .get());
 
       if (storeSnapshot.docs.isEmpty) {
-        print('❌ OrderService: No store found for this user');
         yield [];
         return;
       }
 
       final storeId = storeSnapshot.docs.first.id;
-      final storeName = storeSnapshot.docs.first.data()['name'] ?? 'Unknown';
-      print('✅ OrderService: Found store: $storeName (ID: $storeId)');
 
-      // Now stream orders from that store
-      print('🔍 OrderService: Streaming orders from /stores/$storeId/orders');
+      // Stream orders with offline persistence enabled
       yield* _firestore
           .collection('stores')
           .doc(storeId)
           .collection('orders')
           .orderBy('createdAt', descending: true)
-          .snapshots()
+          .snapshots(includeMetadataChanges: true)
           .map((snapshot) {
-            print('📦 OrderService: Received ${snapshot.docs.length} orders');
             return snapshot.docs
-                .map((doc) {
-                  print('  - Order: ${doc.id} (${doc.data()['orderNumber']})');
-                  return StoreOrderData.fromFirestore(doc, storeId);
-                })
+                .map((doc) => StoreOrderData.fromFirestore(doc, storeId))
                 .toList();
           });
-    } catch (e, stackTrace) {
-      print('❌ OrderService Error: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
       yield [];
     }
   }
@@ -160,9 +167,9 @@ class OrderService {
         }
       }
 
-      print('✅ Order $orderId updated to $newStatus');
+      print('Order $orderId updated to $newStatus');
     } catch (e) {
-      print('❌ Error updating order status: $e');
+      print('Error updating order status: $e');
       rethrow;
     }
   }
@@ -256,12 +263,16 @@ class StoreOrderData {
     final data = doc.data() as Map<String, dynamic>;
     final itemsList = (data['items'] as List<dynamic>?) ?? [];
     
+    // Extract first name only from userName
+    final fullName = data['userName'] ?? '';
+    final firstName = fullName.split(' ').first;
+    
     return StoreOrderData(
       id: doc.id,
       storeId: storeId,
       orderNumber: data['orderNumber'] ?? '',
       userId: data['userId'] ?? '',
-      userName: data['userName'] ?? '',
+      userName: firstName,
       userEmail: data['userEmail'] ?? '',
       userPhone: data['userPhone'] ?? '',
       items: itemsList.map((item) => OrderItem.fromMap(item)).toList(),

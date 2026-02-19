@@ -24,7 +24,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
   final CurrencyService _currencyService = CurrencyService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
-  String _selectedTimeFilter = 'Today';
+  String _selectedTimeFilter = 'This Month';
 
   @override
   void initState() {

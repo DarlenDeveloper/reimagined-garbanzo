@@ -22,23 +22,28 @@ class _ProductsScreenState extends State<ProductsScreen> {
   final _currencyService = CurrencyService();
   final _productService = ProductService();
   final _storeService = StoreService();
+  final _searchController = TextEditingController();
 
   String? _storeId;
   List<Product> _products = [];
+  List<Product> _filteredProducts = [];
   bool _isLoading = true;
   String? _error;
   StreamSubscription<List<Product>>? _productsSubscription;
+  String _selectedFilter = 'All'; // All, In Stock, Low Stock, Out of Stock
 
   @override
   void initState() {
     super.initState();
     _currencyService.init();
     _initializeStore();
+    _searchController.addListener(_filterProducts);
   }
 
   @override
   void dispose() {
     _productsSubscription?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -78,9 +83,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
         if (mounted) {
           setState(() {
             _products = products;
+            _filteredProducts = products;
             _isLoading = false;
             _error = null;
           });
+          _filterProducts();
         }
       },
       onError: (e) {
@@ -91,6 +98,80 @@ class _ProductsScreenState extends State<ProductsScreen> {
           });
         }
       },
+    );
+  }
+
+  void _filterProducts() {
+    setState(() {
+      var filtered = _products;
+
+      // Apply search filter
+      final query = _searchController.text.toLowerCase();
+      if (query.isNotEmpty) {
+        filtered = filtered.where((product) {
+          return product.name.toLowerCase().contains(query) ||
+              product.description.toLowerCase().contains(query);
+        }).toList();
+      }
+
+      // Apply stock filter
+      if (_selectedFilter == 'In Stock') {
+        filtered = filtered.where((p) => !p.trackInventory || p.stock > 5).toList();
+      } else if (_selectedFilter == 'Low Stock') {
+        filtered = filtered.where((p) => p.trackInventory && p.stock > 0 && p.stock <= 5).toList();
+      } else if (_selectedFilter == 'Out of Stock') {
+        filtered = filtered.where((p) => p.trackInventory && p.stock == 0).toList();
+      }
+
+      _filteredProducts = filtered;
+    });
+  }
+
+  void _showSearchSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _SearchSheet(
+        products: _products,
+        currencyService: _currencyService,
+        onProductSelected: (product) {
+          Navigator.pop(context);
+          _showProductDetails(product);
+        },
+      ),
+    );
+  }
+
+  void _showFilterMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Filter Products', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+            ...['All', 'In Stock', 'Low Stock', 'Out of Stock'].map((filter) {
+              return ListTile(
+                title: Text(filter, style: GoogleFonts.poppins()),
+                trailing: _selectedFilter == filter ? const Icon(Iconsax.tick_circle) : null,
+                onTap: () {
+                  setState(() => _selectedFilter = filter);
+                  _filterProducts();
+                  Navigator.pop(context);
+                },
+              );
+            }),
+          ],
+        ),
+      ),
     );
   }
 
@@ -375,22 +456,28 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(10),
+                      GestureDetector(
+                        onTap: _showSearchSheet,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Iconsax.search_normal, color: Colors.black, size: 22),
                         ),
-                        child: const Icon(Iconsax.search_normal, color: Colors.black, size: 22),
                       ),
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(10),
+                      GestureDetector(
+                        onTap: _showFilterMenu,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Iconsax.filter, color: Colors.black, size: 22),
                         ),
-                        child: const Icon(Iconsax.filter, color: Colors.black, size: 22),
                       ),
                     ],
                   ),
@@ -440,7 +527,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       );
     }
 
-    if (_products.isEmpty) {
+    if (_filteredProducts.isEmpty) {
       return _buildEmptyState();
     }
 
@@ -449,10 +536,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
       color: Colors.black,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _products.length,
+        itemCount: _filteredProducts.length,
         itemBuilder: (context, index) => _ProductItem(
-          product: _products[index],
-          onTap: () => _showProductDetails(_products[index]),
+          product: _filteredProducts[index],
+          onTap: () => _showProductDetails(_filteredProducts[index]),
           currencyService: _currencyService,
         ),
       ),
@@ -2340,6 +2427,125 @@ class _EditProductSheetState extends State<_EditProductSheet> {
                 child: const Icon(Icons.close, color: Colors.white, size: 14),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// Search Sheet Widget
+class _SearchSheet extends StatefulWidget {
+  final List<Product> products;
+  final CurrencyService currencyService;
+  final Function(Product) onProductSelected;
+
+  const _SearchSheet({
+    required this.products,
+    required this.currencyService,
+    required this.onProductSelected,
+  });
+
+  @override
+  State<_SearchSheet> createState() => _SearchSheetState();
+}
+
+class _SearchSheetState extends State<_SearchSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  List<Product> _filteredProducts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredProducts = widget.products;
+    _searchController.addListener(_filterProducts);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterProducts() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredProducts = widget.products;
+      } else {
+        _filteredProducts = widget.products.where((product) {
+          return product.name.toLowerCase().contains(query) ||
+              product.description.toLowerCase().contains(query);
+        }).toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: 'Search products...',
+                hintStyle: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 14),
+                icon: Icon(Iconsax.search_normal, color: Colors.grey[600]),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                      )
+                    : null,
+              ),
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _filteredProducts.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Iconsax.search_normal, size: 48, color: Colors.grey[300]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No products found',
+                          style: GoogleFonts.poppins(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _filteredProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = _filteredProducts[index];
+                      return _ProductItem(
+                        product: product,
+                        onTap: () => widget.onProductSelected(product),
+                        currencyService: widget.currencyService,
+                      );
+                    },
+                  ),
           ),
         ],
       ),

@@ -303,7 +303,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               stream: _visitorService.getTodayVisitorCountStream(_storeId!),
                               builder: (context, snapshot) {
                                 final visitorCount = snapshot.data ?? 0;
-                                print('👥 Visitor count stream: $visitorCount');
                                 
                                 // Calculate conversion rate
                                 final conversionRate = visitorCount > 0
