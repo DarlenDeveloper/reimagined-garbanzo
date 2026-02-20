@@ -6,11 +6,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product.dart';
+import '../models/ad.dart';
 import '../services/product_service.dart';
 import '../services/currency_service.dart';
 import '../services/messages_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/cart_service.dart';
+import '../services/ads_service.dart';
 import 'product_detail_screen.dart';
 import 'order_history_screen.dart';
 import 'store_map_screen.dart';
@@ -31,10 +33,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   final CurrencyService _currencyService = CurrencyService();
   final WishlistService _wishlistService = WishlistService();
   final CartService _cartService = CartService();
+  final AdsService _adsService = AdsService();
   final ScrollController _scrollController = ScrollController();
   
   int _selectedCategoryIndex = 0;
   List<Product> _products = [];
+  List<Ad> _ads = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
   bool _hasMore = true;
@@ -42,6 +46,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   StreamSubscription<List<Product>>? _productsSubscription;
   Set<String> _wishlistedProductIds = {};
   String _userCurrency = 'UGX';
+  
+  // Filter states
+  String _selectedPriceRange = 'All';
+  String _selectedRating = 'All';
+  String _selectedSort = 'Popular';
 
   static const int _pageSize = 10;
 
@@ -66,6 +75,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _subscribeToProducts();
+    _subscribeToAds();
     _loadWishlistStatus();
   }
 
@@ -94,6 +104,22 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           _wishlistedProductIds = wishlistItems.map((item) => item['productId'] as String).toSet();
         });
       }
+    });
+  }
+
+  void _subscribeToAds() {
+    _adsService.getActiveAdsStream(limit: 10).listen((ads) {
+      print('📢 Ads loaded: ${ads.length} ads');
+      for (var ad in ads) {
+        print('  - ${ad.storeName}: ${ad.images.length} images, ${ad.viewsRemaining} views remaining');
+      }
+      if (mounted) {
+        setState(() {
+          _ads = ads;
+        });
+      }
+    }, onError: (error) {
+      print('❌ Error loading ads: $error');
     });
   }
 
@@ -192,6 +218,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         child: Column(
           children: [
             _buildHeader(),
+            const SizedBox(height: 12),
+            if (_ads.isNotEmpty) ...[
+              _buildAdsCard(),
+              const SizedBox(height: 12),
+            ],
             _buildSearchBar(),
             const SizedBox(height: 16),
             _buildCategories(),
@@ -205,7 +236,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(
         children: [
           Text(
@@ -218,14 +249,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           ),
           const Spacer(),
           _buildHeaderIcon(
-            Iconsax.category,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CategoriesScreen()),
-            ),
-          ),
-          const SizedBox(width: 8),
-          _buildHeaderIcon(
             Iconsax.map,
             () => Navigator.push(
               context,
@@ -235,6 +258,37 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           const SizedBox(width: 8),
           _buildHeaderIcon(Iconsax.receipt_text, _navigateToOrderHistory),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAdsCard() {
+    // Hide completely if no ads
+    if (_ads.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 240,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: _ads.length,
+        itemBuilder: (context, index) {
+          final ad = _ads[index];
+          // Record view when ad is built
+          _adsService.recordAdView(ad.id);
+          
+          return _AdCard(
+            ad: ad,
+            onShopNow: () {
+              _adsService.recordAdClick(ad.id);
+              _adsService.recordStoreVisit(ad.id);
+              _openStoreProfile(ad.storeId, ad.storeName);
+            },
+            isLast: index == _ads.length - 1,
+          );
+        },
       ),
     );
   }
@@ -257,43 +311,31 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search products...',
-                  hintStyle: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 14),
-                  prefixIcon: Icon(Iconsax.search_normal, size: 20, color: Colors.grey[500]),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                ),
-                onSubmitted: (query) {
-                  // TODO: Implement search
-                },
-              ),
-            ),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Search products...',
+          hintStyle: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 14),
+          prefixIcon: Icon(Iconsax.search_normal, size: 20, color: Colors.grey[500]),
+          filled: true,
+          fillColor: Colors.grey[100],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide.none,
           ),
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: _showFilterSheet,
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(Iconsax.setting_4, size: 20, color: Colors.white),
-            ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide.none,
           ),
-        ],
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        ),
+        onSubmitted: (query) {
+          // TODO: Implement search
+        },
       ),
     );
   }
@@ -676,6 +718,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                                       content: Text('Added to cart', style: GoogleFonts.poppins()),
                                       backgroundColor: Colors.black,
                                       behavior: SnackBarBehavior.floating,
+                                      duration: const Duration(seconds: 3),
                                       action: SnackBarAction(
                                         label: 'View Cart',
                                         textColor: Colors.white,
@@ -774,93 +817,127 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (sheetContext) => Container(
-        height: MediaQuery.of(sheetContext).size.height * 0.6,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(top: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(sheetContext).size.height * 0.7,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Filters',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      'Reset',
-                      style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildFilterSection('Price Range', ['\$0-\$50', '\$50-\$100', '\$100-\$200', '\$200+']),
-                    _buildFilterSection('Rating', ['4+ Stars', '3+ Stars', '2+ Stars', 'All']),
-                    _buildFilterSection('Sort By', ['Popular', 'Newest', 'Price: Low to High', 'Price: High to Low']),
+                    Text(
+                      'Filters',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setModalState(() {
+                          _selectedPriceRange = 'All';
+                          _selectedRating = 'All';
+                          _selectedSort = 'Popular';
+                        });
+                      },
+                      child: Text(
+                        'Reset',
+                        style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                12,
-                20,
-                MediaQuery.of(sheetContext).padding.bottom + 12,
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(sheetContext),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: Text(
-                    'Apply Filters',
-                    style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSelectableFilterSection(
+                        'Price Range',
+                        ['All', 'Under 50K', '50K-100K', '100K-500K', '500K+'],
+                        _selectedPriceRange,
+                        (value) => setModalState(() => _selectedPriceRange = value),
+                      ),
+                      _buildSelectableFilterSection(
+                        'Rating',
+                        ['All', '4+ Stars', '3+ Stars', '2+ Stars'],
+                        _selectedRating,
+                        (value) => setModalState(() => _selectedRating = value),
+                      ),
+                      _buildSelectableFilterSection(
+                        'Sort By',
+                        ['Popular', 'Newest', 'Price: Low to High', 'Price: High to Low'],
+                        _selectedSort,
+                        (value) => setModalState(() => _selectedSort = value),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  12,
+                  20,
+                  MediaQuery.of(sheetContext).padding.bottom + 12,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        // Apply filters
+                        _subscribeToProducts();
+                      });
+                      Navigator.pop(sheetContext);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      'Apply Filters',
+                      style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFilterSection(String title, List<String> options) {
+  Widget _buildSelectableFilterSection(
+    String title,
+    List<String> options,
+    String selectedValue,
+    Function(String) onSelect,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -876,19 +953,31 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: options
-              .map((option) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      option,
-                      style: GoogleFonts.poppins(fontSize: 13, color: Colors.black),
-                    ),
-                  ))
-              .toList(),
+          children: options.map((option) {
+            final isSelected = selectedValue == option;
+            return GestureDetector(
+              onTap: () => onSelect(option),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.black : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isSelected ? Colors.black : Colors.transparent,
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  option,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: isSelected ? Colors.white : Colors.black,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
         const SizedBox(height: 20),
       ],
@@ -968,5 +1057,210 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         );
       }
     }
+  }
+}
+
+
+// Ad Card Widget with Image Carousel
+class _AdCard extends StatefulWidget {
+  final Ad ad;
+  final VoidCallback onShopNow;
+  final bool isLast;
+
+  const _AdCard({
+    required this.ad,
+    required this.onShopNow,
+    this.isLast = false,
+  });
+
+  @override
+  State<_AdCard> createState() => _AdCardState();
+}
+
+class _AdCardState extends State<_AdCard> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: MediaQuery.of(context).size.width - 40,
+      margin: EdgeInsets.only(right: widget.isLast ? 0 : 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.black,
+      ),
+      child: Stack(
+        children: [
+          // Image Carousel
+          if (widget.ad.images.isNotEmpty)
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() => _currentPage = index);
+                  },
+                  itemCount: widget.ad.images.length,
+                  itemBuilder: (context, index) {
+                    return CachedNetworkImage(
+                      imageUrl: widget.ad.images[index],
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[900],
+                        child: const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[900],
+                        child: const Icon(Iconsax.image, size: 50, color: Colors.white),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          
+          // Gradient overlay
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.7),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Decorative circles
+          Positioned(
+            right: -30,
+            top: -30,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
+
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Store info row
+                Row(
+                  children: [
+                    // Store logo
+                    if (widget.ad.storeLogo != null)
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundImage: CachedNetworkImageProvider(widget.ad.storeLogo!),
+                        backgroundColor: Colors.white,
+                      )
+                    else
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          widget.ad.storeName.isNotEmpty ? widget.ad.storeName[0] : 'S',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        widget.ad.storeName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const Spacer(),
+
+                // Page indicators
+                if (widget.ad.images.length > 1)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      widget.ad.images.length,
+                      (index) => Container(
+                        width: 6,
+                        height: 6,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _currentPage == index
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ),
+                  ),
+                
+                const SizedBox(height: 16),
+
+                // Shop button
+                GestureDetector(
+                  onTap: widget.onShopNow,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Iconsax.shop, size: 18, color: Colors.black),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Visit Store',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

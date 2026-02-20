@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/posts_preloader_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -66,6 +67,8 @@ class _SignupScreenState extends State<SignupScreen> {
     try {
       final result = await _authService.signInWithGoogle();
       if (result != null && mounted) {
+        // Start preloading posts immediately after successful Google sign up
+        PostsPreloaderService().preloadPosts();
         context.go('/interests');
       }
     } catch (e) {

@@ -13,6 +13,7 @@ import '../services/delivery_fee_service.dart';
 import 'order_history_screen.dart';
 import 'location_picker_screen.dart';
 import 'main_screen.dart';
+import 'checkout_payment_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String? promoCode;
@@ -407,13 +408,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             for (var totals in totalsByStore.values) {
               grandTotal += totals.total;
             }
+            
+            // Add fixed tax
+            final tax = 400.0; // Fixed 400 UGX tax
+            grandTotal += tax;
 
             return Column(
               children: [
                 _buildHeader(),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -466,15 +471,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: hasLocation 
-            ? Colors.green.shade50 
-            : (hasError ? Colors.red.shade50 : AppColors.grey100),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: hasLocation 
-              ? Colors.green 
-              : (hasError ? Colors.red : AppColors.grey300),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -594,8 +599,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.grey100,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             children: [
@@ -731,10 +743,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
         ],
         const SizedBox(height: 12),
-        if (_savedAddresses.isEmpty)
-          _buildNoAddressCard()
-        else
-          ..._savedAddresses.asMap().entries.map((entry) => _buildAddressCard(entry.value, entry.key)),
+        ..._savedAddresses.asMap().entries.map((entry) => _buildAddressCard(entry.value, entry.key)),
       ],
     );
   }
@@ -743,6 +752,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return GestureDetector(
       onTap: _showAddNewAddressSheet,
       child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: AppColors.grey100,
@@ -780,12 +790,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.grey100 : AppColors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? AppColors.black : AppColors.grey300,
-            width: isSelected ? 2 : 1,
-          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isSelected ? 0.1 : 0.05),
+              blurRadius: isSelected ? 15 : 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -973,29 +986,42 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         final convertedTotals = snapshot.data!;
         final convertedGrandTotal = convertedTotals['grandTotal']!;
         
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Order Summary', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 16),
-            ...itemsByStore.entries.map((entry) {
-              final storeName = entry.value.first.storeName;
-              final storeId = entry.key;
-              final formattedTotal = convertedTotals[storeId] ?? 'Loading...';
-              
-              // Find delivery estimate for this store
-              final deliveryEstimate = _deliveryEstimates.firstWhere(
-                (e) => e.storeId == storeId,
-                orElse: () => DeliveryFeeEstimate(storeId: storeId, storeName: storeName, distance: 0, fee: 0),
-              );
-              
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.grey100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Order Summary', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 20),
+              ...itemsByStore.entries.map((entry) {
+                final storeName = entry.value.first.storeName;
+                final storeId = entry.key;
+                final formattedTotal = convertedTotals[storeId] ?? 'Loading...';
+                
+                // Find delivery estimate for this store
+                final deliveryEstimate = _deliveryEstimates.firstWhere(
+                  (e) => e.storeId == storeId,
+                  orElse: () => DeliveryFeeEstimate(storeId: storeId, storeName: storeName, distance: 0, fee: 0),
+                );
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1050,7 +1076,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 decoration: BoxDecoration(
                   color: Colors.orange.shade50,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange.shade200),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1122,8 +1154,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                 ],
               ),
-              const Divider(height: 16),
             ],
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Tax', style: GoogleFonts.poppins(fontSize: 14, color: AppColors.grey600)),
+                Text(
+                  _currencyService.formatPrice(400, 'UGX'),
+                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const Divider(height: 16),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1131,14 +1174,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 Text('Grand Total', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
                 Text(
                   _currencyService.formatPrice(
-                    double.parse(convertedGrandTotal.replaceAll(RegExp(r'[^0-9.]'), '')) - (_promoDiscount ?? 0) + _totalDeliveryFee,
+                    double.parse(convertedGrandTotal.replaceAll(RegExp(r'[^0-9.]'), '')) - (_promoDiscount ?? 0) + _totalDeliveryFee + 400,
                     _userCurrency,
                   ),
                   style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700),
                 ),
               ],
             ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -1264,81 +1308,62 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    setState(() => _isProcessing = true);
+    // Calculate totals EXACTLY as shown on checkout screen
+    double subtotalAmount = 0;
+    for (var totals in totalsByStore.values) {
+      subtotalAmount += totals.total; // Use total from each store
+    }
+    
+    final totalDeliveryFee = _totalDeliveryFee;
+    final tax = 400.0;
+    final promoDiscount = _promoDiscount ?? 0;
+    
+    // Grand Total = Subtotal - Promo + Delivery + Tax (exactly as checkout screen shows)
+    final grandTotal = subtotalAmount - promoDiscount + totalDeliveryFee + tax;
+    
+    final selectedAddress = _savedAddresses[_selectedAddressIndex];
+    final user = FirebaseAuth.instance.currentUser!;
 
-    try {
-      final selectedAddress = _savedAddresses[_selectedAddressIndex];
-      final user = FirebaseAuth.instance.currentUser!;
-      
-      // Calculate grand total
-      double grandTotal = 0;
-      for (var totals in totalsByStore.values) {
-        grandTotal += totals.total;
-      }
-      
-      // Generate payment hash (dummy for now)
-      final paymentHash = 'PAY_${DateTime.now().millisecondsSinceEpoch}_${user.uid.substring(0, 8)}';
-      
-      // Create payment record
-      final paymentRef = await FirebaseFirestore.instance.collection('payments').add({
-        'hash': paymentHash,
-        'userId': user.uid,
-        'amount': grandTotal,
-        'currency': _userCurrency,
-        'status': 'approved', // Dummy: auto-approve for testing
-        'method': 'dummy_payment',
-        'createdAt': FieldValue.serverTimestamp(),
-        'approvedAt': FieldValue.serverTimestamp(),
-      });
+    // Prepare order data for payment screen
+    final orderData = {
+      'email': user.email ?? _emailController.text,
+      'name': _useMyContactDetails 
+          ? (user.displayName ?? _nameController.text) 
+          : _nameController.text,
+      'phone': _useMyContactDetails 
+          ? (user.phoneNumber ?? _phoneController.text) 
+          : _phoneController.text,
+      'itemsByStore': itemsByStore,
+      'totalsByStore': totalsByStore,
+      'selectedAddress': selectedAddress,
+      'deliveryLocation': _currentLocation,
+      'deliveryFeesByStore': _deliveryEstimates.fold<Map<String, double>>(
+        {},
+        (map, estimate) {
+          map[estimate.storeId] = estimate.fee;
+          return map;
+        },
+      ),
+      'promoCode': _promoCode,
+      'promoDiscount': _promoDiscount,
+      'discountId': _discountId,
+      'discountStoreId': _discountStoreId,
+    };
 
-      // Create orders with payment reference
-      final deliveryFeesByStore = <String, double>{};
-      for (var estimate in _deliveryEstimates) {
-        deliveryFeesByStore[estimate.storeId] = estimate.fee;
-      }
-      
-      final orderIds = await _orderService.createOrdersFromCart(
-        itemsByStore: itemsByStore,
-        totalsByStore: totalsByStore,
-        deliveryAddress: DeliveryAddress(
-          label: selectedAddress.label,
-          street: selectedAddress.street,
-          city: selectedAddress.city,
-        ),
-        contactDetails: ContactDetails(
-          name: _useMyContactDetails ? (user.displayName ?? _nameController.text) : _nameController.text,
-          phone: _useMyContactDetails ? (user.phoneNumber ?? _phoneController.text) : _phoneController.text,
-          email: _useMyContactDetails ? (user.email ?? _emailController.text) : _emailController.text,
-        ),
-        deliveryLocation: _currentLocation,
-        deliveryFeesByStore: deliveryFeesByStore,
-        paymentId: paymentRef.id,
-        paymentHash: paymentHash,
-        promoCode: _promoCode,
-        promoDiscount: _promoDiscount,
-        discountId: _discountId,
-        discountStoreId: _discountStoreId,
-      );
-
-      // Clear cart
-      for (var storeId in itemsByStore.keys) {
-        await _cartService.clearStoreCart(storeId);
-      }
-
-      if (mounted) {
-        setState(() => _isProcessing = false);
-        _showSuccessDialog(orderIds.length);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to place order: $e', style: GoogleFonts.poppins()),
-            backgroundColor: Colors.red,
+    // Navigate to payment screen with EXACT same totals as checkout screen
+    if (mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CheckoutPaymentScreen(
+            subtotal: subtotalAmount,
+            deliveryCharge: totalDeliveryFee,
+            tax: tax,
+            total: grandTotal,
+            orderData: orderData,
           ),
-        );
-      }
+        ),
+      );
     }
   }
 

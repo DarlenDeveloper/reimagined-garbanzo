@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/posts_service.dart';
 import '../services/messages_service.dart';
 import '../services/followers_service.dart';
+import '../services/posts_preloader_service.dart';
 import 'messages_screen.dart';
 import 'notifications_screen.dart';
 import 'search_screen.dart';
@@ -26,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final PostsService _postsService = PostsService();
   final MessagesService _messagesService = MessagesService();
   final FollowersService _followersService = FollowersService();
+  final PostsPreloaderService _preloaderService = PostsPreloaderService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
   final Set<String> _likedPosts = {};
@@ -62,6 +64,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadFeed() async {
+    // Check if posts are already preloaded
+    if (_preloaderService.isPreloaded && _preloaderService.cachedPosts != null) {
+      setState(() {
+        _posts = List.from(_preloaderService.cachedPosts!);
+        _lastDocument = _preloaderService.lastDocument;
+        _isLoading = false;
+      });
+      
+      // Initialize liked/saved/followed states
+      for (final post in _posts) {
+        if (_postsService.hasUserLiked(post, _auth.currentUser?.uid ?? '')) {
+          _likedPosts.add(post['id']);
+        }
+        final savedBy = List<String>.from(post['savedBy'] ?? []);
+        if (savedBy.contains(_auth.currentUser?.uid ?? '')) {
+          _savedPosts.add(post['id']);
+        }
+      }
+      
+      await _loadFollowingStatus();
+      return;
+    }
+    
+    // Fallback to normal loading if preload didn't happen
     setState(() => _isLoading = true);
     _lastDocument = null;
     _posts.clear();

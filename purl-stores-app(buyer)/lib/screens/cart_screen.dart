@@ -126,8 +126,8 @@ class _CartScreenState extends State<CartScreen> {
             }
             
             final delivery = totals.shipping.toDouble();
-            final tax = 0.0;
-            final totalAmount = convertedSubtotal - promoDiscount + delivery + tax;
+            final tax = 400.0; // Fixed 400 UGX tax
+            final totalAmount = convertedSubtotal - promoDiscount + tax;
 
             return Column(
               children: [
@@ -143,6 +143,7 @@ class _CartScreenState extends State<CartScreen> {
                         _buildPromoCode(),
                         const SizedBox(height: 24),
                         _buildOrderSummary(convertedSubtotal, promoDiscount, delivery, tax, totalAmount, _userCurrency),
+                        const SizedBox(height: 60),
                       ],
                     ),
                   ),
@@ -648,47 +649,60 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildOrderSummary(double orderAmount, double promoDiscount, double delivery, double tax, double totalAmount, String userCurrency) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Order Summary',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: context.textPrimaryColor,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-        ),
-        const SizedBox(height: 16),
-        _buildSummaryRow('Order Amount', orderAmount, userCurrency),
-        if (_promoApplied) _buildSummaryRow('Promo-code', -promoDiscount, userCurrency, isDiscount: true),
-        _buildSummaryRow('Delivery', delivery, userCurrency),
-        _buildSummaryRow('Tax', tax, userCurrency),
-        const SizedBox(height: 12),
-        Container(height: 1, color: context.borderColor),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Total Amount',
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: context.textPrimaryColor,
-              ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Order Summary',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: context.textPrimaryColor,
             ),
-            Text(
-              _currencyService.formatPrice(totalAmount, userCurrency),
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: context.textPrimaryColor,
+          ),
+          const SizedBox(height: 20),
+          _buildSummaryRow('Order Amount', orderAmount, userCurrency),
+          if (_promoApplied) _buildSummaryRow('Promo-code', -promoDiscount, userCurrency, isDiscount: true),
+          _buildSummaryRow('Tax', tax, userCurrency),
+          const SizedBox(height: 16),
+          Container(height: 1, color: Colors.grey[200]),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total Amount',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: context.textPrimaryColor,
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
+              Text(
+                _currencyService.formatPrice(totalAmount, userCurrency),
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: context.textPrimaryColor,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -753,7 +767,8 @@ class _CartScreenState extends State<CartScreen> {
 
   Widget _buildBottomButton() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
+      color: Colors.transparent,
       child: SizedBox(
         width: double.infinity,
         height: 54,

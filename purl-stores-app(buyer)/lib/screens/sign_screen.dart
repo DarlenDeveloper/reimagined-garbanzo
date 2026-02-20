@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/posts_preloader_service.dart';
 
 class SignScreen extends StatefulWidget {
   const SignScreen({super.key});
@@ -31,6 +32,8 @@ class _SignScreenState extends State<SignScreen> {
     setState(() => _isLoading = true);
     try {
       await _authService.signInWithEmail(email: email, password: password);
+      // Start preloading posts immediately after successful login
+      PostsPreloaderService().preloadPosts();
       if (mounted) context.go('/home');
     } on FirebaseAuthException catch (e) {
       _showError(_getErrorMessage(e.code));
@@ -45,7 +48,11 @@ class _SignScreenState extends State<SignScreen> {
     setState(() => _isLoading = true);
     try {
       final result = await _authService.signInWithGoogle();
-      if (result != null && mounted) context.go('/interests');
+      if (result != null && mounted) {
+        // Start preloading posts immediately after successful Google sign in
+        PostsPreloaderService().preloadPosts();
+        context.go('/interests');
+      }
     } catch (e) {
       _showError('Google sign in failed. Please try again.');
     } finally {

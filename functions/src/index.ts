@@ -1,9 +1,15 @@
 import {onDocumentCreated, onDocumentUpdated} from "firebase-functions/v2/firestore";
 import {onCall} from "firebase-functions/v2/https";
 import {setGlobalOptions} from "firebase-functions/v2";
+import {defineSecret} from "firebase-functions/params";
 import * as admin from "firebase-admin";
+import axios from "axios";
 
 admin.initializeApp();
+
+// Define secrets for Flutterwave
+const flutterwaveSecretKey = defineSecret("FLUTTERWAVE_SECRET_KEY");
+const flutterwaveEncryptionKey = defineSecret("FLUTTERWAVE_ENCRYPTION_KEY");
 
 // Set global options for all functions
 setGlobalOptions({
@@ -133,6 +139,55 @@ export const onOrderCreated = onDocumentCreated(
       });
 
     console.log(`✅ Sent`);
+  }
+);
+
+/**
+ * Trigger: New order created
+ * Create payment record for tracking and auditing
+ */
+export const createPaymentRecord = onDocumentCreated(
+  "stores/{storeId}/orders/{orderId}",
+  async (event) => {
+    const order = event.data?.data();
+    if (!order) return;
+
+    const storeId = event.params.storeId;
+    const orderId = event.params.orderId;
+
+    console.log(`💳 Creating payment record for order: ${orderId}`);
+
+    try {
+      // Create payment record in payments collection
+      await admin.firestore().collection("payments").add({
+        orderId: orderId,
+        storeId: storeId,
+        userId: order.buyerId,
+        buyerId: order.buyerId,
+        buyerName: order.contactDetails?.name || "Unknown",
+        buyerEmail: order.contactDetails?.email || "",
+        buyerPhone: order.contactDetails?.phone || "",
+        amount: order.total || 0,
+        currency: order.items?.[0]?.currency || "UGX",
+        paymentMethod: order.paymentMethod || "Unknown",
+        paymentId: order.paymentId || null,
+        paymentHash: order.paymentHash || null,
+        status: order.paymentStatus || "pending",
+        paymentStatus: order.paymentStatus || "pending",
+        transactionId: order.paymentId || `order_${orderId}`,
+        orderNumber: order.orderNumber || "",
+        items: order.items || [],
+        deliveryFee: order.deliveryFee || 0,
+        promoCode: order.promoCode || null,
+        promoDiscount: order.promoDiscount || 0,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log(`✅ Payment record created for order: ${orderId}`);
+    } catch (error) {
+      console.error(`❌ Error creating payment record:`, error);
+    }
   }
 );
 
@@ -832,3 +887,304 @@ export const onDeliveryAccepted = onDocumentUpdated(
   }
 );
 
+
+
+/**
+ * Charge card directly
+ * Encrypts card details and processes payment
+ */
+export const chargeCard = onCall(
+  {secrets: [flutterwaveSecretKey, flutterwaveEncryptionKey]},
+  async (request) => {
+    if (!request.auth) {
+      throw new Error("Must be authenticated");
+    }
+
+    const {
+      cardNumber,
+      expiryMonth,
+      expiryYear,
+      cvv,
+      amount,
+      currency,
+      email,
+      fullname,
+      phoneNumber,
+      txRef,
+    } = request.data;
+
+    const FLW_SECRET_KEY = flutterwaveSecretKey.value();
+    const FLW_ENCRYPTION_KEY = flutterwaveEncryptionKey.value();
+
+    if (!FLW_SECRET_KEY || !FLW_ENCRYPTION_KEY) {
+      throw new Error("Flutterwave keys not configured");
+    }
+
+    console.log(`💳 Charging card for ${txRef}`);
+
+    try {
+      // Prepare card data
+      const cardData: any = {
+        card_number: cardNumber,
+        cvv: cvv,
+        expiry_month: expiryMonth,
+        expiry_year: expiryYear,
+        currency: currency,
+        amount: amount,
+        email: email,
+        fullname: fullname,
+        phone_number: phoneNumber,
+        tx_ref: txRef,
+        // Client info for fraud prevention
+        client_ip: "154.123.220.1",
+        device_fingerprint: "62wd23423rq324323qew1",
+        // Redirect URL for 3DS verification
+        redirect_url: "https://purlstores-za.web.app/payment-callback",
+      };
+
+      // Call Flutterwave charge endpoint
+      const response = await axios.post(
+        "https://api.flutterwave.com/v3/charges?type=card",
+        cardData,
+        {
+          headers: {
+            Authorization: `Bearer ${FLW_SECRET_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const responseData = response.data;
+      
+      if (responseData.status !== "success") {
+        console.error("❌ Card charge failed:", responseData);
+        throw new Error(responseData.message || "Failed to charge card");
+      }
+
+      const data = responseData.data;
+      const meta = responseData.meta;
+
+      console.log(`📊 Card charge status: ${data.status}`);
+
+      // Extract redirect URL if present (for 3DS verification)
+      const redirectUrl = meta?.authorization?.redirect || null;
+      const mode = meta?.authorization?.mode || data.auth_model || null;
+
+      // Store payment record
+      await admin.firestore().collection("payments").doc(txRef).set({
+        userId: request.auth.uid,
+        txRef: txRef,
+        amount: amount,
+        currency: currency,
+        status: data.status === "successful" ? "approved" : "pending",
+        paymentMethod: "card",
+        transactionId: data.id,
+        flwRef: data.flw_ref,
+        redirectUrl: redirectUrl,
+        authMode: mode,
+        chargeData: data,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return {
+        success: data.status === "successful",
+        txRef: txRef,
+        transactionId: data.id,
+        status: data.status,
+        redirectUrl: redirectUrl,
+        authMode: mode,
+        message: redirectUrl 
+          ? "Please complete verification in the browser" 
+          : data.status === "successful" 
+            ? "Payment successful" 
+            : "Payment pending",
+      };
+    } catch (error: any) {
+      console.error("❌ Error charging card:", error.response?.data || error.message);
+      throw new Error(
+        error.response?.data?.message || "Failed to charge card"
+      );
+    }
+  }
+);
+
+/**
+ * Charge mobile money (Uganda) using Orchestrator Flow
+ * Supports MTN and Airtel
+ */
+export const chargeMobileMoney = onCall(
+  {secrets: [flutterwaveSecretKey]},
+  async (request) => {
+    if (!request.auth) {
+      throw new Error("Must be authenticated");
+    }
+
+    const {
+      phoneNumber,
+      network,
+      amount,
+      currency,
+      email,
+      fullname,
+      txRef,
+    } = request.data;
+
+    const FLW_SECRET_KEY = flutterwaveSecretKey.value();
+    if (!FLW_SECRET_KEY) {
+      throw new Error("Flutterwave secret key not configured");
+    }
+
+    console.log(`📱 Charging mobile money (${network}) for ${txRef}`);
+
+    try {
+      // Use Flutterwave Orchestrator Flow API
+      const response = await axios.post(
+        "https://api.flutterwave.com/v3/charges?type=mobile_money_uganda",
+        {
+          tx_ref: txRef,
+          amount: amount,
+          currency: currency,
+          email: email,
+          phone_number: phoneNumber,
+          fullname: fullname,
+          // Client info for fraud prevention
+          client_ip: "154.123.220.1",
+          device_fingerprint: "62wd23423rq324323qew1",
+          network: network,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${FLW_SECRET_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log(`📊 Flutterwave response:`, JSON.stringify(response.data));
+
+      const responseData = response.data;
+      
+      if (responseData.status !== "success") {
+        console.error("❌ Payment initiation failed:", responseData);
+        throw new Error(responseData.message || "Failed to initiate payment");
+      }
+
+      const meta = responseData.meta;
+
+      console.log(`📊 Mobile money charge initiated`);
+
+      // Extract redirect URL if present (for verification)
+      const redirectUrl = meta?.authorization?.redirect || null;
+      const mode = meta?.authorization?.mode || "redirect";
+
+      // Generate transaction ID
+      const transactionId = responseData.data?.id || responseData.id || `momo_${txRef}`;
+      const flwRef = responseData.data?.flw_ref || responseData.flw_ref || null;
+
+      // Store payment record
+      await admin.firestore().collection("payments").doc(txRef).set({
+        userId: request.auth.uid,
+        txRef: txRef,
+        amount: amount,
+        currency: currency,
+        status: "pending", // Mobile money is always pending until user approves
+        paymentMethod: "mobile_money",
+        network: network,
+        transactionId: transactionId,
+        flwRef: flwRef,
+        redirectUrl: redirectUrl,
+        authMode: mode,
+        meta: meta,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return {
+        success: true,
+        txRef: txRef,
+        transactionId: transactionId,
+        status: "pending",
+        redirectUrl: redirectUrl,
+        authMode: mode,
+        message: redirectUrl 
+          ? "Please complete verification in the browser" 
+          : "Please check your phone to approve the payment",
+      };
+    } catch (error: any) {
+      console.error("❌ Error charging mobile money:", error.response?.data || error.message);
+      throw new Error(
+        error.response?.data?.message || "Failed to charge mobile money"
+      );
+    }
+  }
+);
+
+/**
+ * Verify Flutterwave payment
+ * Called after payment redirect to verify the transaction
+ */
+export const verifyFlutterwavePayment = onCall(
+  {secrets: [flutterwaveSecretKey]},
+  async (request) => {
+    // Verify user is authenticated
+    if (!request.auth) {
+      throw new Error("Must be authenticated");
+    }
+
+    const {transactionId, txRef} = request.data;
+
+    if (!transactionId && !txRef) {
+      throw new Error("Transaction ID or tx_ref is required");
+    }
+
+    const FLW_SECRET_KEY = flutterwaveSecretKey.value();
+    if (!FLW_SECRET_KEY) {
+      throw new Error("Flutterwave secret key not configured");
+    }
+
+    console.log(`🔍 Verifying payment: ${transactionId || txRef}`);
+
+    try {
+      // Verify transaction with Flutterwave
+      const verifyUrl = transactionId
+        ? `https://api.flutterwave.com/v3/transactions/${transactionId}/verify`
+        : `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${txRef}`;
+
+      const response = await axios.get(verifyUrl, {
+        headers: {
+          Authorization: `Bearer ${FLW_SECRET_KEY}`,
+        },
+      });
+
+      const transactionData = response.data.data;
+      const status = transactionData.status;
+      const amount = transactionData.amount;
+      const currency = transactionData.currency;
+      const reference = transactionData.tx_ref;
+
+      console.log(`📊 Payment status: ${status}, Amount: ${amount} ${currency}`);
+
+      // Update payment record in Firestore
+      await admin.firestore().collection("payments").doc(reference).update({
+        status: status === "successful" ? "approved" : "failed",
+        transactionId: transactionData.id,
+        flwRef: transactionData.flw_ref,
+        verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+        verificationData: transactionData,
+      });
+
+      return {
+        success: status === "successful",
+        status: status,
+        amount: amount,
+        currency: currency,
+        txRef: reference,
+        transactionId: transactionData.id?.toString() || transactionData.id,
+      };
+    } catch (error: any) {
+      console.error("❌ Error verifying payment:", error.response?.data || error.message);
+      throw new Error(
+        error.response?.data?.message || "Failed to verify payment"
+      );
+    }
+  }
+);

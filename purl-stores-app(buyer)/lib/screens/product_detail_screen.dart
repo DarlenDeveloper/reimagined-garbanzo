@@ -915,15 +915,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                       );
                       
                       if (mounted) {
+                        // Clear any existing snackbars first
+                        ScaffoldMessenger.of(context).clearSnackBars();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('Added to cart', style: GoogleFonts.poppins()),
                             backgroundColor: Colors.black,
                             behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 3),
                             action: SnackBarAction(
                               label: 'View Cart',
                               textColor: Colors.white,
                               onPressed: () {
+                                // Find the MainScreen and navigate to cart
+                                Navigator.of(context).popUntil((route) => route.isFirst);
                                 MainScreen.navigateToCart(context);
                               },
                             ),

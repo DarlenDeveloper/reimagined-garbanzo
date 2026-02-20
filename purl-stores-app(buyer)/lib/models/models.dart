@@ -1,3 +1,6 @@
+// Export Ad model
+export 'ad.dart';
+
 class Product {
   final String id;
   final String name;

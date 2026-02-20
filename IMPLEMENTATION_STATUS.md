@@ -222,10 +222,12 @@ This document tracks the implementation status of the Purl multivendor e-commerc
 ## 🟡 IN PROGRESS / PARTIAL
 
 ### Cart & Checkout
-- 🟡 Cart screen UI exists (needs backend integration)
-- 🟡 Checkout screen UI exists (needs payment integration)
-- ❌ Cart service not implemented
-- ❌ Add to cart functionality not connected
+- ✅ Cart screen with full functionality
+- ✅ Checkout screen with delivery details
+- ✅ Cart service implemented
+- ✅ Add to cart functionality connected
+- ✅ **Payment integration complete** (Flutterwave direct charges)
+- ✅ Order creation after payment
 
 ### Orders
 - 🟡 Order screens exist (my_orders, order_history, order_screen)
@@ -244,10 +246,24 @@ This document tracks the implementation status of the Purl multivendor e-commerc
 ## 🔴 NOT STARTED
 
 ### Payment Integration
-- ❌ Pesapal integration
-- ❌ Payment processing
-- ❌ Payment webhooks
-- ❌ Transaction history
+- ✅ **Flutterwave V3 Direct Charges Integration (COMPLETE)**
+  - ✅ Single checkout/payment screen with order summary
+  - ✅ Payment method selection (Visa, Mastercard, MTN, Airtel)
+  - ✅ Card payment form with validation
+  - ✅ Mobile money payment form
+  - ✅ Cloud Functions for direct charges (chargeCard, chargeMobileMoney)
+  - ✅ Secrets migrated to Secret Manager
+  - ✅ Payment verification function
+  - ✅ Order creation after successful payment
+  - ✅ Payment records in Firestore
+  - ✅ Payment success screen
+  - ✅ Redirect URL handling for verification (3DS, captcha)
+  - ✅ Status polling for mobile money payments
+  - ✅ Proper verification before order creation
+  - ✅ Timeout handling (60 seconds)
+  - ✅ User feedback during payment process
+- ❌ Payment webhooks (optional - polling implemented instead)
+- ❌ Transaction history screen
 - ❌ Refund handling
 
 ### Delivery Integration
@@ -312,7 +328,7 @@ This document tracks the implementation status of the Purl multivendor e-commerc
 6. Seller order management screen
 
 ### Short Term
-1. Pesapal payment integration
+1. Flutterwave payment integration for buyer checkout
 2. Order tracking and history
 3. Product reviews backend
 4. Enhanced search with Algolia

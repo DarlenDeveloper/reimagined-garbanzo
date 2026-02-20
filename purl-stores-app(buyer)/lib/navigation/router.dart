@@ -12,6 +12,7 @@ import '../screens/interests_screen.dart';
 import '../screens/complete_profile_screen.dart';
 import '../screens/main_screen.dart';
 import '../screens/checkout_screen.dart';
+import '../services/posts_preloader_service.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -33,6 +34,8 @@ final router = GoRouter(
       return '/';
     }
     if (user != null && state.matchedLocation == '/') {
+      // Start preloading posts immediately when authenticated user is detected
+      PostsPreloaderService().preloadPosts();
       return '/home';
     }
     return null;
