@@ -54,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Purl Logo
+            // Wibble Rider Logo
             Container(
               width: 100,
               height: 100,
@@ -65,7 +65,7 @@ class _SplashScreenState extends State<SplashScreen> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: Image.asset(
-                  'assets/images/purllogo-whitebg.PNG',
+                  'assets/images/wibble_courier_logo.png',
                   width: 100,
                   height: 100,
                   fit: BoxFit.cover,
@@ -74,7 +74,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'PURL COURIER',
+              'WIBBLE RIDER',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -83,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Deliver with Purl',
+              'Deliver with Wibble',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.white70,
                   ),

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 import '../services/auth_service.dart';
 import '../services/delivery_service.dart';
 import '../services/location_service.dart';
@@ -20,19 +21,48 @@ class _HomeScreenState extends State<HomeScreen> {
   final LocationService _locationService = LocationService();
   bool _isOnline = false;
   OverlayEntry? _overlayEntry;
+  Timer? _inactivityTimer;
+  static const Duration _inactivityDuration = Duration(minutes: 30);
 
   @override
   void initState() {
     super.initState();
     _loadOnlineStatus();
     _listenForNewDeliveries();
+    _startInactivityTimer();
   }
 
   @override
   void dispose() {
     _locationService.stopLocationTracking();
     _removeOverlay();
+    _inactivityTimer?.cancel();
     super.dispose();
+  }
+
+  void _startInactivityTimer() {
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(_inactivityDuration, () {
+      if (_isOnline && mounted) {
+        _toggleOnlineStatus(false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'You were set offline due to inactivity',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.orange[700],
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    });
+  }
+
+  void _resetInactivityTimer() {
+    if (_isOnline) {
+      _startInactivityTimer();
+    }
   }
 
   void _listenForNewDeliveries() {
@@ -56,6 +86,12 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await _locationService.setOnlineStatus(value);
       setState(() => _isOnline = value);
+      
+      if (value) {
+        _startInactivityTimer();
+      } else {
+        _inactivityTimer?.cancel();
+      }
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -81,73 +117,77 @@ class _HomeScreenState extends State<HomeScreen> {
     final authService = AuthService();
     final userId = authService.currentUser?.uid;
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance.collection('couriers').doc(userId).snapshots(),
-        builder: (context, courierSnapshot) {
-          final data = courierSnapshot.data?.data() as Map<String, dynamic>?;
-          final fullName = data?['fullName'] ?? 'Courier';
-          final verified = data?['verified'] ?? false;
-          
-          return SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(fullName, verified),
-                Expanded(
-                  child: StreamBuilder<List<DeliveryRequest>>(
-                    stream: DeliveryService().getMyDeliveries(),
-                    builder: (context, activeSnapshot) {
-                      return StreamBuilder<List<DeliveryRequest>>(
-                        stream: DeliveryService().getCompletedDeliveries(),
-                        builder: (context, completedSnapshot) {
-                          final activeDeliveries = activeSnapshot.data ?? [];
-                          final completedDeliveries = completedSnapshot.data ?? [];
-                          
-                          return SingleChildScrollView(
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Current Delivery - only show if exists
-                                if (activeDeliveries.isNotEmpty) ...[
-                                  _buildSectionTitle('Current Delivery'),
+    return GestureDetector(
+      onTap: _resetInactivityTimer,
+      onPanDown: (_) => _resetInactivityTimer(),
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        body: StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance.collection('couriers').doc(userId).snapshots(),
+          builder: (context, courierSnapshot) {
+            final data = courierSnapshot.data?.data() as Map<String, dynamic>?;
+            final fullName = data?['fullName'] ?? 'Courier';
+            final verified = data?['verified'] ?? false;
+            
+            return SafeArea(
+              child: Column(
+                children: [
+                  _buildHeader(fullName, verified),
+                  Expanded(
+                    child: StreamBuilder<List<DeliveryRequest>>(
+                      stream: DeliveryService().getMyDeliveries(),
+                      builder: (context, activeSnapshot) {
+                        return StreamBuilder<List<DeliveryRequest>>(
+                          stream: DeliveryService().getCompletedDeliveries(),
+                          builder: (context, completedSnapshot) {
+                            final activeDeliveries = activeSnapshot.data ?? [];
+                            final completedDeliveries = completedSnapshot.data ?? [];
+                            
+                            return SingleChildScrollView(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Current Delivery - only show if exists
+                                  if (activeDeliveries.isNotEmpty) ...[
+                                    _buildSectionTitle('Current Delivery'),
+                                    const SizedBox(height: 16),
+                                    _buildFlightStyleCard(activeDeliveries.first),
+                                    const SizedBox(height: 32),
+                                  ],
+                                  
+                                  // Previous Delivery
+                                  _buildSectionTitle('Previous Delivery'),
                                   const SizedBox(height: 16),
-                                  _buildFlightStyleCard(activeDeliveries.first),
+                                  completedDeliveries.isEmpty
+                                      ? _buildEmptyPreviousDeliveryCard()
+                                      : _buildPreviousDeliveryCard(completedDeliveries.first),
                                   const SizedBox(height: 32),
+                                  
+                                  // Recent Deliveries
+                                  _buildSectionTitle('Recent Deliveries', showSeeAll: true),
+                                  const SizedBox(height: 16),
+                                  completedDeliveries.isEmpty
+                                      ? _buildEmptyRecentDeliveriesCard()
+                                      : Column(
+                                          children: completedDeliveries
+                                              .take(3)
+                                              .map((delivery) => _buildRecentDeliveryItem(delivery))
+                                              .toList(),
+                                        ),
                                 ],
-                                
-                                // Previous Delivery
-                                _buildSectionTitle('Previous Delivery'),
-                                const SizedBox(height: 16),
-                                completedDeliveries.isEmpty
-                                    ? _buildEmptyPreviousDeliveryCard()
-                                    : _buildPreviousDeliveryCard(completedDeliveries.first),
-                                const SizedBox(height: 32),
-                                
-                                // Recent Deliveries
-                                _buildSectionTitle('Recent Deliveries', showSeeAll: true),
-                                const SizedBox(height: 16),
-                                completedDeliveries.isEmpty
-                                    ? _buildEmptyRecentDeliveriesCard()
-                                    : Column(
-                                        children: completedDeliveries
-                                            .take(3)
-                                            .map((delivery) => _buildRecentDeliveryItem(delivery))
-                                            .toList(),
-                                      ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    },
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

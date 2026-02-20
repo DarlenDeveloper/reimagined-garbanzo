@@ -14,16 +14,16 @@ void main() async {
   // Initialize FCM and request notification permissions
   await FCMService().initialize();
   
-  runApp(const PurlCourierApp());
+  runApp(const WibbleRiderApp());
 }
 
-class PurlCourierApp extends StatelessWidget {
-  const PurlCourierApp({super.key});
+class WibbleRiderApp extends StatelessWidget {
+  const WibbleRiderApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Purl Courier',
+      title: 'Wibble Rider',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: router,

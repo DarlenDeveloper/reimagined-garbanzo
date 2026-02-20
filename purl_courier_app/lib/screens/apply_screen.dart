@@ -55,9 +55,9 @@ class _ApplyScreenState extends State<ApplyScreen> {
         phone: _phoneController.text.trim(),
       );
       
+      // Go directly to home after sign up
       if (mounted) {
-        final nextStep = await _onboardingService.getNextOnboardingStep();
-        context.go(nextStep ?? '/home');
+        context.go('/home');
       }
     } on FirebaseAuthException catch (e) {
       _showError(_getErrorMessage(e.code));
@@ -74,8 +74,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
     try {
       final result = await _authService.signInWithGoogle();
       if (result != null && mounted) {
-        final nextStep = await _onboardingService.getNextOnboardingStep();
-        context.go(nextStep ?? '/home');
+        context.go('/home');
       }
     } on FirebaseAuthException catch (e) {
       _showError(_getErrorMessage(e.code));

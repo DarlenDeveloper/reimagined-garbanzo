@@ -10,49 +10,49 @@ class AppTheme {
       primaryColor: AppColors.black,
       scaffoldBackgroundColor: AppColors.white,
       
-      // Text theme with Inter
-      textTheme: GoogleFonts.interTextTheme().copyWith(
-        displayLarge: GoogleFonts.inter(
+      // Text theme with Poppins
+      textTheme: GoogleFonts.poppinsTextTheme().copyWith(
+        displayLarge: GoogleFonts.poppins(
           fontSize: 32,
           fontWeight: FontWeight.bold,
           color: AppColors.black,
         ),
-        displayMedium: GoogleFonts.inter(
+        displayMedium: GoogleFonts.poppins(
           fontSize: 28,
           fontWeight: FontWeight.bold,
           color: AppColors.black,
         ),
-        displaySmall: GoogleFonts.inter(
+        displaySmall: GoogleFonts.poppins(
           fontSize: 24,
           fontWeight: FontWeight.w600,
           color: AppColors.black,
         ),
-        headlineMedium: GoogleFonts.inter(
+        headlineMedium: GoogleFonts.poppins(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: AppColors.black,
         ),
-        titleLarge: GoogleFonts.inter(
+        titleLarge: GoogleFonts.poppins(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.black,
         ),
-        titleMedium: GoogleFonts.inter(
+        titleMedium: GoogleFonts.poppins(
           fontSize: 16,
           fontWeight: FontWeight.w500,
           color: AppColors.black,
         ),
-        bodyLarge: GoogleFonts.inter(
+        bodyLarge: GoogleFonts.poppins(
           fontSize: 16,
           fontWeight: FontWeight.normal,
           color: AppColors.black,
         ),
-        bodyMedium: GoogleFonts.inter(
+        bodyMedium: GoogleFonts.poppins(
           fontSize: 14,
           fontWeight: FontWeight.normal,
           color: AppColors.black,
         ),
-        bodySmall: GoogleFonts.inter(
+        bodySmall: GoogleFonts.poppins(
           fontSize: 12,
           fontWeight: FontWeight.normal,
           color: AppColors.grey,
@@ -65,7 +65,7 @@ class AppTheme {
         foregroundColor: AppColors.black,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.poppins(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.black,
@@ -125,7 +125,7 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.error, width: 1),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        hintStyle: GoogleFonts.inter(
+        hintStyle: GoogleFonts.poppins(
           color: AppColors.grey,
           fontSize: 14,
         ),

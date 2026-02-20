@@ -34,10 +34,9 @@ class _SignInScreenState extends State<SignInScreen> {
         password: _passwordController.text,
       );
       
-      // Check onboarding status and route accordingly
+      // Go directly to home after sign in
       if (mounted) {
-        final nextStep = await _onboardingService.getNextOnboardingStep();
-        context.go(nextStep ?? '/home');
+        context.go('/home');
       }
     } on FirebaseAuthException catch (e) {
       _showError(_getErrorMessage(e.code));
@@ -54,8 +53,7 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final result = await _authService.signInWithGoogle();
       if (result != null && mounted) {
-        final nextStep = await _onboardingService.getNextOnboardingStep();
-        context.go(nextStep ?? '/home');
+        context.go('/home');
       }
     } on FirebaseAuthException catch (e) {
       _showError(_getErrorMessage(e.code));

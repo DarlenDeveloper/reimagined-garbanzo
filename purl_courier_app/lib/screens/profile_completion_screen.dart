@@ -81,7 +81,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         leading: IconButton(
-          onPressed: () => context.pop(),
+          onPressed: () async {
+            // Sign out and go back to welcome
+            await _authService.signOut();
+            if (mounted) context.go('/welcome');
+          },
           icon: const Icon(Iconsax.arrow_left),
         ),
         title: const Text('Complete Profile'),

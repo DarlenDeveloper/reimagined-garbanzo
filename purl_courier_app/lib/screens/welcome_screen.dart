@@ -43,207 +43,146 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
           child: Column(
             children: [
-              const Spacer(),
-              
-              // Animated Logo Section
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: Column(
-                    children: [
-                      // Logo - rounded square
-                      Container(
-                        width: 140,
-                        height: 140,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        child: Center(
-                          child: Image.asset(
-                            'assets/images/purllogo-whitebg.PNG',
-                            width: 110,
-                            height: 110,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 48),
-                      
-                      // Title
-                      Text(
-                        'Welcome to Purl Courier',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.5,
-                              height: 1.2,
-                              color: Colors.white,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Subtitle
-                      Container(
-                        constraints: const BoxConstraints(maxWidth: 320),
-                        child: Text(
-                          'Join our delivery network and start earning by delivering orders in your area',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: Colors.grey[400],
-                                height: 1.5,
-                                letterSpacing: 0.2,
-                              ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
+              // Skip button
+              Align(
+                alignment: Alignment.topRight,
+                child: TextButton(
+                  onPressed: () => context.push('/signin'),
+                  child: Text(
+                    'Skip',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),
               
               const Spacer(),
               
-              // Buttons
+              // 3D Delivery Guy Image with fade at bottom
               FadeTransition(
                 opacity: _fadeAnimation,
-                child: Column(
-                  children: [
-                    // Sign In Button - White
-                    Container(
-                      width: double.infinity,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Container(
+                    constraints: const BoxConstraints(maxHeight: 350),
+                    child: ShaderMask(
+                      shaderCallback: (Rect bounds) {
+                        return LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white,
+                            Colors.white,
+                            Colors.white.withOpacity(0.0),
+                          ],
+                          stops: const [0.0, 0.7, 1.0],
+                        ).createShader(bounds);
+                      },
+                      blendMode: BlendMode.dstIn,
+                      child: Image.asset(
+                        'assets/images/delivery_guy.png',
+                        fit: BoxFit.contain,
                       ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => context.push('/signin'),
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Iconsax.login,
-                                    color: Colors.black,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  'Sign In',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                              ],
-                            ),
+                    ),
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 48),
+              
+              // Title
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: Text(
+                  'Welcome to Wibble Rider!',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                        color: Colors.black,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Subtitle
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: Text(
+                  'Join our delivery network and start earning by delivering orders in your area',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                        height: 1.5,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Page indicator dots
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+              
+              const Spacer(),
+              
+              // Next Button
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.push('/signin'),
+                      borderRadius: BorderRadius.circular(16),
+                      child: const Center(
+                        child: Text(
+                          'Next',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                     ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Customer Support Button - Outlined
-                    Container(
-                      width: double.infinity,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.grey[800]!,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            // TODO: Add customer support contact
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Contact support: support@purl.com'),
-                                backgroundColor: Colors.grey[900],
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[900],
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Iconsax.message,
-                                    color: Colors.grey[400],
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Customer Support',
-                                  style: TextStyle(
-                                    color: Colors.grey[300],
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Footer text
-                    Text(
-                      'By continuing, you agree to our Terms & Privacy Policy',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[700],
-                            fontSize: 11,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                  ),
                 ),
               ),
               
