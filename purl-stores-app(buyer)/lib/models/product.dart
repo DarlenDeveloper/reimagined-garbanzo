@@ -28,6 +28,7 @@ class Product {
   final String storeId;
   final String storeName;
   final String? storeLogo;
+  final String? storeVerificationStatus;
   
   // Basic info
   final String name;
@@ -67,6 +68,7 @@ class Product {
     required this.storeId,
     required this.storeName,
     this.storeLogo,
+    this.storeVerificationStatus,
     required this.name,
     this.description = '',
     required this.categoryId,
@@ -94,6 +96,7 @@ class Product {
     String storeId,
     String storeName, [
     String? storeLogo,
+    String? storeVerificationStatus,
   ]) {
     final data = doc.data() ?? {};
     
@@ -102,6 +105,7 @@ class Product {
       storeId: storeId,
       storeName: storeName,
       storeLogo: storeLogo,
+      storeVerificationStatus: storeVerificationStatus,
       name: data['name'] as String? ?? '',
       description: data['description'] as String? ?? '',
       categoryId: data['categoryId'] as String? ?? '',
@@ -136,6 +140,9 @@ class Product {
 
   /// Check if product is in stock
   bool get isInStock => !trackInventory || stock > 0;
+
+  /// Check if store is verified
+  bool get isStoreVerified => storeVerificationStatus == 'verified';
 
   /// Get discount percentage if compare price exists
   int? get discountPercentage {

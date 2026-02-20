@@ -175,6 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (storeData != null) {
         post['storeName'] = storeData['name'] ?? 'Store';
         post['storeLogoUrl'] = storeData['logoUrl'];
+        post['storeVerificationStatus'] = storeData['verificationStatus'];
       } else {
         post['storeName'] = 'Store';
       }
@@ -435,6 +436,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final storeId = post['storeId'] as String;
     final storeName = post['storeName'] ?? 'Store';
     final storeLogoUrl = post['storeLogoUrl'] as String?;
+    final storeVerificationStatus = post['storeVerificationStatus'] as String?;
+    final isStoreVerified = storeVerificationStatus == 'verified';
     final content = post['content'] ?? '';
     final likes = post['likes'] ?? 0;
     final createdAt = post['createdAt'] as Timestamp?;
@@ -478,7 +481,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     GestureDetector(
                       onTap: () => _openStoreProfile(storeId, storeName),
-                      child: Text(storeName, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
+                      child: Row(
+                        children: [
+                          Text(storeName, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
+                          if (isStoreVerified) ...[
+                            const SizedBox(width: 4),
+                            const Icon(Icons.verified, size: 18, color: Colors.blue),
+                          ],
+                        ],
+                      ),
                     ),
                     const SizedBox(width: 6),
                     Text('· ${createdAt != null ? _postsService.getTimeAgo(createdAt) : '1h'}', style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500])),

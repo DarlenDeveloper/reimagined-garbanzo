@@ -213,22 +213,183 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              const Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(color: Colors.black),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Iconsax.warning_2, size: 48, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        _error!,
+                        style: GoogleFonts.poppins(color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _subscribeToProducts,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Retry', style: GoogleFonts.poppins()),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_products.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Iconsax.box, size: 48, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No products found',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Try a different category',
+                        style: GoogleFonts.poppins(color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
+            // Fixed header - always visible
             _buildHeader(),
             const SizedBox(height: 12),
-            if (_ads.isNotEmpty) ...[
-              _buildAdsCard(),
-              const SizedBox(height: 12),
-            ],
-            _buildSearchBar(),
-            const SizedBox(height: 16),
-            _buildCategories(),
-            const SizedBox(height: 16),
-            _buildProductsGrid(),
+            
+            // Scrollable content
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  _subscribeToProducts();
+                },
+                color: Colors.black,
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  slivers: [
+                    // Ad card section (scrollable)
+                    if (_ads.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: Column(
+                          children: [
+                            _buildAdsCard(),
+                            const SizedBox(height: 12),
+                          ],
+                        ),
+                      ),
+                    
+                    // Pinned search bar - sticks when it reaches the top
+                    SliverAppBar(
+                      pinned: true,
+                      backgroundColor: Colors.white,
+                      surfaceTintColor: Colors.white,
+                      elevation: 0,
+                      toolbarHeight: 130,
+                      automaticallyImplyLeading: false,
+                      flexibleSpace: Container(
+                        color: Colors.white,
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 8),
+                            _buildSearchBar(),
+                            const SizedBox(height: 16),
+                            _buildCategories(),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    // Product grid
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                      sliver: SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.55,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            if (index >= _products.length) {
+                              return Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: CircularProgressIndicator(
+                                    color: Colors.grey[400],
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              );
+                            }
+                            return _buildProductCard(_products[index]);
+                          },
+                          childCount: _products.length + (_isLoadingMore ? 2 : 0),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -269,27 +430,85 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       return const SizedBox.shrink();
     }
 
-    return SizedBox(
-      height: 240,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: _ads.length,
-        itemBuilder: (context, index) {
-          final ad = _ads[index];
-          // Record view when ad is built
-          _adsService.recordAdView(ad.id);
-          
-          return _AdCard(
-            ad: ad,
-            onShopNow: () {
-              _adsService.recordAdClick(ad.id);
-              _adsService.recordStoreVisit(ad.id);
-              _openStoreProfile(ad.storeId, ad.storeName);
-            },
-            isLast: index == _ads.length - 1,
-          );
-        },
+    // Show only the first ad
+    final ad = _ads.first;
+    
+    // Debug logging
+    print('🎯 Ad Card Data:');
+    print('  Store ID: ${ad.storeId}');
+    print('  Store Name: ${ad.storeName}');
+    print('  Store Logo: ${ad.storeLogo}');
+    print('  Images: ${ad.images.length} images');
+    
+    _adsService.recordAdView(ad.id);
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 20, right: 20),
+      child: SizedBox(
+        height: 240,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Main ad card
+            _AdCard(
+              ad: ad,
+              onShopNow: () {
+                print('🛍️ Card clicked for store: ${ad.storeName} (${ad.storeId})');
+                _adsService.recordAdClick(ad.id);
+                _adsService.recordStoreVisit(ad.id);
+                _openStoreProfile(ad.storeId, ad.storeName);
+              },
+            ),
+            
+            // White overlay card at bottom right (creates cutout effect)
+            Positioned(
+              right: -12,
+              bottom: -12,
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+            
+            // Arrow button on top
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: GestureDetector(
+                onTap: () {
+                  print('🛍️ Arrow clicked for store: ${ad.storeName} (${ad.storeId})');
+                  _adsService.recordAdClick(ad.id);
+                  _adsService.recordStoreVisit(ad.id);
+                  _openStoreProfile(ad.storeId, ad.storeName);
+                },
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.arrow_outward,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -382,104 +601,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
-  Widget _buildProductsGrid() {
-    if (_isLoading) {
-      return const Expanded(
-        child: Center(
-          child: CircularProgressIndicator(color: Colors.black),
-        ),
-      );
-    }
 
-    if (_error != null) {
-      return Expanded(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Iconsax.warning_2, size: 48, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                _error!,
-                style: GoogleFonts.poppins(color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _subscribeToProducts,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                ),
-                child: Text('Retry', style: GoogleFonts.poppins()),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (_products.isEmpty) {
-      return Expanded(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Iconsax.box, size: 48, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'No products found',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Try a different category',
-                style: GoogleFonts.poppins(color: Colors.grey[500]),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Expanded(
-      child: RefreshIndicator(
-        onRefresh: () async {
-          _subscribeToProducts();
-        },
-        color: Colors.black,
-        child: GridView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.55,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
-          itemCount: _products.length + (_isLoadingMore ? 2 : 0),
-          itemBuilder: (context, index) {
-            // Show loading indicator at the bottom
-            if (index >= _products.length) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: CircularProgressIndicator(
-                    color: Colors.grey[400],
-                    strokeWidth: 2,
-                  ),
-                ),
-              );
-            }
-            return _buildProductCard(_products[index]);
-          },
-        ),
-      ),
-    );
-  }
 
   Widget _buildProductCard(Product product) {
     // Get currency fresh each time to handle updates
@@ -648,15 +770,25 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       Expanded(
                         child: GestureDetector(
                           onTap: () => _openStoreProfile(product.storeId, product.storeName),
-                          child: Text(
-                            product.storeName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey[600],
-                            ),
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  product.storeName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ),
+                              if (product.isStoreVerified) ...[
+                                const SizedBox(width: 3),
+                                const Icon(Icons.verified, size: 12, color: Colors.blue),
+                              ],
+                            ],
                           ),
                         ),
                       ),
@@ -1063,16 +1195,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 }
 
 
-// Ad Card Widget with Image Carousel
+// Ad Card Widget with Auto-scrolling Image Carousel
 class _AdCard extends StatefulWidget {
   final Ad ad;
   final VoidCallback onShopNow;
-  final bool isLast;
 
   const _AdCard({
     required this.ad,
     required this.onShopNow,
-    this.isLast = false,
   });
 
   @override
@@ -1082,9 +1212,32 @@ class _AdCard extends StatefulWidget {
 class _AdCardState extends State<_AdCard> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  Timer? _autoScrollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAutoScroll();
+  }
+
+  void _startAutoScroll() {
+    if (widget.ad.images.length <= 1) return;
+    
+    _autoScrollTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (_pageController.hasClients) {
+        final nextPage = (_currentPage + 1) % widget.ad.images.length;
+        _pageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _autoScrollTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -1092,8 +1245,7 @@ class _AdCardState extends State<_AdCard> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: MediaQuery.of(context).size.width - 40,
-      margin: EdgeInsets.only(right: widget.isLast ? 0 : 12),
+      height: 240,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         color: Colors.black,
@@ -1116,14 +1268,19 @@ class _AdCardState extends State<_AdCard> {
                       imageUrl: widget.ad.images[index],
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
-                        color: Colors.grey[900],
-                        child: const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
+                        color: Colors.grey[300],
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.grey[600],
+                            strokeWidth: 2,
+                          ),
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        color: Colors.grey[900],
-                        child: const Icon(Iconsax.image, size: 50, color: Colors.white),
+                        color: Colors.grey[300],
+                        child: Center(
+                          child: Icon(Iconsax.image, size: 50, color: Colors.grey[600]),
+                        ),
                       ),
                     );
                   },
@@ -1148,65 +1305,12 @@ class _AdCardState extends State<_AdCard> {
             ),
           ),
 
-          // Decorative circles
-          Positioned(
-            right: -30,
-            top: -30,
-            child: Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
-              ),
-            ),
-          ),
-
           // Content
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Store info row
-                Row(
-                  children: [
-                    // Store logo
-                    if (widget.ad.storeLogo != null)
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundImage: CachedNetworkImageProvider(widget.ad.storeLogo!),
-                        backgroundColor: Colors.white,
-                      )
-                    else
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.white,
-                        child: Text(
-                          widget.ad.storeName.isNotEmpty ? widget.ad.storeName[0] : 'S',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        widget.ad.storeName,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                
                 const Spacer(),
 
                 // Page indicators
@@ -1228,36 +1332,6 @@ class _AdCardState extends State<_AdCard> {
                       ),
                     ),
                   ),
-                
-                const SizedBox(height: 16),
-
-                // Shop button
-                GestureDetector(
-                  onTap: widget.onShopNow,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Iconsax.shop, size: 18, color: Colors.black),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Visit Store',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               ],
             ),
           ),

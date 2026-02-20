@@ -374,13 +374,9 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(_storeData?['name'] ?? widget.storeName, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
-              if (_storeData?['isVerified'] == true) ...[
+              if (_storeData?['verificationStatus'] == 'verified') ...[
                 const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-                  child: const Icon(Icons.check, size: 12, color: Colors.white),
-                ),
+                const Icon(Icons.verified, size: 20, color: Colors.blue),
               ],
             ],
           ),

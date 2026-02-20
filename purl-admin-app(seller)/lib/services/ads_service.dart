@@ -20,10 +20,26 @@ class AdsService {
     if (_userId == null) throw Exception('User not authenticated');
 
     try {
+      // Get the store ID for the current user
+      final storeQuery = await _firestore
+          .collection('stores')
+          .where('authorizedUsers', arrayContains: _userId)
+          .limit(1)
+          .get();
+
+      if (storeQuery.docs.isEmpty) {
+        throw Exception('No store found for current user');
+      }
+
+      final storeId = storeQuery.docs.first.id;
+      final storeData = storeQuery.docs.first.data();
+      final storeName = storeData['storeName'] ?? 'Unknown Store';
+      final storeLogo = storeData['logo'] as String?;
+
       // Upload images to Firebase Storage
       final List<String> imageUrls = [];
       for (int i = 0; i < images.length; i++) {
-        final fileName = 'ads/$_userId/${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+        final fileName = 'ads/$storeId/${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
         final ref = _storage.ref().child(fileName);
         await ref.putFile(images[i]);
         final url = await ref.getDownloadURL();
@@ -33,14 +49,11 @@ class AdsService {
       // Calculate total views
       final totalViews = (budget * 1024).toInt();
 
-      // Get store info
-      final storeDoc = await _firestore.collection('stores').doc(_userId).get();
-      final storeName = storeDoc.data()?['storeName'] ?? 'Unknown Store';
-
       // Create ad document
       final adData = {
-        'storeId': _userId,
+        'storeId': storeId, // Now using actual storeId instead of userId
         'storeName': storeName,
+        'storeLogo': storeLogo,
         'title': title,
         'images': imageUrls,
         'budget': budget,
@@ -62,12 +75,29 @@ class AdsService {
   }
 
   // Get all ads for current store
-  Stream<List<Map<String, dynamic>>> getMyAds() {
-    if (_userId == null) return Stream.value([]);
+  Stream<List<Map<String, dynamic>>> getMyAds() async* {
+    if (_userId == null) {
+      yield [];
+      return;
+    }
 
-    return _firestore
+    // Get the store ID for the current user
+    final storeQuery = await _firestore
+        .collection('stores')
+        .where('authorizedUsers', arrayContains: _userId)
+        .limit(1)
+        .get();
+
+    if (storeQuery.docs.isEmpty) {
+      yield [];
+      return;
+    }
+
+    final storeId = storeQuery.docs.first.id;
+
+    yield* _firestore
         .collection('ads')
-        .where('storeId', isEqualTo: _userId)
+        .where('storeId', isEqualTo: storeId)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
@@ -80,12 +110,29 @@ class AdsService {
   }
 
   // Get active ads only
-  Stream<List<Map<String, dynamic>>> getActiveAds() {
-    if (_userId == null) return Stream.value([]);
+  Stream<List<Map<String, dynamic>>> getActiveAds() async* {
+    if (_userId == null) {
+      yield [];
+      return;
+    }
 
-    return _firestore
+    // Get the store ID for the current user
+    final storeQuery = await _firestore
+        .collection('stores')
+        .where('authorizedUsers', arrayContains: _userId)
+        .limit(1)
+        .get();
+
+    if (storeQuery.docs.isEmpty) {
+      yield [];
+      return;
+    }
+
+    final storeId = storeQuery.docs.first.id;
+
+    yield* _firestore
         .collection('ads')
-        .where('storeId', isEqualTo: _userId)
+        .where('storeId', isEqualTo: storeId)
         .where('status', isEqualTo: 'active')
         .orderBy('createdAt', descending: true)
         .snapshots()
@@ -112,9 +159,27 @@ class AdsService {
     if (_userId == null) return {};
 
     try {
+      // Get the store ID for the current user
+      final storeQuery = await _firestore
+          .collection('stores')
+          .where('authorizedUsers', arrayContains: _userId)
+          .limit(1)
+          .get();
+
+      if (storeQuery.docs.isEmpty) {
+        return {
+          'totalViews': 0,
+          'totalClicks': 0,
+          'totalSpent': 0.0,
+          'ctr': 0.0,
+        };
+      }
+
+      final storeId = storeQuery.docs.first.id;
+
       final snapshot = await _firestore
           .collection('ads')
-          .where('storeId', isEqualTo: _userId)
+          .where('storeId', isEqualTo: storeId)
           .get();
 
       int totalViews = 0;

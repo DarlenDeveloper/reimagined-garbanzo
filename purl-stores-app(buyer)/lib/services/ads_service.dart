@@ -15,28 +15,34 @@ class AdsService {
         .limit(limit)
         .snapshots()
         .asyncMap((snapshot) async {
-      // Fetch store logos for each ad
+      // Fetch store data for each ad
       final ads = <Ad>[];
       for (final doc in snapshot.docs) {
         final ad = Ad.fromFirestore(doc);
         
-        // Fetch store logo if not present
+        // Fetch store data (name and logo)
+        String storeName = ad.storeName;
         String? storeLogo = ad.storeLogo;
-        if (storeLogo == null) {
-          try {
-            final storeDoc = await _firestore.collection('stores').doc(ad.storeId).get();
-            if (storeDoc.exists) {
-              storeLogo = storeDoc.data()?['logo'] as String?;
+        
+        try {
+          final storeDoc = await _firestore.collection('stores').doc(ad.storeId).get();
+          if (storeDoc.exists) {
+            final storeData = storeDoc.data();
+            // Use actual store name from stores collection
+            storeName = storeData?['storeName'] as String? ?? ad.storeName;
+            // Fetch logo if not in ad
+            if (storeLogo == null) {
+              storeLogo = storeData?['logo'] as String?;
             }
-          } catch (e) {
-            print('Error fetching store logo: $e');
           }
+        } catch (e) {
+          print('❌ Error fetching store data for ${ad.storeId}: $e');
         }
         
         ads.add(Ad(
           id: ad.id,
           storeId: ad.storeId,
-          storeName: ad.storeName,
+          storeName: storeName,
           storeLogo: storeLogo,
           images: ad.images,
           budget: ad.budget,

@@ -689,8 +689,14 @@ class _SearchScreenState extends State<SearchScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (isVerified)
-                        const Icon(Icons.verified, size: 16, color: Colors.blue),
+                      if (isVerified) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+                          child: const Icon(Icons.check, size: 12, color: Colors.white),
+                        ),
+                      ],
                     ],
                   ),
                   if (description.isNotEmpty) ...[

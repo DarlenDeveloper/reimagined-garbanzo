@@ -29,6 +29,19 @@ class ProductService {
     return null;
   }
 
+  /// Get store document (for verification status)
+  Future<DocumentSnapshot<Map<String, dynamic>>?> _getStoreDoc(String storeId) async {
+    try {
+      final doc = await _firestore.collection('stores').doc(storeId).get();
+      if (doc.exists) {
+        return doc;
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+    return null;
+  }
+
   /// Get all active products from all stores
   /// Uses collection group query to fetch across all store subcollections
   Stream<List<Product>> getDiscoverProductsStream({
@@ -54,6 +67,7 @@ class ProductService {
         if (pathSegments.length >= 2) {
           final storeId = pathSegments[1];
           final store = await _getStore(storeId);
+          final storeDoc = await _getStoreDoc(storeId);
           
           if (store != null) {
             products.add(Product.fromFirestore(
@@ -61,6 +75,7 @@ class ProductService {
               storeId,
               store.name,
               store.logoUrl,
+              storeDoc?.data()?['verificationStatus'] as String?,
             ));
           }
         }
@@ -85,12 +100,14 @@ class ProductService {
         .snapshots()
         .asyncMap((snapshot) async {
       final store = await _getStore(storeId);
+      final storeDoc = await _getStoreDoc(storeId);
       
       return snapshot.docs.map((doc) => Product.fromFirestore(
         doc,
         storeId,
         store?.name ?? 'Unknown Store',
         store?.logoUrl,
+        storeDoc?.data()?['verificationStatus'] as String?,
       )).toList();
     });
   }
@@ -108,11 +125,13 @@ class ProductService {
       if (!doc.exists) return null;
 
       final store = await _getStore(storeId);
+      final storeDoc = await _getStoreDoc(storeId);
       return Product.fromFirestore(
         doc,
         storeId,
         store?.name ?? 'Unknown Store',
         store?.logoUrl,
+        storeDoc?.data()?['verificationStatus'] as String?,
       );
     } catch (e) {
       return null;
@@ -143,6 +162,7 @@ class ProductService {
         if (pathSegments.length >= 2) {
           final storeId = pathSegments[1];
           final store = await _getStore(storeId);
+          final storeDoc = await _getStoreDoc(storeId);
           
           if (store != null) {
             products.add(Product.fromFirestore(
@@ -150,6 +170,7 @@ class ProductService {
               storeId,
               store.name,
               store.logoUrl,
+              storeDoc?.data()?['verificationStatus'] as String?,
             ));
           }
         }
@@ -177,6 +198,7 @@ class ProductService {
         if (pathSegments.length >= 2) {
           final storeId = pathSegments[1];
           final store = await _getStore(storeId);
+          final storeDoc = await _getStoreDoc(storeId);
           
           if (store != null) {
             products.add(Product.fromFirestore(
@@ -184,6 +206,7 @@ class ProductService {
               storeId,
               store.name,
               store.logoUrl,
+              storeDoc?.data()?['verificationStatus'] as String?,
             ));
           }
         }
