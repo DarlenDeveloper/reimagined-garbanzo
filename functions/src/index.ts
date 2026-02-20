@@ -4,6 +4,7 @@ import {setGlobalOptions} from "firebase-functions/v2";
 import {defineSecret} from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import axios from "axios";
+import * as crypto from "crypto";
 
 admin.initializeApp();
 
@@ -16,6 +17,16 @@ setGlobalOptions({
   region: "africa-south1",
   maxInstances: 10,
 });
+
+/**
+ * Encrypt card data using 3DES encryption for Flutterwave
+ */
+function encrypt3DES(text: string, key: string): string {
+  const cipher = crypto.createCipheriv("des-ede3", key, "");
+  let encrypted = cipher.update(text, "utf8", "base64");
+  encrypted += cipher.final("base64");
+  return encrypted;
+}
 
 /**
  * Send notification to a specific FCM token
@@ -923,8 +934,8 @@ export const chargeCard = onCall(
     console.log(`💳 Charging card for ${txRef}`);
 
     try {
-      // Prepare card data
-      const cardData: any = {
+      // Encrypt card data using 3DES
+      const cardDataToEncrypt = JSON.stringify({
         card_number: cardNumber,
         cvv: cvv,
         expiry_month: expiryMonth,
@@ -935,6 +946,13 @@ export const chargeCard = onCall(
         fullname: fullname,
         phone_number: phoneNumber,
         tx_ref: txRef,
+      });
+
+      const encryptedCardData = encrypt3DES(cardDataToEncrypt, FLW_ENCRYPTION_KEY);
+
+      // Prepare request payload
+      const payload = {
+        client: encryptedCardData,
         // Client info for fraud prevention
         client_ip: "154.123.220.1",
         device_fingerprint: "62wd23423rq324323qew1",
@@ -945,7 +963,7 @@ export const chargeCard = onCall(
       // Call Flutterwave charge endpoint
       const response = await axios.post(
         "https://api.flutterwave.com/v3/charges?type=card",
-        cardData,
+        payload,
         {
           headers: {
             Authorization: `Bearer ${FLW_SECRET_KEY}`,

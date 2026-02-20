@@ -155,6 +155,7 @@ class _StoreChatScreenState extends State<StoreChatScreen> {
                           final messages = snapshot.data!;
                           return ListView.builder(
                             controller: _scrollController,
+                            reverse: true, // Show newest messages at bottom
                             padding: const EdgeInsets.all(16),
                             itemCount: messages.length,
                             itemBuilder: (context, index) {

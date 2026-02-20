@@ -13,6 +13,7 @@ import '../services/messages_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/cart_service.dart';
 import '../services/ads_service.dart';
+import 'search_screen.dart';
 import 'product_detail_screen.dart';
 import 'order_history_screen.dart';
 import 'store_map_screen.dart';
@@ -311,31 +312,32 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Search products...',
-          hintStyle: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 14),
-          prefixIcon: Icon(Iconsax.search_normal, size: 20, color: Colors.grey[500]),
-          filled: true,
-          fillColor: Colors.grey[100],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        ),
-        onSubmitted: (query) {
-          // TODO: Implement search
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SearchScreen(),
+            ),
+          );
         },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Row(
+            children: [
+              Icon(Iconsax.search_normal, size: 20, color: Colors.grey[500]),
+              const SizedBox(width: 12),
+              Text(
+                'Search products...',
+                style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 14),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

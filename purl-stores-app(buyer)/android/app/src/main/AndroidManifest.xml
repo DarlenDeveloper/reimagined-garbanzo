@@ -16,6 +16,9 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         
+        <!-- Fix for Apache HTTP library (required for Google Maps) -->
+        <uses-library android:name="org.apache.http.legacy" android:required="false"/>
+        
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
