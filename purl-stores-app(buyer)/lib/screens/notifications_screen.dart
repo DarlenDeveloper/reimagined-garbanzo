@@ -166,16 +166,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withAlpha(25),
+                    color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Iconsax.notification, color: Colors.blue, size: 20),
+                      const Icon(Iconsax.notification, color: Colors.black, size: 20),
                       const SizedBox(width: 12),
                       Text(
                         '$unreadCount unread notification${unreadCount > 1 ? 's' : ''}',
-                        style: GoogleFonts.poppins(color: Colors.blue, fontWeight: FontWeight.w500),
+                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -209,9 +209,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: isRead ? Colors.grey[100] : Colors.blue.withAlpha(15),
+                          color: isRead ? Colors.grey[100] : Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: isRead ? null : Border.all(color: Colors.blue.withAlpha(50)),
+                          border: isRead ? null : Border.all(color: Colors.black.withAlpha(30)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,7 +245,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                           width: 8,
                                           height: 8,
                                           decoration: const BoxDecoration(
-                                            color: Colors.blue,
+                                            color: Colors.black,
                                             shape: BoxShape.circle,
                                           ),
                                         ),

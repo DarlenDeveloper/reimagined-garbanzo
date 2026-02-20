@@ -3,9 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/search_service.dart';
 import '../services/currency_service.dart';
+import '../services/wishlist_service.dart';
 import '../theme/colors.dart';
+import 'store_profile_screen.dart';
+import 'product_detail_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -17,6 +21,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _controller = TextEditingController();
   final _searchService = SearchService();
+  final _wishlistService = WishlistService();
   
   String searchQuery = '';
   int _selectedTab = 0; // 0 = Products, 1 = Stores
@@ -56,7 +61,13 @@ class _SearchScreenState extends State<SearchScreen> {
 
     setState(() => isLoadingSuggestions = true);
 
-    final suggestions = await _searchService.getSearchSuggestions(query);
+    // Get suggestions based on selected tab
+    List<String> suggestions;
+    if (_selectedTab == 0) {
+      suggestions = await _searchService.getSearchSuggestions(query);
+    } else {
+      suggestions = await _searchService.getStoreSuggestions(query);
+    }
     
     setState(() {
       searchSuggestions = suggestions;
@@ -68,6 +79,8 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<void> _performSearch(String query) async {
     if (query.isEmpty) return;
 
+    print('🔎 Performing search for: "$query" on tab: ${_selectedTab == 0 ? "Products" : "Stores"}');
+
     setState(() {
       isSearching = true;
       showResults = true;
@@ -75,14 +88,18 @@ class _SearchScreenState extends State<SearchScreen> {
 
     if (_selectedTab == 0) {
       // Search products
+      print('📱 Searching products...');
       final results = await _searchService.searchProducts(query);
+      print('📱 Got ${results.length} product results');
       setState(() {
         searchResults = results;
         isSearching = false;
       });
     } else {
       // Search stores
+      print('🏪 Searching stores...');
       final results = await _searchService.searchStores(query);
+      print('🏪 Got ${results.length} store results');
       setState(() {
         storeResults = results;
         isSearching = false;
@@ -104,45 +121,50 @@ class _SearchScreenState extends State<SearchScreen> {
           icon: const Icon(Iconsax.arrow_left, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Container(
-          height: 44,
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: TextField(
-            controller: _controller,
-            autofocus: true,
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
-            decoration: InputDecoration(
-              hintText: 'Search products, brands...',
-              hintStyle: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[500]),
-              prefixIcon: Icon(Iconsax.search_normal, color: Colors.grey[500], size: 20),
-              suffixIcon: searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Iconsax.close_circle, color: Colors.grey[500], size: 20),
-                      onPressed: () {
-                        _controller.clear();
-                        setState(() {
-                          searchQuery = '';
-                          showResults = false;
-                          searchSuggestions = [];
-                        });
-                      },
-                    )
-                  : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        title: Material(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            height: 44,
+            margin: const EdgeInsets.only(right: 16),
+            child: TextField(
+              controller: _controller,
+              autofocus: true,
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
+              decoration: InputDecoration(
+                hintText: 'Search products, brands...',
+                hintStyle: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[500]),
+                prefixIcon: Icon(Iconsax.search_normal, color: Colors.grey[500], size: 20),
+                suffixIcon: searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Iconsax.close_circle, color: Colors.grey[500], size: 20),
+                        onPressed: () {
+                          _controller.clear();
+                          setState(() {
+                            searchQuery = '';
+                            showResults = false;
+                            searchSuggestions = [];
+                          });
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                filled: true,
+                fillColor: Colors.transparent,
+              ),
+              onChanged: (value) {
+                setState(() => searchQuery = value);
+                _getSuggestions(value);
+              },
+              onSubmitted: (query) {
+                if (query.isNotEmpty) {
+                  _performSearch(query);
+                }
+              },
             ),
-            onChanged: (value) {
-              setState(() => searchQuery = value);
-              _getSuggestions(value);
-            },
-            onSubmitted: (query) {
-              if (query.isNotEmpty) {
-                _performSearch(query);
-              }
-            },
           ),
         ),
       ),
@@ -179,8 +201,10 @@ class _SearchScreenState extends State<SearchScreen> {
     final isSelected = _selectedTab == index;
     return GestureDetector(
       onTap: () {
+        print('🔄 Switching to tab: $label (index: $index)');
         setState(() => _selectedTab = index);
         if (searchQuery.isNotEmpty && showResults) {
+          print('🔄 Re-searching with query: "$searchQuery"');
           _performSearch(searchQuery);
         }
       },
@@ -363,84 +387,184 @@ class _SearchScreenState extends State<SearchScreen> {
     final name = product['name'] ?? 'Product';
     final price = (product['price'] ?? 0).toDouble();
     final currency = product['currency'] ?? 'UGX';
-    final images = product['images'] as List<dynamic>? ?? [];
-    final imageUrl = images.isNotEmpty ? images[0] : '';
+    final productId = product['id'];
+    final storeId = product['storeId'];
+    final storeName = product['storeName'] ?? 'Store';
+    final primaryImageUrl = product['primaryImageUrl'];
     final isFeatured = product['isFeatured'] ?? false;
-    final rating = (product['rating'] ?? 0).toDouble();
     
     final currencyData = CurrencyService.currencies[currency];
     final symbol = currencyData?.symbol ?? currency;
-    final formattedPrice = '$symbol ${price.toStringAsFixed(0)}';
+    
+    // Format price with k/M suffix and space
+    String formattedPrice;
+    if (price >= 1000000) {
+      formattedPrice = '$symbol ${(price / 1000000).toStringAsFixed(1)}M';
+    } else if (price >= 1000) {
+      formattedPrice = '$symbol ${(price / 1000).toStringAsFixed(0)}k';
+    } else {
+      formattedPrice = '$symbol ${price.toStringAsFixed(0)}';
+    }
 
     return GestureDetector(
       onTap: () {
-        final productId = product['id'];
-        final storeId = product['storeId'];
         if (productId != null && storeId != null) {
-          context.push('/product/$storeId/$productId');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProductDetailScreen(
+                productId: productId,
+                productName: name,
+                storeName: storeName,
+                storeId: storeId,
+              ),
+            ),
+          );
         }
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!),
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Stack(
-              children: [
-                Container(
-                  height: 140,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  ),
-                  child: imageUrl.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                          child: CachedNetworkImage(
-                            imageUrl: imageUrl,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                            errorWidget: (context, url, error) => const Icon(Icons.image, size: 40),
+            // Product image
+            Expanded(
+              child: Stack(
+                children: [
+                  // Image
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    child: primaryImageUrl != null
+                        ? ClipRRect(
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                            child: CachedNetworkImage(
+                              imageUrl: primaryImageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Center(
+                                child: Icon(Iconsax.box, size: 50, color: Colors.grey[400]),
+                              ),
+                              errorWidget: (context, url, error) => Center(
+                                child: Icon(Iconsax.box, size: 50, color: Colors.grey[400]),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Icon(Iconsax.box, size: 50, color: Colors.grey[400]),
                           ),
-                        )
-                      : const Center(child: Icon(Icons.image, size: 40)),
-                ),
-                if (isFeatured)
+                  ),
+                  // Featured badge
+                  if (isFeatured)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Top Item',
+                          style: GoogleFonts.poppins(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  // Favorite button
                   Positioned(
                     top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.orange,
-                        borderRadius: BorderRadius.circular(4),
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () async {
+                        if (productId == null || storeId == null) {
+                          print('❌ Cannot add to wishlist: productId=$productId, storeId=$storeId');
+                          return;
+                        }
+                        
+                        final userId = FirebaseAuth.instance.currentUser?.uid;
+                        if (userId == null) {
+                          print('❌ User not logged in');
+                          return;
+                        }
+                        
+                        try {
+                          await _wishlistService.toggleWishlist(
+                            userId: userId,
+                            productId: productId,
+                            storeId: storeId,
+                            productName: name,
+                            price: price,
+                            currency: currency,
+                            productImage: primaryImageUrl,
+                            storeName: storeName,
+                          );
+                          
+                          // Show feedback
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Added to wishlist'),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          print('❌ Wishlist error: $e');
+                        }
+                      },
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Iconsax.heart,
+                          size: 14,
+                          color: Colors.black,
+                        ),
                       ),
-                      child: Text('Top Item', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
+            // Product info
             Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.star, size: 12, color: Colors.orange),
-                      const SizedBox(width: 4),
-                      Text(rating.toStringAsFixed(1), style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
-                    ],
+                  Text(
+                    name,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(formattedPrice, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700)),
+                  Text(
+                    formattedPrice,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -492,16 +616,25 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildStoreCard(Map<String, dynamic> store) {
     final name = store['name'] ?? 'Store';
     final description = store['description'] ?? '';
-    final logo = store['logo'] ?? '';
+    final logoUrl = store['logoUrl'] ?? '';
     final isVerified = store['isVerified'] ?? false;
     final rating = (store['rating'] ?? 0).toDouble();
     final followerCount = store['followerCount'] ?? 0;
+    final storeId = store['id'];
 
     return GestureDetector(
       onTap: () {
-        final storeId = store['id'];
         if (storeId != null) {
-          context.push('/store/$storeId');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => StoreProfileScreen(
+                storeId: storeId,
+                storeName: name,
+                storeAvatar: name.isNotEmpty ? name[0] : 'S',
+              ),
+            ),
+          );
         }
       },
       child: Container(
@@ -510,7 +643,13 @@ class _SearchScreenState extends State<SearchScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -520,13 +659,13 @@ class _SearchScreenState extends State<SearchScreen> {
               height: 60,
               decoration: BoxDecoration(
                 color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: logo.isNotEmpty
+              child: logoUrl.isNotEmpty
                   ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(16),
                       child: CachedNetworkImage(
-                        imageUrl: logo,
+                        imageUrl: logoUrl,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
                         errorWidget: (context, url, error) => const Icon(Icons.store, size: 30),

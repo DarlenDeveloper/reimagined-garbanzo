@@ -9,6 +9,7 @@ import '../services/posts_service.dart';
 import '../services/messages_service.dart';
 import '../services/followers_service.dart';
 import '../services/posts_preloader_service.dart';
+import '../services/notification_service.dart';
 import 'messages_screen.dart';
 import 'notifications_screen.dart';
 import 'search_screen.dart';
@@ -28,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final MessagesService _messagesService = MessagesService();
   final FollowersService _followersService = FollowersService();
   final PostsPreloaderService _preloaderService = PostsPreloaderService();
+  final NotificationService _notificationService = NotificationService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
   final Set<String> _likedPosts = {};
@@ -38,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   bool _isLoadingMore = false;
   int _unreadMessageCount = 0;
+  int _unreadNotificationCount = 0;
   DocumentSnapshot? _lastDocument;
   static const int _pageSize = 5;
 
@@ -212,6 +215,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final userId = _auth.currentUser?.uid;
     if (userId == null) return;
 
+    print('🔔 Loading unread counts for user: $userId');
+
     // Listen to conversations for real-time unread count
     _messagesService.getUserConversations(userId).listen((conversations) {
       int totalUnread = 0;
@@ -219,8 +224,29 @@ class _HomeScreenState extends State<HomeScreen> {
         final unreadCount = (conversation['unreadCount'] as Map<String, dynamic>?)?[userId] ?? 0;
         totalUnread += unreadCount as int;
       }
+      print('💬 Message unread count: $totalUnread');
       if (mounted) {
         setState(() => _unreadMessageCount = totalUnread);
+      }
+    });
+    
+    // Listen to notifications for real-time unread count with detailed logging
+    FirebaseFirestore.instance
+        .collection('stores')
+        .doc(userId)
+        .collection('notifications')
+        .snapshots()
+        .listen((snapshot) {
+      print('📦 Total notifications: ${snapshot.docs.length}');
+      int unreadCount = 0;
+      for (var doc in snapshot.docs) {
+        final isRead = doc.data()['isRead'] ?? true;
+        print('  - ${doc.id}: isRead=$isRead');
+        if (!isRead) unreadCount++;
+      }
+      print('🔔 Notification unread count: $unreadCount');
+      if (mounted) {
+        setState(() => _unreadNotificationCount = unreadCount);
       }
     });
   }
@@ -315,9 +341,46 @@ class _HomeScreenState extends State<HomeScreen> {
           const Spacer(),
           _buildHeaderIcon(Iconsax.search_normal, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()))),
           const SizedBox(width: 16),
-          _buildHeaderIcon(Iconsax.notification, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
+          _buildNotificationIcon(),
           const SizedBox(width: 16),
           _buildMessageIcon(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationIcon() {
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(Iconsax.notification, size: 24, color: Colors.black),
+          if (_unreadNotificationCount > 0)
+            Positioned(
+              right: -6,
+              top: -6,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 18,
+                  minHeight: 18,
+                ),
+                child: Text(
+                  _unreadNotificationCount > 99 ? '99+' : '$_unreadNotificationCount',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
         ],
       ),
     );

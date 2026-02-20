@@ -39,6 +39,20 @@ class SearchService {
             description.contains(queryLower)) {
           data['id'] = doc.id;
           data['storeId'] = doc.reference.parent.parent?.id;
+          
+          // Extract primary image URL from images array
+          final images = data['images'];
+          if (images is List && images.isNotEmpty) {
+            // Sort by sortOrder and get first image URL
+            final sortedImages = List.from(images);
+            sortedImages.sort((a, b) {
+              final aOrder = a['sortOrder'] ?? 0;
+              final bOrder = b['sortOrder'] ?? 0;
+              return aOrder.compareTo(bOrder);
+            });
+            data['primaryImageUrl'] = sortedImages.first['url'];
+          }
+          
           results.add(data);
           
           // Limit results to 20
@@ -59,13 +73,15 @@ class SearchService {
 
     try {
       final queryLower = query.toLowerCase().trim();
+      print('🔍 Searching stores for: "$queryLower"');
       
-      // Get all active stores and filter in memory (like products)
+      // Get all stores and filter in memory
       final snapshot = await _firestore
           .collection('stores')
-          .where('isActive', isEqualTo: true)
           .limit(50)
           .get();
+
+      print('📦 Found ${snapshot.docs.length} stores');
 
       final results = <Map<String, dynamic>>[];
       
@@ -78,12 +94,14 @@ class SearchService {
         if (name.contains(queryLower) || description.contains(queryLower)) {
           data['id'] = doc.id;
           results.add(data);
+          print('✅ Match found: ${data['name']}');
           
           // Limit results to 20
           if (results.length >= 20) break;
         }
       }
 
+      print('🎯 Returning ${results.length} store results');
       return results;
     } catch (e) {
       print('❌ Store search error: $e');
@@ -168,6 +186,42 @@ class SearchService {
       return suggestions.toList();
     } catch (e) {
       print('❌ Suggestions error: $e');
+      return [];
+    }
+  }
+
+  /// Get store name suggestions (autocomplete)
+  Future<List<String>> getStoreSuggestions(String query) async {
+    if (query.isEmpty) return [];
+
+    try {
+      final queryLower = query.toLowerCase().trim();
+      
+      // Get stores and extract names
+      final snapshot = await _firestore
+          .collection('stores')
+          .limit(50)
+          .get();
+
+      final suggestions = <String>{};  // Use Set to avoid duplicates
+      
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final name = (data['name'] ?? '').toString();
+        final nameLower = name.toLowerCase();
+        
+        // Check if name contains the query
+        if (nameLower.contains(queryLower)) {
+          suggestions.add(name);
+          
+          // Limit to 10 suggestions
+          if (suggestions.length >= 10) break;
+        }
+      }
+
+      return suggestions.toList();
+    } catch (e) {
+      print('❌ Store suggestions error: $e');
       return [];
     }
   }
