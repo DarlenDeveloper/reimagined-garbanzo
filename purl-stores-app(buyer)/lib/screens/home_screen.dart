@@ -323,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.asset(
-              'assets/images/mainpurllogo.png',
+              'assets/images/wibblelogo.png',
               width: 32,
               height: 32,
               fit: BoxFit.cover,
@@ -338,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          Text('Purl Stores', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
+          Text('Wibble', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
           const Spacer(),
           _buildHeaderIcon(Iconsax.search_normal, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()))),
           const SizedBox(width: 16),
@@ -732,7 +732,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _sharePost(Map<String, dynamic> post) {
-    final shareText = '${post['storeName']}: ${post['content']}\n\nShop on Purl Stores';
+    final shareText = '${post['storeName']}: ${post['content']}\n\nShop on Wibble';
     Share.share(shareText);
   }
 

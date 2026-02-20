@@ -137,7 +137,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(20),
                       child: Image.asset(
-                        'assets/images/mainpurllogo.png',
+                        'assets/images/wibblelogo.png',
                         width: 70,
                         height: 70,
                         fit: BoxFit.cover,
@@ -145,7 +145,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Purl Stores',
+                      'Wibble',
                       style: GoogleFonts.poppins(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,

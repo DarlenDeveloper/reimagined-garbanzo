@@ -1,5 +1,5 @@
 name: purl_stores
-description: "Purl Stores - Shop from your favorite stores"
+description: "Wibble - Shop from your favorite stores"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -49,9 +49,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/mainpurllogo.png"
+  image_path: "assets/images/wibblelogo.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/mainpurllogo.png"
+  adaptive_icon_foreground: "assets/images/wibblelogo.png"
 
 flutter:
   uses-material-design: true
