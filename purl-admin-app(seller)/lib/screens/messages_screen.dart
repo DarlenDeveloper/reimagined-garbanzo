@@ -138,7 +138,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
         final userDoc = await _firestore.collection('users').doc(userId).get();
         if (userDoc.exists) {
           final userData = userDoc.data();
-          if (userData?['name'] != null && userData!['name'].toString().isNotEmpty) {
+          // Try firstName first, then fall back to name
+          if (userData?['firstName'] != null && userData!['firstName'].toString().isNotEmpty) {
+            userName = userData['firstName'];
+          } else if (userData?['name'] != null && userData!['name'].toString().isNotEmpty) {
             userName = userData['name'];
           }
         }

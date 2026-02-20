@@ -1,88 +1,96 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'currency_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// PaymentService for managing seller payments and transactions
+/// This is separate from FlutterwaveService which handles payment processing
 class PaymentService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final CurrencyService _currencyService = CurrencyService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Get store's payment transactions stream
-  Stream<PaymentData> getPaymentDataStream() async* {
-    final user = _auth.currentUser;
-    if (user == null) {
-      yield PaymentData(balance: 0, transactions: [], currency: 'UGX');
-      return;
+  /// Get payment data stream for current seller
+  Stream<PaymentData> getPaymentDataStream() {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) {
+      return Stream.value(PaymentData(balance: 0, transactions: [], currency: 'UGX'));
     }
 
-    // Get store ID from stores where user is authorized
-    final storeQuery = await _firestore
-        .collection('stores')
-        .where('authorizedUsers', arrayContains: user.uid)
-        .limit(1)
-        .get();
-    
-    if (storeQuery.docs.isEmpty) {
-      yield PaymentData(balance: 0, transactions: [], currency: 'UGX');
-      return;
-    }
-
-    final storeId = storeQuery.docs.first.id;
-    final storeData = storeQuery.docs.first.data();
-    final storeCurrency = storeData['currency'] as String? ?? 'UGX';
-
-    // Listen to orders for this store
-    await for (var snapshot in _firestore
-        .collection('stores')
-        .doc(storeId)
-        .collection('orders')
-        .orderBy('createdAt', descending: true)
-        .snapshots()) {
-      
-      final transactions = <PaymentTransaction>[];
-      double balance = 0;
-
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final total = (data['total'] ?? 0).toDouble();
-        final orderNumber = data['orderNumber'] ?? '';
-        final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-        
-        // Get commission from order (tiered: 10%-3% based on order total)
-        final commission = (data['commission'] ?? 0).toDouble();
-        final sellerPayout = (data['sellerPayout'] ?? (total - commission)).toDouble();
-
-        // Add sale transaction
-        transactions.add(PaymentTransaction(
-          type: 'Sale',
-          amount: total,
-          orderId: orderNumber,
-          date: createdAt,
-          isPositive: true,
-          currency: storeCurrency,
-        ));
-
-        // Add commission transaction
-        if (commission > 0) {
-          transactions.add(PaymentTransaction(
-            type: 'Commission',
-            amount: commission,
-            orderId: orderNumber,
-            date: createdAt,
-            isPositive: false,
-            currency: storeCurrency,
-          ));
-        }
-
-        // Calculate balance (seller payout)
-        balance += sellerPayout;
+    return _firestore
+        .collection('sellers')
+        .doc(userId)
+        .snapshots()
+        .asyncMap((sellerDoc) async {
+      if (!sellerDoc.exists) {
+        return PaymentData(balance: 0, transactions: [], currency: 'UGX');
       }
 
-      yield PaymentData(balance: balance, transactions: transactions, currency: storeCurrency);
-    }
+      final data = sellerDoc.data()!;
+      final balance = (data['balance'] ?? 0).toDouble();
+      final currency = data['currency'] ?? 'UGX';
+
+      // Get recent transactions
+      final transactionsSnapshot = await _firestore
+          .collection('sellers')
+          .doc(userId)
+          .collection('transactions')
+          .orderBy('createdAt', descending: true)
+          .limit(50)
+          .get();
+
+      final transactions = transactionsSnapshot.docs
+          .map((doc) => PaymentTransaction.fromFirestore(doc))
+          .toList();
+
+      return PaymentData(
+        balance: balance,
+        transactions: transactions,
+        currency: currency,
+      );
+    });
+  }
+
+  /// Request payout
+  Future<void> requestPayout({
+    required double amount,
+    required String method,
+    required Map<String, dynamic> details,
+  }) async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) throw Exception('User not authenticated');
+
+    // Create payout request
+    await _firestore
+        .collection('sellers')
+        .doc(userId)
+        .collection('payouts')
+        .add({
+      'amount': amount,
+      'method': method,
+      'details': details,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    // Deduct from balance
+    await _firestore.collection('sellers').doc(userId).update({
+      'balance': FieldValue.increment(-amount),
+    });
+
+    // Add transaction record
+    await _firestore
+        .collection('sellers')
+        .doc(userId)
+        .collection('transactions')
+        .add({
+      'type': 'payout',
+      'amount': -amount,
+      'method': method,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 }
 
+/// Payment data model
 class PaymentData {
   final double balance;
   final List<PaymentTransaction> transactions;
@@ -95,57 +103,62 @@ class PaymentData {
   });
 }
 
+/// Payment transaction model
 class PaymentTransaction {
-  final String type;
+  final String id;
+  final String type; // 'sale', 'payout', 'refund'
   final double amount;
-  final String orderId;
-  final DateTime date;
-  final bool isPositive;
-  final String currency;
+  final String? method;
+  final String status;
+  final DateTime createdAt;
+  final String? orderId;
+  final String? description;
 
   PaymentTransaction({
+    required this.id,
     required this.type,
     required this.amount,
-    required this.orderId,
-    required this.date,
-    required this.isPositive,
-    required this.currency,
+    this.method,
+    required this.status,
+    required this.createdAt,
+    this.orderId,
+    this.description,
   });
 
-  String get formattedAmount {
-    final prefix = isPositive ? '+' : '-';
-    final symbol = _getCurrencySymbol(currency);
-    return '$prefix$symbol${amount.toStringAsFixed(2)}';
-  }
+  bool get isPositive => amount >= 0;
 
-  String _getCurrencySymbol(String currency) {
-    switch (currency.toUpperCase()) {
-      case 'UGX':
-        return 'USh ';
-      case 'KES':
-        return 'KSh ';
-      case 'TZS':
-        return 'TSh ';
-      case 'USD':
-        return '\$';
-      case 'EUR':
-        return '€';
-      case 'GBP':
-        return '£';
-      default:
-        return '\$';
-    }
+  String get formattedAmount {
+    final absAmount = amount.abs();
+    final prefix = amount >= 0 ? '+' : '-';
+    return '$prefix${absAmount.toStringAsFixed(0)}';
   }
 
   String get formattedDate {
     final now = DateTime.now();
-    final diff = now.difference(date);
+    final diff = now.difference(createdAt);
     
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-    if (diff.inDays < 1) return 'Today';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return '${diff.inDays} days ago';
-    return '${date.day}/${date.month}/${date.year}';
+    if (diff.inDays == 0) {
+      return 'Today';
+    } else if (diff.inDays == 1) {
+      return 'Yesterday';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays} days ago';
+    } else {
+      return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
+    }
+  }
+
+  factory PaymentTransaction.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return PaymentTransaction(
+      id: doc.id,
+      type: data['type'] ?? 'sale',
+      amount: (data['amount'] ?? 0).toDouble(),
+      method: data['method'],
+      status: data['status'] ?? 'completed',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      orderId: data['orderId'],
+      description: data['description'],
+    );
   }
 }

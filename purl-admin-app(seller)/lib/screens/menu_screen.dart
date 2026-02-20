@@ -75,6 +75,7 @@ class MenuScreen extends StatelessWidget {
                       _MenuSection(
                         title: 'Settings',
                         items: [
+                          _MenuItem(icon: Icons.verified_outlined, label: 'Verification', route: '/store-verification'),
                           _MenuItem(icon: Icons.settings_outlined, label: 'Store Settings'),
                           _MenuItem(icon: Icons.payment_outlined, label: 'Payments'),
                           _MenuItem(icon: Icons.local_shipping_outlined, label: 'Shipping'),
@@ -144,10 +145,12 @@ class _MenuSection extends StatelessWidget {
 class _MenuItem extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String? route;
 
   const _MenuItem({
     required this.icon,
     required this.label,
+    this.route,
   });
 
   @override
@@ -162,7 +165,11 @@ class _MenuItem extends StatelessWidget {
         ),
       ),
       trailing: Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
-      onTap: () {},
+      onTap: () {
+        if (route != null) {
+          Navigator.pushNamed(context, route!);
+        }
+      },
     );
   }
 }

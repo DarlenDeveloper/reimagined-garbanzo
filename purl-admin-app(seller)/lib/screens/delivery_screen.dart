@@ -4,8 +4,6 @@ import 'package:iconsax/iconsax.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
-import 'request_delivery_screen.dart';
-import 'courier_search_map_screen.dart';
 import '../services/order_service.dart';
 import '../services/delivery_service.dart';
 import '../services/currency_service.dart';
@@ -1074,16 +1072,14 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
 
       Navigator.pop(context); // Close loading
 
-      // Navigate to courier search map screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CourierSearchMapScreen(
-            deliveryId: deliveryRef.id,
-            storeLocation: storeLocation,
-            buyerLocation: buyerLocation,
-            deliveryFee: deliveryFee,
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Delivery request created successfully',
+            style: GoogleFonts.poppins(),
           ),
+          backgroundColor: Colors.green,
         ),
       );
     } catch (e) {

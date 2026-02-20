@@ -3,17 +3,19 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'notifications_screen.dart';
 import 'analytics_screen.dart';
 import 'discounts_screen.dart';
-import 'request_delivery_screen.dart';
 import 'main_screen.dart';
 import 'messages_screen.dart';
+import 'store_verification_screen.dart';
 import '../services/store_service.dart';
 import '../services/messages_service.dart';
 import '../services/order_service.dart';
 import '../services/currency_service.dart';
 import '../services/visitor_service.dart';
+import '../services/verification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,9 +33,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final _orderService = OrderService();
   final _currencyService = CurrencyService();
   final _visitorService = VisitorService();
+  final _verificationService = VerificationService();
   String _storeName = '';
   String? _storeId;
   bool _isLoading = true;
+  bool _showVerificationBanner = true;
 
   @override
   void initState() {
@@ -46,6 +50,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> _loadStoreData() async {
     try {
+      // Check if banner was dismissed
+      final prefs = await SharedPreferences.getInstance();
+      final bannerDismissed = prefs.getBool('hide_verification_banner') ?? false;
+      setState(() => _showVerificationBanner = !bannerDismissed);
+      
       // Get user's first name and store ID
       final user = FirebaseAuth.instance.currentUser;
       print('👤 Current user: ${user?.uid}');
@@ -207,6 +216,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ],
                   ),
                   const SizedBox(height: 24),
+                  
+                  // Verification Banner
+                  if (_storeId != null) _buildVerificationBanner(),
+                  
                   _buildAnalyticsSection(),
                   const SizedBox(height: 28),
                   _buildRecentOrdersSection(),
@@ -431,12 +444,174 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           children: [
             Expanded(child: _ActionButton(icon: Iconsax.add_square, label: 'Add Product', onTap: () => MainScreen.navigateToTab(context, 2))),
             const SizedBox(width: 12),
-            Expanded(child: _ActionButton(icon: Iconsax.truck_fast, label: 'New Delivery', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RequestDeliveryScreen())))),
+            Expanded(child: _ActionButton(icon: Iconsax.truck_fast, label: 'New Delivery', onTap: () => MainScreen.navigateToTab(context, 3))),
             const SizedBox(width: 12),
             Expanded(child: _ActionButton(icon: Iconsax.ticket_discount, label: 'Discounts', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DiscountsScreen())))),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildVerificationBanner() {
+    return FutureBuilder<VerificationStatus>(
+      future: _verificationService.getVerificationStatus(_storeId!),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        
+        final status = snapshot.data!;
+        
+        // Don't show banner if verified and not expiring soon
+        if (status == VerificationStatus.verified) {
+          return FutureBuilder<bool>(
+            future: _verificationService.isExpiringSoon(_storeId!),
+            builder: (context, expiringSnapshot) {
+              if (expiringSnapshot.data != true) return const SizedBox.shrink();
+              
+              // Show renewal reminder
+              return FutureBuilder<int?>(
+                future: _verificationService.getDaysUntilExpiry(_storeId!),
+                builder: (context, daysSnapshot) {
+                  final days = daysSnapshot.data ?? 0;
+                  // TODO: Create separate renewal screen instead of reusing verification screen
+                  // The renewal screen should:
+                  // - Skip the form step (no owner name, location, ID document)
+                  // - Go directly to payment step
+                  // - Show "Renew Verification" title
+                  // - Call renewVerification() instead of submitVerification()
+                  return _buildBannerCard(
+                    icon: Iconsax.refresh,
+                    title: 'Verification Expiring Soon',
+                    subtitle: 'Renew in $days days to keep your verified badge',
+                    buttonText: 'Renew Now',
+                    color: Colors.orange,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const StoreVerificationScreen(isRenewal: true),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        }
+        
+        // Show banner for non-verified stores
+        if (status == VerificationStatus.none || status == VerificationStatus.expired) {
+          if (!_showVerificationBanner) return const SizedBox.shrink();
+          
+          return _buildBannerCard(
+            icon: Iconsax.verify,
+            title: 'Get Verified',
+            subtitle: 'Stand out with a verified badge • \$4.99/month',
+            buttonText: 'Get Started',
+            color: Colors.blue,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const StoreVerificationScreen(),
+              ),
+            ),
+            onDismiss: () async {
+              setState(() => _showVerificationBanner = false);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('hide_verification_banner', true);
+            },
+          );
+        }
+        
+        // Don't show banner for pending status - they already submitted
+        if (status == VerificationStatus.pending) {
+          return const SizedBox.shrink();
+        }
+        
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Widget _buildBannerCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String? buttonText,
+    required Color color,
+    required VoidCallback? onTap,
+    VoidCallback? onDismiss,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (buttonText != null) ...[
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: onTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  buttonText,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ],
+          if (onDismiss != null) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onDismiss,
+              child: Icon(Icons.close, size: 20, color: Colors.white.withOpacity(0.7)),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

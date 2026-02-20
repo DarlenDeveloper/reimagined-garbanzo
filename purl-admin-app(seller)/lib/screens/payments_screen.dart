@@ -32,6 +32,18 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     }
   }
 
+  String _formatAmount(double amount, String currency) {
+    final symbol = _getCurrencySymbol(currency);
+    
+    if (amount >= 1000000) {
+      return '$symbol${(amount / 1000000).toStringAsFixed(1)}M';
+    } else if (amount >= 1000) {
+      return '$symbol${(amount / 1000).toStringAsFixed(amount >= 10000 ? 0 : 1)}k';
+    } else {
+      return '$symbol${amount.toStringAsFixed(0)}';
+    }
+  }
+
   void _showPayoutSheet(double currentBalance, String currency) {
     final currencySymbol = _getCurrencySymbol(currency);
     final amountController = TextEditingController();
@@ -229,7 +241,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   children: [
                     Text('Available Balance', style: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 14)),
                     const SizedBox(height: 8),
-                    Text('$currencySymbol${balance.toStringAsFixed(2)}', style: GoogleFonts.poppins(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700)),
+                    Text(_formatAmount(balance, currency), style: GoogleFonts.poppins(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () => _showPayoutSheet(balance, currency),
@@ -288,7 +300,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(t.type, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                              Text(t.orderId, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
+                              Text(t.orderId ?? 'N/A', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
                             ],
                           ),
                         ),

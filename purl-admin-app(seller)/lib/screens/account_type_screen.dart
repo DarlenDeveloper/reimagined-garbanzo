@@ -58,7 +58,7 @@ class AccountTypeScreen extends StatelessWidget {
                   'Accept payments & track orders',
                 ],
                 isPrimary: true,
-                onTap: () => context.go('/subscription'),
+                onTap: () => context.go('/store-setup'),
               ),
               const SizedBox(height: 16),
               // Join Store Option

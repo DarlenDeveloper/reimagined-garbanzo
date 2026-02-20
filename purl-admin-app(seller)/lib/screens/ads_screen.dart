@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'create_ad_screen.dart';
+import 'ad_payment_screen.dart';
 import '../services/ads_service.dart';
 
 class AdsScreen extends StatefulWidget {
@@ -548,18 +549,18 @@ class _AdCard extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: Navigate to payment screen
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Payment integration coming soon',
-                              style: GoogleFonts.poppins(),
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AdPaymentScreen(
+                              adId: adId ?? '',
+                              budgetUSD: budget,
+                              adTitle: title,
                             ),
-                            backgroundColor: Colors.black,
-                            behavior: SnackBarBehavior.floating,
                           ),
                         );
+                        // Refresh will happen automatically via stream
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
