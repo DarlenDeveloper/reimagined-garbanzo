@@ -39,7 +39,7 @@ class PurlAdminApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Purl Admin',
+      title: 'Wibble Seller',
       debugShowCheckedModeBanner: false,
       theme: lightTheme,
       routerConfig: router,

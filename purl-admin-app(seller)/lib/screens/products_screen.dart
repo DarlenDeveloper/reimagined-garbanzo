@@ -572,7 +572,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'To start selling on Purl, add your products or import from another platform.',
+              'To start selling on Wibble, add your products or import from another platform.',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 14,

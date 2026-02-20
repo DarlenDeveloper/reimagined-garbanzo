@@ -122,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(18)),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(18),
-                        child: Image.asset('assets/images/mainlogo.png', fit: BoxFit.cover),
+                        child: Image.asset('assets/images/wibblelogo.png', fit: BoxFit.cover),
                       ),
                     ),
                     const SizedBox(height: 16),

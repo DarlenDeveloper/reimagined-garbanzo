@@ -26,12 +26,12 @@ class AccountTypeScreen extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(18),
-                  child: Image.asset('assets/images/mainlogo.png', fit: BoxFit.cover),
+                  child: Image.asset('assets/images/wibblelogo.png', fit: BoxFit.cover),
                 ),
               ),
               const SizedBox(height: 24),
               Text(
-                'Welcome to Purl',
+                'Welcome to Wibble',
                 style: GoogleFonts.poppins(
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
@@ -51,7 +51,7 @@ class AccountTypeScreen extends StatelessWidget {
               _AccountTypeCard(
                 icon: Iconsax.shop,
                 title: 'Create My Store',
-                subtitle: 'Start selling your products on Purl',
+                subtitle: 'Start selling your products on Wibble',
                 features: const [
                   'Set up your own store',
                   'Add products & manage inventory',

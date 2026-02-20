@@ -1,5 +1,5 @@
 name: purl_admin
-description: "Purl Admin - Manage your store and sell products"
+description: "Wibble Seller - Manage your store and sell products"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -54,9 +54,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/mainpurllogo.png"
+  image_path: "assets/images/wibble_seller_launcher.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/mainpurllogo.png"
+  adaptive_icon_foreground: "assets/images/wibble_seller_launcher.png"
 
 flutter:
   uses-material-design: true

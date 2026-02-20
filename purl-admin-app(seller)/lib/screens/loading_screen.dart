@@ -134,16 +134,16 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
                           imageUrl: _logoUrl!,
                           fit: BoxFit.cover,
                           placeholder: (context, url) => Image.asset(
-                            'assets/images/mainpurllogo.png',
+                            'assets/images/wibblelogo.png',
                             fit: BoxFit.cover,
                           ),
                           errorWidget: (context, url, error) => Image.asset(
-                            'assets/images/mainpurllogo.png',
+                            'assets/images/wibblelogo.png',
                             fit: BoxFit.cover,
                           ),
                         )
                       : Image.asset(
-                          'assets/images/mainpurllogo.png',
+                          'assets/images/wibblelogo.png',
                           fit: BoxFit.cover,
                         ),
                 ),
@@ -151,7 +151,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
               const SizedBox(height: 20),
               // Store name or app name
               Text(
-                _storeName ?? 'Purl Admin',
+                _storeName ?? 'Wibble Seller',
                 style: GoogleFonts.poppins(
                   color: Colors.white,
                   fontSize: 18,
