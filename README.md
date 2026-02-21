@@ -109,4 +109,5 @@ flutter run
 
 ## License
 
-Proprietary - PURL Co
+Proprietary - POP
+
