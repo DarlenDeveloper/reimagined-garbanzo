@@ -13,8 +13,7 @@ import 'payments_screen.dart';
 import 'socials_screen.dart';
 import 'users_screen.dart';
 import 'notifications_screen.dart';
-import 'chat_screen.dart';
-import 'marketing_screen.dart';
+import 'ai_customer_service_screen.dart';
 import 'discounts_screen.dart';
 import 'settings_screen.dart';
 import 'messages_screen.dart';
@@ -240,7 +239,6 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
                     _buildMenuItem(Iconsax.chart_2, 'Analytics', () => widget.onNavigateScreen(const AnalyticsScreen())),
                     _buildMenuItem(Iconsax.wallet_2, 'Payments', () => widget.onNavigateScreen(const PaymentsScreen())),
                     _buildMenuItem(Iconsax.discount_shape, 'Discounts', () => widget.onNavigateScreen(DiscountsScreen())),
-                    _buildMenuItem(Iconsax.magicpen, 'Marketing', () => widget.onNavigateScreen(const MarketingScreen())),
                     _buildMenuItem(Iconsax.chart_215, 'Ads', () => widget.onNavigateScreen(const AdsScreen())),
                     
                     const SizedBox(height: 16),
@@ -248,7 +246,7 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
                     
                     _buildMenuItem(Iconsax.gallery, 'Socials', () => widget.onNavigateScreen(const SocialsScreen())),
                     _buildMenuItem(Iconsax.message, 'Messages', () => widget.onNavigateScreen(const MessagesScreen())),
-                    _buildMenuItem(Iconsax.cpu, 'Customer Service', () => widget.onNavigateScreen(const ChatScreen())),
+                    _buildMenuItem(Iconsax.cpu, 'Customer Service', () => widget.onNavigateScreen(const AICustomerServiceScreen())),
                     _buildMenuItem(Iconsax.notification, 'Notifications', () => widget.onNavigateScreen(const NotificationsScreen())),
                     
                     const SizedBox(height: 16),

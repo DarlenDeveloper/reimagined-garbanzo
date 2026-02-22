@@ -8,9 +8,20 @@ class VerificationService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  /// Get verification status for current store
+  // Cache for verification status
+  static final Map<String, _CachedStatus> _statusCache = {};
+  static const Duration _cacheDuration = Duration(hours: 1);
+
+  /// Get verification status for current store (with caching)
   Future<VerificationStatus> getVerificationStatus(String storeId) async {
     try {
+      // Check cache first
+      final cached = _statusCache[storeId];
+      if (cached != null && DateTime.now().difference(cached.timestamp) < _cacheDuration) {
+        print('✅ Using cached verification status: ${cached.status}');
+        return cached.status;
+      }
+
       print('🔍 Checking verification status for store: $storeId');
       final doc = await _firestore.collection('stores').doc(storeId).get();
       
@@ -34,17 +45,33 @@ class VerificationService {
             'isVerified': false,
           });
           print('⏰ Status expired, marked as expired');
-          return VerificationStatus.expired;
+          final result = VerificationStatus.expired;
+          _statusCache[storeId] = _CachedStatus(result, DateTime.now());
+          return result;
         }
       }
 
       final result = VerificationStatus.fromString(status);
       print('✅ Returning status: $result');
+      
+      // Cache the result
+      _statusCache[storeId] = _CachedStatus(result, DateTime.now());
+      
       return result;
     } catch (e) {
       print('❌ Error getting verification status: $e');
       return VerificationStatus.none;
     }
+  }
+
+  /// Clear cache for a specific store (call after status changes)
+  static void clearCache(String storeId) {
+    _statusCache.remove(storeId);
+  }
+
+  /// Clear all cache
+  static void clearAllCache() {
+    _statusCache.clear();
   }
 
   /// Submit verification request
@@ -85,6 +112,9 @@ class VerificationService {
           'submittedAt': FieldValue.serverTimestamp(),
         },
       });
+
+      // Clear cache after status change
+      VerificationService.clearCache(storeId);
 
       return 'success';
     } catch (e) {
@@ -136,6 +166,9 @@ class VerificationService {
         'verificationExpiresAt': Timestamp.fromDate(expiresAt),
         'verificationData.approvedAt': FieldValue.serverTimestamp(),
       });
+
+      // Clear cache after status change
+      VerificationService.clearCache(storeId);
     } catch (e) {
       print('Error approving verification: $e');
       throw Exception('Failed to approve verification');
@@ -173,6 +206,9 @@ class VerificationService {
           'isRenewal': true,
         },
       });
+
+      // Clear cache after status change
+      VerificationService.clearCache(storeId);
     } catch (e) {
       print('Error renewing verification: $e');
       throw Exception('Failed to renew verification');
@@ -249,4 +285,12 @@ enum VerificationStatus {
         return 'Expired';
     }
   }
+}
+
+/// Internal class for caching verification status
+class _CachedStatus {
+  final VerificationStatus status;
+  final DateTime timestamp;
+
+  _CachedStatus(this.status, this.timestamp);
 }
