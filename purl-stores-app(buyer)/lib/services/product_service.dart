@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/product.dart';
 import '../models/store.dart';
 
@@ -9,6 +11,44 @@ class ProductService {
 
   // Cache store info to avoid repeated lookups
   final Map<String, Store> _storeCache = {};
+  
+  // Cache verification status separately for faster access
+  final Map<String, String?> _verificationCache = {};
+  
+  // Persistent cache
+  SharedPreferences? _prefs;
+  bool _cacheInitialized = false;
+
+  /// Initialize cache from SharedPreferences
+  Future<void> _initCache() async {
+    if (_cacheInitialized) return;
+    
+    _prefs = await SharedPreferences.getInstance();
+    final cachedData = _prefs?.getString('product_service_verification_cache');
+    if (cachedData != null) {
+      try {
+        final Map<String, dynamic> decoded = json.decode(cachedData);
+        decoded.forEach((key, value) {
+          _verificationCache[key] = value as String?;
+        });
+        print('📦 ProductService: Loaded ${_verificationCache.length} verification statuses from cache');
+      } catch (e) {
+        print('Error loading ProductService cache: $e');
+      }
+    }
+    _cacheInitialized = true;
+  }
+  
+  /// Save cache to SharedPreferences
+  Future<void> _saveCache() async {
+    try {
+      final cacheData = json.encode(_verificationCache);
+      await _prefs?.setString('product_service_verification_cache', cacheData);
+      print('💾 ProductService: Saved ${_verificationCache.length} verification statuses to cache');
+    } catch (e) {
+      print('Error saving ProductService cache: $e');
+    }
+  }
 
   /// Get store info (with caching)
   Future<Store?> _getStore(String storeId) async {
@@ -29,16 +69,38 @@ class ProductService {
     return null;
   }
 
-  /// Get store document (for verification status)
-  Future<DocumentSnapshot<Map<String, dynamic>>?> _getStoreDoc(String storeId) async {
+  /// Get store document (for verification status) with caching
+  Future<String?> _getVerificationStatus(String storeId) async {
+    // Initialize cache if needed
+    await _initCache();
+    
+    // Return cached value if available
+    if (_verificationCache.containsKey(storeId)) {
+      print('✅ ProductService: Using cached verification for $storeId: ${_verificationCache[storeId]}');
+      return _verificationCache[storeId];
+    }
+    
+    print('🔄 ProductService: Fetching verification status for $storeId');
     try {
       final doc = await _firestore.collection('stores').doc(storeId).get();
       if (doc.exists) {
-        return doc;
+        final verificationStatus = doc.data()?['verificationStatus'] as String?;
+        // Cache the verification status
+        _verificationCache[storeId] = verificationStatus;
+        print('✅ ProductService: Cached verification for $storeId: $verificationStatus');
+        
+        // Persist to SharedPreferences
+        _saveCache();
+        
+        return verificationStatus;
       }
     } catch (e) {
-      // Ignore errors
+      print('❌ ProductService: Error fetching verification for $storeId: $e');
     }
+    
+    // Cache null to avoid repeated failed lookups
+    _verificationCache[storeId] = null;
+    _saveCache();
     return null;
   }
 
@@ -62,22 +124,29 @@ class ProductService {
       final products = <Product>[];
       
       for (final doc in snapshot.docs) {
-        // Extract storeId from document path: stores/{storeId}/products/{productId}
-        final pathSegments = doc.reference.path.split('/');
-        if (pathSegments.length >= 2) {
-          final storeId = pathSegments[1];
-          final store = await _getStore(storeId);
-          final storeDoc = await _getStoreDoc(storeId);
-          
-          if (store != null) {
-            products.add(Product.fromFirestore(
-              doc,
-              storeId,
-              store.name,
-              store.logoUrl,
-              storeDoc?.data()?['verificationStatus'] as String?,
-            ));
+        try {
+          // Extract storeId from document path: stores/{storeId}/products/{productId}
+          final pathSegments = doc.reference.path.split('/');
+          if (pathSegments.length >= 2) {
+            final storeId = pathSegments[1];
+            
+            // Get store and verification status (both use caching)
+            final store = await _getStore(storeId);
+            final verificationStatus = await _getVerificationStatus(storeId);
+            
+            if (store != null) {
+              products.add(Product.fromFirestore(
+                doc,
+                storeId,
+                store.name,
+                store.logoUrl,
+                verificationStatus,
+              ));
+            }
           }
+        } catch (e) {
+          print('Error processing product: $e');
+          // Continue with next product
         }
       }
       
@@ -100,14 +169,14 @@ class ProductService {
         .snapshots()
         .asyncMap((snapshot) async {
       final store = await _getStore(storeId);
-      final storeDoc = await _getStoreDoc(storeId);
+      final verificationStatus = await _getVerificationStatus(storeId);
       
       return snapshot.docs.map((doc) => Product.fromFirestore(
         doc,
         storeId,
         store?.name ?? 'Unknown Store',
         store?.logoUrl,
-        storeDoc?.data()?['verificationStatus'] as String?,
+        verificationStatus,
       )).toList();
     });
   }
@@ -125,13 +194,13 @@ class ProductService {
       if (!doc.exists) return null;
 
       final store = await _getStore(storeId);
-      final storeDoc = await _getStoreDoc(storeId);
+      final verificationStatus = await _getVerificationStatus(storeId);
       return Product.fromFirestore(
         doc,
         storeId,
         store?.name ?? 'Unknown Store',
         store?.logoUrl,
-        storeDoc?.data()?['verificationStatus'] as String?,
+        verificationStatus,
       );
     } catch (e) {
       return null;
@@ -162,7 +231,7 @@ class ProductService {
         if (pathSegments.length >= 2) {
           final storeId = pathSegments[1];
           final store = await _getStore(storeId);
-          final storeDoc = await _getStoreDoc(storeId);
+          final verificationStatus = await _getVerificationStatus(storeId);
           
           if (store != null) {
             products.add(Product.fromFirestore(
@@ -170,7 +239,7 @@ class ProductService {
               storeId,
               store.name,
               store.logoUrl,
-              storeDoc?.data()?['verificationStatus'] as String?,
+              verificationStatus,
             ));
           }
         }
@@ -194,21 +263,28 @@ class ProductService {
       final products = <Product>[];
       
       for (final doc in snapshot.docs) {
-        final pathSegments = doc.reference.path.split('/');
-        if (pathSegments.length >= 2) {
-          final storeId = pathSegments[1];
-          final store = await _getStore(storeId);
-          final storeDoc = await _getStoreDoc(storeId);
-          
-          if (store != null) {
-            products.add(Product.fromFirestore(
-              doc,
-              storeId,
-              store.name,
-              store.logoUrl,
-              storeDoc?.data()?['verificationStatus'] as String?,
-            ));
+        try {
+          final pathSegments = doc.reference.path.split('/');
+          if (pathSegments.length >= 2) {
+            final storeId = pathSegments[1];
+            
+            // Get store and verification status (both use caching)
+            final store = await _getStore(storeId);
+            final verificationStatus = await _getVerificationStatus(storeId);
+            
+            if (store != null) {
+              products.add(Product.fromFirestore(
+                doc,
+                storeId,
+                store.name,
+                store.logoUrl,
+                verificationStatus,
+              ));
+            }
           }
+        } catch (e) {
+          print('Error processing featured product: $e');
+          // Continue with next product
         }
       }
       
@@ -224,5 +300,8 @@ class ProductService {
   /// Clear store cache (call when needed)
   void clearCache() {
     _storeCache.clear();
+    _verificationCache.clear();
+    _prefs?.remove('product_service_verification_cache');
+    print('🗑️ ProductService: Cache cleared');
   }
 }

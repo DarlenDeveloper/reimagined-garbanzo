@@ -617,7 +617,8 @@ class _SearchScreenState extends State<SearchScreen> {
     final name = store['name'] ?? 'Store';
     final description = store['description'] ?? '';
     final logoUrl = store['logoUrl'] ?? '';
-    final isVerified = store['isVerified'] ?? false;
+    final verificationStatus = store['verificationStatus'] as String?;
+    final isVerified = verificationStatus == 'verified';
     final rating = (store['rating'] ?? 0).toDouble();
     final followerCount = store['followerCount'] ?? 0;
     final storeId = store['id'];

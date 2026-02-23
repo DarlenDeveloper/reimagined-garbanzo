@@ -5,6 +5,8 @@ import 'package:iconsax/iconsax.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../services/posts_service.dart';
 import '../services/messages_service.dart';
 import '../services/followers_service.dart';
@@ -36,6 +38,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final Set<String> _savedPosts = {};
   final Set<String> _followedVendors = {};
   
+  // Cache for store data to prevent repeated fetches
+  final Map<String, Map<String, dynamic>> _storeDataCache = {};
+  
+  // Persistent cache for verification status
+  SharedPreferences? _prefs;
+  
   List<Map<String, dynamic>> _posts = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
@@ -47,9 +55,41 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _initCache();
     _loadFeed();
     _loadUnreadCount();
     _scrollController.addListener(_onScroll);
+  }
+  
+  Future<void> _initCache() async {
+    _prefs = await SharedPreferences.getInstance();
+    // Load cached verification statuses
+    final cachedData = _prefs?.getString('store_verification_cache');
+    if (cachedData != null) {
+      try {
+        final Map<String, dynamic> decoded = json.decode(cachedData);
+        decoded.forEach((key, value) {
+          if (value is Map) {
+            _storeDataCache[key] = Map<String, dynamic>.from(value);
+          }
+        });
+        print('📦 Loaded ${_storeDataCache.length} stores from cache');
+        
+        // Check cache age and refresh if older than 1 hour
+        final cacheTimestamp = _prefs?.getInt('store_cache_timestamp') ?? 0;
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final cacheAge = now - cacheTimestamp;
+        final oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+        
+        if (cacheAge > oneHour) {
+          print('🔄 Cache is older than 1 hour, will refresh on next fetch');
+          // Don't clear cache immediately, but mark it for refresh
+          _prefs?.setBool('cache_needs_refresh', true);
+        }
+      } catch (e) {
+        print('Error loading cache: $e');
+      }
+    }
   }
 
   void _onScroll() {
@@ -69,11 +109,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadFeed() async {
     // Check if posts are already preloaded
     if (_preloaderService.isPreloaded && _preloaderService.cachedPosts != null) {
+      print('📦 Using preloaded posts');
       setState(() {
         _posts = List.from(_preloaderService.cachedPosts!);
         _lastDocument = _preloaderService.lastDocument;
         _isLoading = false;
       });
+      
+      // Enrich preloaded posts with store data (including verification status)
+      await _enrichPreloadedPosts();
       
       // Initialize liked/saved/followed states
       for (final post in _posts) {
@@ -91,6 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     
     // Fallback to normal loading if preload didn't happen
+    print('🔄 Loading posts from Firestore');
     setState(() => _isLoading = true);
     _lastDocument = null;
     _posts.clear();
@@ -112,6 +157,75 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
     }
+  }
+  
+  Future<void> _enrichPreloadedPosts() async {
+    // Get unique store IDs from preloaded posts
+    final storeIds = _posts.map((post) => post['storeId'] as String).toSet();
+    print('🔍 Enriching ${_posts.length} preloaded posts from ${storeIds.length} stores');
+    
+    final storeDataMap = <String, Map<String, dynamic>>{};
+    final storesToFetch = <String>[];
+    
+    // Check if cache needs refresh
+    final needsRefresh = _prefs?.getBool('cache_needs_refresh') ?? false;
+    
+    // First, check cache for all stores
+    for (final storeId in storeIds) {
+      if (_storeDataCache.containsKey(storeId) && !needsRefresh) {
+        storeDataMap[storeId] = _storeDataCache[storeId]!;
+        print('✅ Using cached data for store: $storeId (verified: ${_storeDataCache[storeId]!['verificationStatus']})');
+      } else {
+        storesToFetch.add(storeId);
+      }
+    }
+    
+    // Fetch missing stores from Firestore
+    if (storesToFetch.isNotEmpty) {
+      print('🔄 Fetching ${storesToFetch.length} stores from Firestore');
+      await Future.wait(
+        storesToFetch.map((storeId) async {
+          try {
+            final storeDoc = await FirebaseFirestore.instance
+                .collection('stores')
+                .doc(storeId)
+                .get();
+            
+            if (storeDoc.exists) {
+              final data = storeDoc.data() ?? {};
+              // Cache the store data in memory
+              _storeDataCache[storeId] = data;
+              storeDataMap[storeId] = data;
+              print('✅ Fetched and cached store: $storeId (verified: ${data['verificationStatus']})');
+            }
+          } catch (e) {
+            print('❌ Error fetching store $storeId: $e');
+          }
+        }),
+      );
+      
+      // Persist cache to SharedPreferences
+      _saveCache();
+    }
+    
+    // Update posts with store data
+    for (final post in _posts) {
+      final storeId = post['storeId'] as String;
+      final storeData = storeDataMap[storeId];
+      
+      if (storeData != null) {
+        post['storeName'] = storeData['name'] ?? 'Store';
+        post['storeLogoUrl'] = storeData['logoUrl'];
+        post['storeVerificationStatus'] = storeData['verificationStatus'];
+        print('📝 Post ${post['id']}: store=${post['storeName']}, verified=${post['storeVerificationStatus']}');
+      } else {
+        post['storeName'] = 'Store';
+        print('⚠️ Post ${post['id']}: No store data found');
+      }
+    }
+    
+    // Trigger rebuild to show verification badges
+    setState(() {});
   }
 
   Future<void> _loadMorePosts() async {
@@ -151,22 +265,48 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final storeDataMap = <String, Map<String, dynamic>>{};
-    await Future.wait(
-      storeIds.map((storeId) async {
-        try {
-          final storeDoc = await FirebaseFirestore.instance
-              .collection('stores')
-              .doc(storeId)
-              .get();
-          
-          if (storeDoc.exists) {
-            storeDataMap[storeId] = storeDoc.data() ?? {};
+    final storesToFetch = <String>[];
+    
+    // Check if cache needs refresh
+    final needsRefresh = _prefs?.getBool('cache_needs_refresh') ?? false;
+    
+    // First, check cache for all stores
+    for (final storeId in storeIds) {
+      if (_storeDataCache.containsKey(storeId) && !needsRefresh) {
+        storeDataMap[storeId] = _storeDataCache[storeId]!;
+        print('✅ Using cached data for store: $storeId (verified: ${_storeDataCache[storeId]!['verificationStatus']})');
+      } else {
+        storesToFetch.add(storeId);
+      }
+    }
+    
+    // Fetch missing stores from Firestore
+    if (storesToFetch.isNotEmpty) {
+      print('🔄 Fetching ${storesToFetch.length} stores from Firestore');
+      await Future.wait(
+        storesToFetch.map((storeId) async {
+          try {
+            final storeDoc = await FirebaseFirestore.instance
+                .collection('stores')
+                .doc(storeId)
+                .get();
+            
+            if (storeDoc.exists) {
+              final data = storeDoc.data() ?? {};
+              // Cache the store data in memory
+              _storeDataCache[storeId] = data;
+              storeDataMap[storeId] = data;
+              print('✅ Fetched and cached store: $storeId (verified: ${data['verificationStatus']})');
+            }
+          } catch (e) {
+            print('❌ Error fetching store $storeId: $e');
           }
-        } catch (e) {
-          print('Error fetching store $storeId: $e');
-        }
-      }),
-    );
+        }),
+      );
+      
+      // Persist cache to SharedPreferences
+      _saveCache();
+    }
 
     for (final post in newPosts) {
       final storeId = post['storeId'] as String;
@@ -176,8 +316,10 @@ class _HomeScreenState extends State<HomeScreen> {
         post['storeName'] = storeData['name'] ?? 'Store';
         post['storeLogoUrl'] = storeData['logoUrl'];
         post['storeVerificationStatus'] = storeData['verificationStatus'];
+        print('📝 Post ${post['id']}: store=${post['storeName']}, verified=${post['storeVerificationStatus']}');
       } else {
         post['storeName'] = 'Store';
+        print('⚠️ Post ${post['id']}: No store data found');
       }
     }
 
@@ -194,6 +336,18 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     });
+  }
+  
+  Future<void> _saveCache() async {
+    try {
+      final cacheData = json.encode(_storeDataCache);
+      await _prefs?.setString('store_verification_cache', cacheData);
+      await _prefs?.setInt('store_cache_timestamp', DateTime.now().millisecondsSinceEpoch);
+      await _prefs?.setBool('cache_needs_refresh', false);
+      print('💾 Saved ${_storeDataCache.length} stores to persistent cache');
+    } catch (e) {
+      print('Error saving cache: $e');
+    }
   }
 
   Future<void> _loadFollowingStatus() async {
@@ -442,6 +596,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final likes = post['likes'] ?? 0;
     final createdAt = post['createdAt'] as Timestamp?;
     final mediaList = post['mediaUrls'] as List?;
+    
+    // Debug logging
+    print('🎨 Building post card: postId=$postId, storeId=$storeId, storeName=$storeName, verificationStatus=$storeVerificationStatus, isVerified=$isStoreVerified');
     
     final isLiked = _likedPosts.contains(postId);
     final isSaved = _savedPosts.contains(postId);

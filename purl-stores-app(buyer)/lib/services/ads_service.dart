@@ -28,11 +28,11 @@ class AdsService {
           final storeDoc = await _firestore.collection('stores').doc(ad.storeId).get();
           if (storeDoc.exists) {
             final storeData = storeDoc.data();
-            // Use actual store name from stores collection
-            storeName = storeData?['storeName'] as String? ?? ad.storeName;
-            // Fetch logo if not in ad
+            // Use actual store name from stores collection (field is 'name', not 'storeName')
+            storeName = storeData?['name'] as String? ?? ad.storeName;
+            // Fetch logo if not in ad (field is 'logoUrl', not 'logo')
             if (storeLogo == null) {
-              storeLogo = storeData?['logo'] as String?;
+              storeLogo = storeData?['logoUrl'] as String?;
             }
           }
         } catch (e) {

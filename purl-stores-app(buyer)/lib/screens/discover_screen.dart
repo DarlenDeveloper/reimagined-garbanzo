@@ -18,6 +18,7 @@ import 'product_detail_screen.dart';
 import 'order_history_screen.dart';
 import 'store_map_screen.dart';
 import 'categories_screen.dart';
+import 'ai_shopping_assistant_screen.dart';
 import 'store_profile_screen.dart';
 import 'main_screen.dart';
 
@@ -42,6 +43,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   List<Ad> _ads = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
+  bool _isSwitchingCategory = false; // New flag for category switching
   bool _hasMore = true;
   String? _error;
   StreamSubscription<List<Product>>? _productsSubscription;
@@ -178,11 +180,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     
     final categoryId = _categories[_selectedCategoryIndex]['id'];
     
-    setState(() {
-      _isLoading = true;
-      _error = null;
-      _hasMore = true;
-    });
+    // Only show full loading state on initial load
+    // For category switches, use a subtle indicator
+    if (_products.isEmpty && !_isSwitchingCategory) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+        _hasMore = true;
+      });
+    }
 
     _productsSubscription = _productService
         .getDiscoverProductsStream(
@@ -195,6 +201,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           setState(() {
             _products = products;
             _isLoading = false;
+            _isSwitchingCategory = false;
             _error = null;
             _hasMore = products.length >= _pageSize;
           });
@@ -205,6 +212,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           setState(() {
             _error = 'Failed to load products';
             _isLoading = false;
+            _isSwitchingCategory = false;
           });
         }
       },
@@ -213,98 +221,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              const Expanded(
-                child: Center(
-                  child: CircularProgressIndicator(color: Colors.black),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (_error != null) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Iconsax.warning_2, size: 48, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        style: GoogleFonts.poppins(color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _subscribeToProducts,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: Text('Retry', style: GoogleFonts.poppins()),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (_products.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Iconsax.box, size: 48, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No products found',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Try a different category',
-                        style: GoogleFonts.poppins(color: Colors.grey[500]),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -325,7 +241,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   controller: _scrollController,
                   slivers: [
                     // Ad card section (scrollable)
-                    if (_ads.isNotEmpty)
+                    if (_ads.isNotEmpty && !_isLoading)
                       SliverToBoxAdapter(
                         child: Column(
                           children: [
@@ -341,7 +257,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       backgroundColor: Colors.white,
                       surfaceTintColor: Colors.white,
                       elevation: 0,
-                      toolbarHeight: 130,
+                      toolbarHeight: _isSwitchingCategory ? 134 : 130, // Extra space for loading bar
                       automaticallyImplyLeading: false,
                       flexibleSpace: Container(
                         color: Colors.white,
@@ -352,40 +268,109 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                             const SizedBox(height: 16),
                             _buildCategories(),
                             const SizedBox(height: 8),
+                            // Subtle loading indicator when switching categories
+                            if (_isSwitchingCategory)
+                              SizedBox(
+                                height: 2,
+                                child: LinearProgressIndicator(
+                                  color: Colors.black,
+                                  backgroundColor: Colors.grey[200],
+                                ),
+                              ),
                           ],
                         ),
                       ),
                     ),
                     
-                    // Product grid
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                      sliver: SliverGrid(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.55,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
+                    // Loading state
+                    if (_isLoading)
+                      const SliverFillRemaining(
+                        child: Center(
+                          child: CircularProgressIndicator(color: Colors.black),
                         ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            if (index >= _products.length) {
-                              return Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: CircularProgressIndicator(
-                                    color: Colors.grey[400],
-                                    strokeWidth: 2,
-                                  ),
+                      )
+                    // Error state
+                    else if (_error != null)
+                      SliverFillRemaining(
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Iconsax.warning_2, size: 48, color: Colors.grey[400]),
+                              const SizedBox(height: 16),
+                              Text(
+                                _error!,
+                                style: GoogleFonts.poppins(color: Colors.grey[600]),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _subscribeToProducts,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.black,
+                                  foregroundColor: Colors.white,
                                 ),
-                              );
-                            }
-                            return _buildProductCard(_products[index]);
-                          },
-                          childCount: _products.length + (_isLoadingMore ? 2 : 0),
+                                child: Text('Retry', style: GoogleFonts.poppins()),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    // Empty state
+                    else if (_products.isEmpty)
+                      SliverFillRemaining(
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Iconsax.box, size: 48, color: Colors.grey[400]),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No products found',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Try a different category',
+                                style: GoogleFonts.poppins(color: Colors.grey[500]),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    // Product grid
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                        sliver: SliverGrid(
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.55,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              if (index >= _products.length) {
+                                return Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: CircularProgressIndicator(
+                                      color: Colors.grey[400],
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                );
+                              }
+                              return _buildProductCard(_products[index]);
+                            },
+                            childCount: _products.length + (_isLoadingMore ? 2 : 0),
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -460,49 +445,53 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               },
             ),
             
-            // White overlay card at bottom right (creates cutout effect)
+            // Professional CTA button - compact pill design
             Positioned(
-              right: -12,
-              bottom: -12,
-              child: Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-            ),
-            
-            // Arrow button on top
-            Positioned(
-              right: 0,
-              bottom: 0,
+              right: 12,
+              bottom: 12,
               child: GestureDetector(
                 onTap: () {
-                  print('🛍️ Arrow clicked for store: ${ad.storeName} (${ad.storeId})');
+                  print('🛍️ Shop Now tapped for: ${ad.storeName} (${ad.storeId})');
                   _adsService.recordAdClick(ad.id);
                   _adsService.recordStoreVisit(ad.id);
                   _openStoreProfile(ad.storeId, ad.storeName);
                 },
                 child: Container(
-                  width: 48,
-                  height: 48,
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18), // height / 2 for perfect pill
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.arrow_outward,
-                    size: 20,
-                    color: Colors.white,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // "Shop Now" text
+                      Text(
+                        'Shop Now',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      
+                      const SizedBox(width: 6),
+                      
+                      // Arrow icon
+                      const Icon(
+                        Icons.arrow_forward,
+                        size: 16,
+                        color: Colors.black,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -531,32 +520,57 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SearchScreen(),
-            ),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: Row(
-            children: [
-              Icon(Iconsax.search_normal, size: 20, color: Colors.grey[500]),
-              const SizedBox(width: 12),
-              Text(
-                'Search products...',
-                style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SearchScreen(),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Iconsax.search_normal, size: 20, color: Colors.grey[500]),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Search products...',
+                      style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 14),
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(width: 12),
+          GestureDetector(
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => const AIShoppingAssistantScreen(),
+              );
+            },
+            child: SizedBox(
+              height: 56,
+              width: 56,
+              child: Image.asset(
+                'assets/images/popailogo.png',
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -573,7 +587,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           return GestureDetector(
             onTap: () {
               if (_selectedCategoryIndex != index) {
-                setState(() => _selectedCategoryIndex = index);
+                setState(() {
+                  _selectedCategoryIndex = index;
+                  _isSwitchingCategory = true;
+                  // Keep current products visible during switch
+                });
                 _subscribeToProducts();
               }
             },
@@ -1213,6 +1231,7 @@ class _AdCardState extends State<_AdCard> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   Timer? _autoScrollTimer;
+  bool _userInteracting = false; // Track user interaction
 
   @override
   void initState() {
@@ -1223,14 +1242,25 @@ class _AdCardState extends State<_AdCard> {
   void _startAutoScroll() {
     if (widget.ad.images.length <= 1) return;
     
-    _autoScrollTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (_pageController.hasClients) {
+    _autoScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      // Only auto-scroll if user is not interacting
+      if (_pageController.hasClients && !_userInteracting) {
         final nextPage = (_currentPage + 1) % widget.ad.images.length;
         _pageController.animateToPage(
           nextPage,
-          duration: const Duration(milliseconds: 400),
+          duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOut,
         );
+      }
+    });
+  }
+
+  void _onUserInteraction() {
+    setState(() => _userInteracting = true);
+    // Resume auto-scroll after 5 seconds of no interaction
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() => _userInteracting = false);
       }
     });
   }
@@ -1261,6 +1291,7 @@ class _AdCardState extends State<_AdCard> {
                   controller: _pageController,
                   onPageChanged: (index) {
                     setState(() => _currentPage = index);
+                    _onUserInteraction();
                   },
                   itemCount: widget.ad.images.length,
                   itemBuilder: (context, index) {

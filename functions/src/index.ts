@@ -16,6 +16,9 @@ export {getAIConfig} from "./vapi/getAIConfig";
 export {renewAISubscription} from "./vapi/renewAISubscription";
 export {checkSubscriptionStatus} from "./vapi/checkSubscriptionStatus";
 
+// Export AI Shopping Assistant
+export {aiShoppingAssistant} from "./ai/aiShoppingAssistant";
+
 // Define secrets for Flutterwave
 const flutterwaveSecretKey = defineSecret("FLUTTERWAVE_SECRET_KEY");
 const flutterwaveEncryptionKey = defineSecret("FLUTTERWAVE_ENCRYPTION_KEY");

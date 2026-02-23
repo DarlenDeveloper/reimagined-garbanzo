@@ -170,6 +170,16 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
     }
   }
 
+  String _getLocationText() {
+    final locationData = _storeData?['location'];
+    if (locationData is GeoPoint) {
+      return 'GPS Location';
+    } else if (locationData is String && locationData.isNotEmpty) {
+      return locationData;
+    }
+    return 'Location not specified';
+  }
+
   Future<void> _openChat() async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) {
@@ -386,10 +396,17 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Iconsax.star1, size: 16, color: Colors.grey[700]),
+              Icon(Iconsax.location, size: 16, color: Colors.grey[700]),
               const SizedBox(width: 4),
-              Text('${(_storeData?['rating'] ?? 4.5).toStringAsFixed(1)}', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black)),
-              Text(' (${_storeData?['reviewCount'] ?? 0} reviews)', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500])),
+              Flexible(
+                child: Text(
+                  _getLocationText(),
+                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[600]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -433,6 +450,8 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
   }
 
   String _formatNumber(int num) {
+    if (num >= 1000000000000) return '${(num / 1000000000000).toStringAsFixed(1)}T';
+    if (num >= 1000000000) return '${(num / 1000000000).toStringAsFixed(1)}B';
     if (num >= 1000000) return '${(num / 1000000).toStringAsFixed(1)}M';
     if (num >= 1000) return '${(num / 1000).toStringAsFixed(1)}K';
     return num.toString();
@@ -472,17 +491,210 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
           const SizedBox(width: 12),
           Expanded(
             child: GestureDetector(
-              onTap: () => _showLocationSheet(),
+              onTap: () => _initiateAICall(),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(14)),
-                child: const Icon(Iconsax.location, size: 20, color: Colors.black),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Iconsax.call, size: 20, color: Colors.black),
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _initiateAICall() async {
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.black)),
+      );
+
+      print('🔍 Checking AI config for store: ${widget.storeId}');
+      
+      // Fetch AI config from Firestore (correct path: aiAssistant/config)
+      final aiConfigDoc = await FirebaseFirestore.instance
+          .collection('stores')
+          .doc(widget.storeId)
+          .collection('aiAssistant')
+          .doc('config')
+          .get();
+
+      print('📄 AI Config exists: ${aiConfigDoc.exists}');
+      if (aiConfigDoc.exists) {
+        print('📄 AI Config data: ${aiConfigDoc.data()}');
+        print('📄 enabled: ${aiConfigDoc.data()?['enabled']}');
+        print('📄 status: ${aiConfigDoc.data()?['status']}');
+        print('📄 phoneNumber: ${aiConfigDoc.data()?['phoneNumber']}');
+      }
+
+      // Close loading
+      if (mounted) Navigator.pop(context);
+
+      // Check if AI service is enabled and active
+      final enabled = aiConfigDoc.data()?['enabled'] as bool? ?? false;
+      final status = aiConfigDoc.data()?['status'] as String? ?? 'inactive';
+      final isActive = enabled && status == 'active';
+
+      if (!aiConfigDoc.exists || !isActive) {
+        print('❌ AI Service not enabled or config not found (enabled: $enabled, status: $status)');
+        // Show banner that store hasn't subscribed
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Icon(Iconsax.info_circle, color: Colors.orange[700], size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'AI Service Unavailable',
+                      style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                'This store hasn\'t subscribed to AI-Powered Customer Service yet.',
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[700]),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('OK', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      // Get phone number from AI config
+      final phoneNumber = aiConfigDoc.data()?['phoneNumber'] as String?;
+      
+      print('📞 Phone number: $phoneNumber');
+      
+      if (phoneNumber == null || phoneNumber.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Customer service number not configured', style: GoogleFonts.poppins()),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Show the call dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Iconsax.call, color: Colors.green[700], size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'AI Customer Service',
+                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Call our AI-powered customer service:',
+                  style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Iconsax.call, size: 18, color: Colors.grey[700]),
+                      const SizedBox(width: 8),
+                      Text(
+                        phoneNumber,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '24/7 AI-powered support available',
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500]),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel', style: GoogleFonts.poppins()),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // TODO: Implement actual phone call using url_launcher
+                  // launch('tel:$phoneNumber');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text('Call Now', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading if still showing
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load AI service: ${e.toString()}', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      print('❌ Error loading AI config: $e');
+    }
   }
 
   Widget _buildProductsTab() {
@@ -712,8 +924,6 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
           _buildAboutSection('Response Time', responseTime, Iconsax.timer_1),
           const SizedBox(height: 24),
           _buildStoreHighlights(),
-          const SizedBox(height: 24),
-          _buildReviewsSummary(),
         ],
       ),
     );
@@ -748,8 +958,13 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
   }
 
   Widget _buildStoreHighlights() {
-    final highlights = [
-      _Highlight(icon: Iconsax.verify, label: 'Verified Seller'),
+    // Check if store is verified
+    final verificationStatus = _storeData?['verificationStatus'] as String?;
+    final isVerified = verificationStatus == 'verified';
+    
+    final highlights = <_Highlight>[
+      // Only show Verified Seller if actually verified
+      if (isVerified) _Highlight(icon: Iconsax.verify, label: 'Verified Seller'),
       _Highlight(icon: Iconsax.truck_fast, label: 'Fast Shipping'),
       _Highlight(icon: Iconsax.shield_tick, label: 'Buyer Protection'),
       _Highlight(icon: Iconsax.refresh, label: 'Easy Returns'),
@@ -777,76 +992,6 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> with SingleTick
           )).toList(),
         ),
       ],
-    );
-  }
-
-  Widget _buildReviewsSummary() {
-    final rating = (_storeData?['rating'] ?? 4.5).toDouble();
-    final reviewCount = _storeData?['reviewCount'] ?? 0;
-    
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text('Customer Reviews', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black)),
-              const Spacer(),
-              Text('See all', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.black)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Column(
-                children: [
-                  Text('${rating.toStringAsFixed(1)}', style: GoogleFonts.poppins(fontSize: 40, fontWeight: FontWeight.w700, color: Colors.black)),
-                  Row(children: List.generate(5, (i) => Icon(i < rating.floor() ? Iconsax.star1 : Iconsax.star, size: 16, color: Colors.grey[700]))),
-                  const SizedBox(height: 4),
-                  Text('$reviewCount reviews', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
-                ],
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildRatingBar(5, 0.75),
-                    _buildRatingBar(4, 0.15),
-                    _buildRatingBar(3, 0.06),
-                    _buildRatingBar(2, 0.03),
-                    _buildRatingBar(1, 0.01),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRatingBar(int stars, double percentage) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Text('$stars', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Container(
-              height: 6,
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(3)),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: percentage,
-                child: Container(decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(3))),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
