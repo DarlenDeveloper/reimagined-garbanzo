@@ -186,10 +186,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
-          leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: Colors.black), onPressed: () => Navigator.pop(context)),
+          leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: const Color(0xFFfb2a0a)), onPressed: () => Navigator.pop(context)),
           title: Text('Messages', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w700)),
         ),
-        body: const Center(child: CircularProgressIndicator(color: Colors.black)),
+        body: const Center(child: CircularProgressIndicator(color: const Color(0xFFfb2a0a))),
       );
     }
 
@@ -198,10 +198,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: Colors.black), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: const Color(0xFFfb2a0a)), onPressed: () => Navigator.pop(context)),
         title: Text('Messages', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w700)),
         actions: [
-          IconButton(icon: const Icon(Iconsax.scan_barcode, color: Colors.black), onPressed: () {}),
+          IconButton(icon: const Icon(Iconsax.scan_barcode, color: const Color(0xFFfb2a0a)), onPressed: () {}),
         ],
       ),
       body: Row(
@@ -237,7 +237,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           stream: _messagesService.getStoreConversations(_storeId!),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator(color: Colors.black));
+                              return const Center(child: CircularProgressIndicator(color: const Color(0xFFfb2a0a)));
                             }
 
                             if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -323,7 +323,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: Colors.black,
+                  backgroundColor: const Color(0xFFfb2a0a),
                   backgroundImage: userPhotoUrl != null && userPhotoUrl.isNotEmpty ? NetworkImage(userPhotoUrl) : null,
                   child: userPhotoUrl == null || userPhotoUrl.isEmpty
                       ? const Icon(Iconsax.user, color: Colors.white, size: 24)
@@ -338,7 +338,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(resolvedName, style: GoogleFonts.poppins(fontWeight: unreadCount > 0 ? FontWeight.w600 : FontWeight.w500, fontSize: 14)),
-                          Text(timeAgo, style: GoogleFonts.poppins(fontSize: 11, color: unreadCount > 0 ? Colors.black : Colors.grey[500])),
+                          Text(timeAgo, style: GoogleFonts.poppins(fontSize: 11, color: unreadCount > 0 ? const Color(0xFFfb2a0a) : Colors.grey[500])),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -347,7 +347,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           Expanded(
                             child: Text(
                               lastMessage,
-                              style: GoogleFonts.poppins(fontSize: 13, color: unreadCount > 0 ? Colors.black : Colors.grey[600], fontWeight: unreadCount > 0 ? FontWeight.w500 : FontWeight.w400),
+                              style: GoogleFonts.poppins(fontSize: 13, color: unreadCount > 0 ? const Color(0xFFfb2a0a) : Colors.grey[600], fontWeight: unreadCount > 0 ? FontWeight.w500 : FontWeight.w400),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -356,7 +356,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             Container(
                               margin: const EdgeInsets.only(left: 8),
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(10)),
+                              decoration: BoxDecoration(color: const Color(0xFFfb2a0a), borderRadius: BorderRadius.circular(10)),
                               child: Text('$unreadCount', style: GoogleFonts.poppins(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
                             ),
                         ],
@@ -377,7 +377,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       stream: _messagesService.getStoreConversations(_storeId!),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator(color: Colors.black));
+          return const Center(child: CircularProgressIndicator(color: const Color(0xFFfb2a0a)));
         }
 
         final conversation = snapshot.data!.firstWhere(
@@ -409,7 +409,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     children: [
                       CircleAvatar(
                         radius: 20,
-                        backgroundColor: Colors.black,
+                        backgroundColor: const Color(0xFFfb2a0a),
                         backgroundImage: userPhotoUrl != null && userPhotoUrl.isNotEmpty ? NetworkImage(userPhotoUrl) : null,
                         child: userPhotoUrl == null || userPhotoUrl.isEmpty
                             ? const Icon(Iconsax.user, color: Colors.white, size: 20)
@@ -435,7 +435,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     stream: _messagesService.getMessages(_selectedConversationId!),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator(color: Colors.black));
+                        return const Center(child: CircularProgressIndicator(color: const Color(0xFFfb2a0a)));
                       }
 
                       if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -486,7 +486,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isMe ? Colors.black : Colors.grey[100],
+                color: isMe ? const Color(0xFFfb2a0a) : Colors.grey[100],
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(16),
                   topRight: const Radius.circular(16),
@@ -541,7 +541,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             },
             child: Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: const Color(0xFFb71000), borderRadius: BorderRadius.circular(12)),
               child: const Icon(Iconsax.send_1, color: Colors.white, size: 20),
             ),
           ),
@@ -594,7 +594,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   Widget _buildSearchResults() {
     if (_searchResults == null) {
-      return const Center(child: CircularProgressIndicator(color: Colors.black));
+      return const Center(child: CircularProgressIndicator(color: const Color(0xFFfb2a0a)));
     }
 
     if (_searchResults!.isEmpty) {
@@ -683,13 +683,13 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: Colors.black), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: const Color(0xFFfb2a0a)), onPressed: () => Navigator.pop(context)),
         titleSpacing: 0,
         title: Row(
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: Colors.black,
+              backgroundColor: const Color(0xFFfb2a0a),
               backgroundImage: userPhotoUrl != null && userPhotoUrl.isNotEmpty ? NetworkImage(userPhotoUrl) : null,
               child: userPhotoUrl == null || userPhotoUrl.isEmpty
                   ? const Icon(Iconsax.user, color: Colors.white, size: 18)
@@ -699,14 +699,14 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(userName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black)),
+                Text(userName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15, color: const Color(0xFFfb2a0a))),
                 Text('Buyer', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
               ],
             ),
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Iconsax.more, color: Colors.black), onPressed: _showOptions),
+          IconButton(icon: const Icon(Iconsax.more, color: const Color(0xFFfb2a0a)), onPressed: _showOptions),
         ],
       ),
       body: Column(
@@ -716,7 +716,7 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
               stream: widget.messagesService.getMessages(widget.conversation['id']),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: Colors.black));
+                  return const Center(child: CircularProgressIndicator(color: const Color(0xFFfb2a0a)));
                 }
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -755,7 +755,7 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               decoration: BoxDecoration(
-                                color: isMe ? Colors.black : Colors.grey[100],
+                                color: isMe ? const Color(0xFFfb2a0a) : Colors.grey[100],
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(16),
                                   topRight: const Radius.circular(16),
@@ -800,7 +800,7 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
                   onTap: _sendMessage,
                   child: Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(color: const Color(0xFFb71000), borderRadius: BorderRadius.circular(12)),
                     child: const Icon(Iconsax.send_1, color: Colors.white, size: 20),
                   ),
                 ),

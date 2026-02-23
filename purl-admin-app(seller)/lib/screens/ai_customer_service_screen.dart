@@ -66,10 +66,10 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
           ),
           backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
+          foregroundColor: const Color(0xFFb71000),
           elevation: 0,
         ),
-        body: const Center(child: CircularProgressIndicator(color: Colors.black)),
+        body: const Center(child: CircularProgressIndicator(color: const Color(0xFFb71000))),
       );
     }
 
@@ -85,10 +85,10 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
               ),
               backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
+              foregroundColor: const Color(0xFFb71000),
               elevation: 0,
             ),
-            body: const Center(child: CircularProgressIndicator(color: Colors.black)),
+            body: const Center(child: CircularProgressIndicator(color: const Color(0xFFb71000))),
           );
         }
 
@@ -112,7 +112,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        foregroundColor: const Color(0xFFb71000),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -130,7 +130,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                   style: GoogleFonts.poppins(
                     fontSize: 32,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: const Color(0xFFb71000),
                     height: 1.2,
                   ),
                 ),
@@ -182,7 +182,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: const Color(0xFFb71000),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -202,7 +202,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                             style: GoogleFonts.poppins(
                               fontSize: 36,
                               fontWeight: FontWeight.w700,
-                              color: Colors.black,
+                              color: const Color(0xFFb71000),
                               height: 1,
                             ),
                           ),
@@ -245,7 +245,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.black,
+                      color: const Color(0xFFb71000),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -298,7 +298,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                   hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
                   prefixText: '+256 ',
                   prefixStyle: GoogleFonts.poppins(
-                    color: Colors.black,
+                    color: const Color(0xFFb71000),
                     fontWeight: FontWeight.w500,
                   ),
                   filled: true,
@@ -326,7 +326,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                     ? null
                     : _startPayment,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
+                  backgroundColor: const Color(0xFFb71000),
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: Colors.grey[300],
                   shape: RoundedRectangleBorder(
@@ -363,7 +363,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         children: [
-          Icon(icon, size: 22, color: Colors.black),
+          Icon(icon, size: 22, color: const Color(0xFFb71000)),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -390,7 +390,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(
-            color: isSelected ? Colors.black : Colors.grey[300]!,
+            color: isSelected ? const Color(0xFFb71000) : Colors.grey[300]!,
             width: isSelected ? 2.5 : 1.5,
           ),
           borderRadius: BorderRadius.circular(12),
@@ -415,7 +415,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        foregroundColor: const Color(0xFFb71000),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -428,7 +428,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.black,
+                color: const Color(0xFFb71000),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -543,7 +543,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Iconsax.warning_2, size: 16, color: Colors.black),
+                          Icon(Iconsax.warning_2, size: 16, color: const Color(0xFFb71000)),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -551,7 +551,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black,
+                                color: const Color(0xFFb71000),
                               ),
                             ),
                           ),
@@ -566,7 +566,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                       child: ElevatedButton(
                         onPressed: () => _showRenewalDialog(),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
+                          backgroundColor: const Color(0xFFb71000),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -662,7 +662,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                       valueColor: AlwaysStoppedAnimation<Color>(
                         config.subscription.usedMinutes >= config.subscription.minutesIncluded
                             ? Colors.red
-                            : Colors.black,
+                            : const Color(0xFFb71000),
                       ),
                       minHeight: 8,
                     ),
@@ -697,7 +697,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                   return const Center(
                     child: Padding(
                       padding: EdgeInsets.all(20),
-                      child: CircularProgressIndicator(color: Colors.black),
+                      child: CircularProgressIndicator(color: const Color(0xFFb71000)),
                     ),
                   );
                 }
@@ -917,7 +917,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage, style: GoogleFonts.poppins()),
-            backgroundColor: Colors.black,
+            backgroundColor: const Color(0xFFb71000),
           ),
         );
       }
@@ -989,12 +989,12 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                     'Renewal feature coming soon',
                     style: GoogleFonts.poppins(),
                   ),
-                  backgroundColor: Colors.black,
+                  backgroundColor: const Color(0xFFb71000),
                 ),
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.black,
+              backgroundColor: const Color(0xFFb71000),
               foregroundColor: Colors.white,
             ),
             child: Text('Renew', style: GoogleFonts.poppins()),
@@ -1018,7 +1018,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(color: Colors.black),
+                const CircularProgressIndicator(color: const Color(0xFFb71000)),
                 const SizedBox(height: 20),
                 Text(
                   'Processing Payment',
@@ -1047,7 +1047,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(color: Colors.black),
+              const CircularProgressIndicator(color: const Color(0xFFb71000)),
               const SizedBox(height: 20),
               Text(
                 'Setting Up AI Service',
@@ -1137,7 +1137,7 @@ class _AICustomerServiceScreenState extends State<AICustomerServiceScreen> {
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
+                backgroundColor: const Color(0xFFb71000),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

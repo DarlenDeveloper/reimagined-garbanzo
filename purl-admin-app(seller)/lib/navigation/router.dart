@@ -24,8 +24,6 @@ final router = GoRouter(
     final isLoggingIn = state.matchedLocation == '/login' || 
                         state.matchedLocation == '/signup' ||
                         state.matchedLocation == '/forgot-password' ||
-                        state.matchedLocation == '/verify-email' ||
-                        state.matchedLocation == '/account-type' ||
                         state.matchedLocation == '/runner-code';
 
     // If not logged in and not on a login page, redirect to login

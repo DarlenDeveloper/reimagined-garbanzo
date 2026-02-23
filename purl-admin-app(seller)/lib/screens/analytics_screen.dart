@@ -80,7 +80,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: Colors.black), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: const Color(0xFFb71000)), onPressed: () => Navigator.pop(context)),
         title: Text('Analytics', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w700)),
         actions: [
           GestureDetector(
@@ -91,9 +91,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
               decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(20)),
               child: Row(
                 children: [
-                  Text(_selectedPeriod, style: GoogleFonts.poppins(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w500)),
+                  Text(_selectedPeriod, style: GoogleFonts.poppins(color: const Color(0xFFb71000), fontSize: 12, fontWeight: FontWeight.w500)),
                   const SizedBox(width: 4),
-                  const Icon(Iconsax.arrow_down_1, color: Colors.black, size: 16),
+                  const Icon(Iconsax.arrow_down_1, color: const Color(0xFFb71000), size: 16),
                 ],
               ),
             ),
@@ -110,7 +110,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
               controller: _tabController,
               labelColor: Colors.white,
               unselectedLabelColor: Colors.grey[600],
-              indicator: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(10)),
+              indicator: BoxDecoration(color: const Color(0xFFb71000), borderRadius: BorderRadius.circular(10)),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
               labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
@@ -134,7 +134,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
   Widget _buildOverviewTab() {
     return _storeId == null
         ? const Center(
-            child: CircularProgressIndicator(color: Colors.black),
+            child: CircularProgressIndicator(color: const Color(0xFFb71000)),
           )
         : StreamBuilder<List<StoreOrderData>>(
             stream: _orderService.getStoreOrdersStream(),
@@ -200,7 +200,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(
-                          child: CircularProgressIndicator(color: Colors.black),
+                          child: CircularProgressIndicator(color: const Color(0xFFb71000)),
                         );
                       }
 
@@ -277,7 +277,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                           // Revenue Chart
                           _sectionHeader('Revenue Trend', Iconsax.trend_up),
                           const SizedBox(height: 16),
-                          _LineChart(data: dailyRevenue, labels: _weekDays, color: Colors.black, prefix: '\$ '),
+                          _LineChart(data: dailyRevenue, labels: _weekDays, color: const Color(0xFFb71000), prefix: '\$ '),
                           const SizedBox(height: 24),
                           // Quick Stats
                           _sectionHeader('Quick Stats', Iconsax.flash_1),
@@ -355,7 +355,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
-            child: CircularProgressIndicator(color: Colors.black),
+            child: CircularProgressIndicator(color: const Color(0xFFb71000)),
           );
         }
 
@@ -402,7 +402,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
             // Sales Summary
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(color: const Color(0xFFb71000), borderRadius: BorderRadius.circular(16)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -452,7 +452,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
             // Sales Chart
             _sectionHeader('Daily Sales', Iconsax.chart_21),
             const SizedBox(height: 16),
-            _BarChart(data: dailySales, labels: _weekDays, color: Colors.black),
+            _BarChart(data: dailySales, labels: _weekDays, color: const Color(0xFFb71000)),
             const SizedBox(height: 24),
             // Sales Breakdown
             _sectionHeader('Sales Breakdown', Iconsax.chart_1),
@@ -461,7 +461,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
               label: 'Product Sales',
               value: _formatCompactNumber(productSales),
               percentage: productSalesPercent,
-              color: Colors.black,
+              color: const Color(0xFFb71000),
             ),
             _BreakdownItem(
               label: 'Shipping Fees',
@@ -508,7 +508,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
-            child: CircularProgressIndicator(color: Colors.black),
+            child: CircularProgressIndicator(color: const Color(0xFFb71000)),
           );
         }
 
@@ -642,7 +642,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                      child: CircularProgressIndicator(color: Colors.black),
+                      child: CircularProgressIndicator(color: const Color(0xFFb71000)),
                     );
                   }
 
@@ -675,7 +675,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                       // Traffic Summary
                       Container(
                         padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(16)),
+                        decoration: BoxDecoration(color: const Color(0xFFb71000), borderRadius: BorderRadius.circular(16)),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -721,7 +721,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                       // Visitor Trend Chart
                       _sectionHeader('Visitor Trend', Iconsax.chart_21),
                       const SizedBox(height: 16),
-                      _LineChart(data: dailyVisitors, labels: _weekDays, color: Colors.black, prefix: ''),
+                      _LineChart(data: dailyVisitors, labels: _weekDays, color: const Color(0xFFb71000), prefix: ''),
                       const SizedBox(height: 24),
                       // Conversion Funnel
                       _sectionHeader('Conversion Funnel', Iconsax.chart_1),
@@ -817,7 +817,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
   Widget _sectionHeader(String title, IconData icon) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.black),
+        Icon(icon, size: 20, color: const Color(0xFFb71000)),
         const SizedBox(width: 8),
         Text(title, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
       ],
@@ -839,7 +839,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
             const SizedBox(height: 16),
             ...['Today', 'Yesterday', 'This Week', 'Last Week', 'This Month', 'Last Month', 'This Year'].map((period) => ListTile(
               title: Text(period, style: GoogleFonts.poppins(fontWeight: _selectedPeriod == period ? FontWeight.w600 : FontWeight.w400)),
-              trailing: _selectedPeriod == period ? const Icon(Iconsax.tick_circle, color: Colors.black) : null,
+              trailing: _selectedPeriod == period ? const Icon(Iconsax.tick_circle, color: const Color(0xFFb71000)) : null,
               onTap: () {
                 setState(() => _selectedPeriod = period);
                 Navigator.pop(context);
@@ -1149,7 +1149,7 @@ class _PaymentMethod extends StatelessWidget {
         decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
         child: Column(
           children: [
-            Icon(icon, size: 24, color: Colors.black),
+            Icon(icon, size: 24, color: const Color(0xFFb71000)),
             const SizedBox(height: 8),
             Text('$percentage%', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
             Text(method, style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey[600])),
@@ -1199,8 +1199,8 @@ class _TopProduct extends StatelessWidget {
           Container(
             width: 32,
             height: 32,
-            decoration: BoxDecoration(color: rank <= 3 ? Colors.black : Colors.grey[300], borderRadius: BorderRadius.circular(8)),
-            child: Center(child: Text('#$rank', style: GoogleFonts.poppins(color: rank <= 3 ? Colors.white : Colors.black, fontWeight: FontWeight.w700, fontSize: 12))),
+            decoration: BoxDecoration(color: rank <= 3 ? const Color(0xFFb71000) : Colors.grey[300], borderRadius: BorderRadius.circular(8)),
+            child: Center(child: Text('#$rank', style: GoogleFonts.poppins(color: rank <= 3 ? Colors.white : const Color(0xFFb71000), fontWeight: FontWeight.w700, fontSize: 12))),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1257,7 +1257,7 @@ class _CategoryPerformance extends StatelessWidget {
                   child: CircularProgressIndicator(
                     value: percentage / 100,
                     backgroundColor: Colors.grey[300],
-                    valueColor: const AlwaysStoppedAnimation(Colors.black),
+                    valueColor: const AlwaysStoppedAnimation(const Color(0xFFb71000)),
                     strokeWidth: 5,
                   ),
                 ),
@@ -1312,7 +1312,7 @@ class _TrafficSource extends StatelessWidget {
                 const SizedBox(height: 4),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(2),
-                  child: LinearProgressIndicator(value: percentage / 100, backgroundColor: Colors.grey[300], valueColor: const AlwaysStoppedAnimation(Colors.black), minHeight: 4),
+                  child: LinearProgressIndicator(value: percentage / 100, backgroundColor: Colors.grey[300], valueColor: const AlwaysStoppedAnimation(const Color(0xFFb71000)), minHeight: 4),
                 ),
               ],
             ),
@@ -1419,7 +1419,7 @@ class _SupportIssue extends StatelessWidget {
                 const SizedBox(height: 4),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(2),
-                  child: LinearProgressIndicator(value: percentage / 100, backgroundColor: Colors.grey[300], valueColor: const AlwaysStoppedAnimation(Colors.black), minHeight: 4),
+                  child: LinearProgressIndicator(value: percentage / 100, backgroundColor: Colors.grey[300], valueColor: const AlwaysStoppedAnimation(const Color(0xFFb71000)), minHeight: 4),
                 ),
               ],
             ),
@@ -1457,7 +1457,7 @@ class _RatingBar extends StatelessWidget {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(value: count / total, backgroundColor: Colors.grey[300], valueColor: const AlwaysStoppedAnimation(Colors.black), minHeight: 6),
+              child: LinearProgressIndicator(value: count / total, backgroundColor: Colors.grey[300], valueColor: const AlwaysStoppedAnimation(const Color(0xFFb71000)), minHeight: 6),
             ),
           ),
           const SizedBox(width: 8),
@@ -1494,7 +1494,7 @@ class _ConversionFunnelItem extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: percentage / 100,
                     backgroundColor: Colors.grey[300],
-                    valueColor: const AlwaysStoppedAnimation(Colors.black),
+                    valueColor: const AlwaysStoppedAnimation(const Color(0xFFb71000)),
                     minHeight: 6,
                   ),
                 ),
@@ -1531,7 +1531,7 @@ class _EngagementMetric extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: Colors.black),
+          Icon(icon, size: 20, color: const Color(0xFFb71000)),
           const SizedBox(height: 12),
           if (value != null)
             Text(value!, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700))

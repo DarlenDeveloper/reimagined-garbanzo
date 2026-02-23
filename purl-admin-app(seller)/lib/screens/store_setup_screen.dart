@@ -19,7 +19,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
   final _imagePicker = ImagePicker();
   final PageController _pageController = PageController();
   int _currentStep = 0;
-  final int _totalSteps = 6;
+  final int _totalSteps = 5;
   bool _isCreating = false;
   File? _logoFile;
   String? _logoUrl;
@@ -52,22 +52,10 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
     'Sunday': _BusinessHour(isOpen: false, open: '', close: ''),
   };
 
-  // Step 5: Payment Setup
-  bool _enableCashOnDelivery = true;
-  bool _enableMobileMoney = false;
-  bool _enableBankTransfer = false;
-  bool _enableCardPayments = false;
-  final _bankNameController = TextEditingController();
-  final _accountNameController = TextEditingController();
-  final _accountNumberController = TextEditingController();
-  final _momoNumberController = TextEditingController();
-
-  // Step 6: Shipping
+  // Step 5: Shipping
   bool _enableLocalDelivery = true;
   bool _enableNationwide = false;
   bool _enablePickup = true;
-  final _localDeliveryFeeController = TextEditingController(text: '5.00');
-  final _nationwideFeeController = TextEditingController(text: '15.00');
 
   final List<String> _categories = [
     'Fashion & Apparel', 'Electronics', 'Beauty & Cosmetics', 'Food & Beverages',
@@ -92,12 +80,6 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
     _phoneController.dispose();
     _emailController.dispose();
     _websiteController.dispose();
-    _bankNameController.dispose();
-    _accountNameController.dispose();
-    _accountNumberController.dispose();
-    _momoNumberController.dispose();
-    _localDeliveryFeeController.dispose();
-    _nationwideFeeController.dispose();
     super.dispose();
   }
 
@@ -136,21 +118,9 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
           'open': hours.open,
           'close': hours.close,
         })),
-        paymentMethods: {
-          'cashOnDelivery': _enableCashOnDelivery,
-          'mobileMoney': _enableMobileMoney,
-          'momoNumber': _momoNumberController.text.trim(),
-          'bankTransfer': _enableBankTransfer,
-          'bankName': _bankNameController.text.trim(),
-          'accountName': _accountNameController.text.trim(),
-          'accountNumber': _accountNumberController.text.trim(),
-          'cardPayments': _enableCardPayments,
-        },
         shipping: {
           'localDelivery': _enableLocalDelivery,
-          'localDeliveryFee': _localDeliveryFeeController.text.trim(),
           'nationwide': _enableNationwide,
-          'nationwideFee': _nationwideFeeController.text.trim(),
           'storePickup': _enablePickup,
         },
       );
@@ -198,7 +168,6 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                   _buildAddressStep(),
                   _buildContactStep(),
                   _buildBusinessHoursStep(),
-                  _buildPaymentStep(),
                   _buildShippingStep(),
                 ],
               ),
@@ -211,7 +180,11 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
   }
 
   Widget _buildHeader() {
-    final stepTitles = ['Store Info', 'Address', 'Contact', 'Hours', 'Payments', 'Shipping'];
+    final stepTitles = ['Store Info', 'Address', 'Contact', 'Hours', 'Shipping'];
+    // Safety check for hot reload
+    if (_currentStep >= stepTitles.length) {
+      _currentStep = stepTitles.length - 1;
+    }
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Row(
@@ -253,7 +226,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
               height: 4,
               margin: EdgeInsets.only(right: index < _totalSteps - 1 ? 4 : 0),
               decoration: BoxDecoration(
-                color: isCompleted || isCurrent ? Colors.black : Colors.grey[200],
+                color: isCompleted || isCurrent ? const Color(0xFFfb2a0a) : Colors.grey[200],
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -264,16 +237,17 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
   }
 
   Widget _buildBottomButtons() {
+    const double buttonHeight = 52;
     return Padding(
       padding: const EdgeInsets.all(20),
       child: GestureDetector(
         onTap: _isCreating ? null : _nextStep,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          height: buttonHeight,
           decoration: BoxDecoration(
-            color: _isCreating ? Colors.grey : Colors.black,
-            borderRadius: BorderRadius.circular(12),
+            color: _isCreating ? Colors.grey : const Color(0xFFb71000),
+            borderRadius: BorderRadius.circular(buttonHeight / 2),
           ),
           child: Center(
             child: _isCreating
@@ -293,25 +267,33 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
   }
 
   Widget _buildTextField(String label, String hint, TextEditingController controller, {IconData? icon, TextInputType? keyboardType, int maxLines = 1}) {
+    const double fieldHeight = 52;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[700])),
         const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          style: GoogleFonts.poppins(fontSize: 14),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-            filled: true,
-            fillColor: Colors.grey[100],
-            prefixIcon: icon != null ? Icon(icon, color: Colors.grey[500], size: 20) : null,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 1.5)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        Container(
+          height: maxLines == 1 ? fieldHeight : null,
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(maxLines == 1 ? fieldHeight / 2 : 16),
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            maxLines: maxLines,
+            style: GoogleFonts.poppins(fontSize: 14),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+              filled: false,
+              prefixIcon: icon != null ? Icon(icon, color: Colors.grey[500], size: 20) : null,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: maxLines == 1 ? 20 : 16, vertical: maxLines == 1 ? 16 : 14),
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -320,6 +302,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
   }
 
   Widget _buildDropdown(String label, String hint, String value, List<String> items, Function(String) onChanged, {IconData? icon}) {
+    const double fieldHeight = 52;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -328,8 +311,9 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
         GestureDetector(
           onTap: () => _showSelectionSheet(label, items, value, onChanged),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+            height: fieldHeight,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(fieldHeight / 2)),
             child: Row(
               children: [
                 if (icon != null) ...[Icon(icon, color: Colors.grey[500], size: 20), const SizedBox(width: 12)],
@@ -370,7 +354,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(color: isSelected ? Colors.black : Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+                      decoration: BoxDecoration(color: isSelected ? const Color(0xFFfb2a0a) : Colors.grey[100], borderRadius: BorderRadius.circular(12)),
                       child: Row(
                         children: [
                           Expanded(child: Text(item, style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: isSelected ? Colors.white : Colors.black))),
@@ -588,7 +572,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
           Switch(
             value: hours.isOpen,
             onChanged: (v) => setState(() => _businessHours[day] = hours.copyWith(isOpen: v)),
-            activeColor: Colors.black,
+            activeColor: const Color(0xFFfb2a0a),
           ),
         ],
       ),
@@ -631,7 +615,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: t == currentTime ? Colors.black : Colors.grey[100], borderRadius: BorderRadius.circular(10)),
+                      decoration: BoxDecoration(color: t == currentTime ? const Color(0xFFfb2a0a) : Colors.grey[100], borderRadius: BorderRadius.circular(10)),
                       child: Center(child: Text(t, style: GoogleFonts.poppins(color: t == currentTime ? Colors.white : Colors.black, fontWeight: FontWeight.w500))),
                     ),
                   );
@@ -644,79 +628,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
     );
   }
 
-  // STEP 5: Payment Setup
-  Widget _buildPaymentStep() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(14)),
-            child: Row(
-              children: [
-                Icon(Iconsax.wallet_2, color: Colors.grey[600]),
-                const SizedBox(width: 12),
-                Expanded(child: Text('Set up how you want to receive payments from customers.', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]))),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text('Payment Methods', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-          _buildPaymentOption('Cash on Delivery', 'Accept cash when order is delivered', Iconsax.money, _enableCashOnDelivery, (v) => setState(() => _enableCashOnDelivery = v)),
-          _buildPaymentOption('Mobile Money', 'MTN, Vodafone, AirtelTigo, etc.', Iconsax.mobile, _enableMobileMoney, (v) => setState(() => _enableMobileMoney = v)),
-          _buildPaymentOption('Bank Transfer', 'Direct bank deposits', Iconsax.bank, _enableBankTransfer, (v) => setState(() => _enableBankTransfer = v)),
-          _buildPaymentOption('Card Payments', 'Visa, Mastercard, etc.', Iconsax.card, _enableCardPayments, (v) => setState(() => _enableCardPayments = v)),
-          if (_enableMobileMoney) ...[
-            const SizedBox(height: 20),
-            Text('Mobile Money Details', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 12),
-            _buildTextField('Mobile Money Number', '+233 XX XXX XXXX', _momoNumberController, icon: Iconsax.mobile, keyboardType: TextInputType.phone),
-          ],
-          if (_enableBankTransfer) ...[
-            const SizedBox(height: 20),
-            Text('Bank Account Details', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 12),
-            _buildTextField('Bank Name', 'Enter bank name', _bankNameController, icon: Iconsax.bank),
-            _buildTextField('Account Name', 'Account holder name', _accountNameController, icon: Iconsax.user),
-            _buildTextField('Account Number', 'Enter account number', _accountNumberController, icon: Iconsax.card, keyboardType: TextInputType.number),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentOption(String title, String subtitle, IconData icon, bool value, Function(bool) onChanged) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: value ? Colors.black : Colors.grey[100], borderRadius: BorderRadius.circular(14)),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: value ? Colors.white.withAlpha(25) : Colors.white, borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: value ? Colors.white : Colors.black, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: value ? Colors.white : Colors.black)),
-                Text(subtitle, style: GoogleFonts.poppins(fontSize: 11, color: value ? Colors.grey[400] : Colors.grey[600])),
-              ],
-            ),
-          ),
-          Switch(value: value, onChanged: onChanged, activeColor: Colors.white, activeTrackColor: Colors.grey[600]),
-        ],
-      ),
-    );
-  }
-
-  // STEP 6: Shipping Setup
+  // STEP 5: Shipping Setup
   Widget _buildShippingStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -738,28 +650,18 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
           Text('Delivery Options', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           _buildShippingOption('Local Delivery', 'Deliver within your city', Iconsax.location, _enableLocalDelivery, (v) => setState(() => _enableLocalDelivery = v)),
-          if (_enableLocalDelivery)
-            Padding(
-              padding: const EdgeInsets.only(left: 16, bottom: 12),
-              child: _buildTextField('Local Delivery Fee', '5.00', _localDeliveryFeeController, icon: Iconsax.dollar_circle, keyboardType: TextInputType.number),
-            ),
           _buildShippingOption('Nationwide Shipping', 'Ship across the country', Iconsax.truck, _enableNationwide, (v) => setState(() => _enableNationwide = v)),
-          if (_enableNationwide)
-            Padding(
-              padding: const EdgeInsets.only(left: 16, bottom: 12),
-              child: _buildTextField('Nationwide Shipping Fee', '15.00', _nationwideFeeController, icon: Iconsax.dollar_circle, keyboardType: TextInputType.number),
-            ),
           _buildShippingOption('Store Pickup', 'Customers pick up from your location', Iconsax.shop, _enablePickup, (v) => setState(() => _enablePickup = v)),
           const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(color: const Color(0xFFfb2a0a), borderRadius: BorderRadius.circular(14)),
             child: Row(
               children: [
                 const Icon(Iconsax.info_circle, color: Colors.white, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text('You can always change these settings later in your store dashboard.', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[400])),
+                  child: Text('You can always change these settings later in your store dashboard.', style: GoogleFonts.poppins(fontSize: 12, color: Colors.white)),
                 ),
               ],
             ),
@@ -773,7 +675,7 @@ class _StoreSetupScreenState extends State<StoreSetupScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: value ? Colors.black : Colors.grey[100], borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: value ? const Color(0xFFfb2a0a) : Colors.grey[100], borderRadius: BorderRadius.circular(14)),
       child: Row(
         children: [
           Container(

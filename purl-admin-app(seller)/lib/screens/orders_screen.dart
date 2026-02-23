@@ -106,7 +106,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           stream: _orderService.getStoreOrdersStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: Colors.black));
+              return const Center(child: CircularProgressIndicator(color: Color(0xFFfb2a0a)));
             }
 
             if (snapshot.hasError) {
@@ -179,7 +179,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             margin: const EdgeInsets.symmetric(horizontal: 4),
                             decoration: BoxDecoration(
-                              color: isSelected ? Colors.black : Colors.grey[100],
+                              color: isSelected ? const Color(0xFFfb2a0a) : Colors.grey[100],
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Column(
@@ -261,7 +261,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               'Order updated to ${newStatus == 'shipped' ? 'Shipped' : 'Refunded'}',
               style: GoogleFonts.poppins(),
             ),
-            backgroundColor: Colors.black,
+            backgroundColor: const Color(0xFFfb2a0a),
           ),
         );
       }
@@ -499,21 +499,21 @@ class _OrderItem extends StatelessWidget {
                       if (order.promoCode != null && order.promoCode!.isNotEmpty) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.green.shade300),
+                            color: const Color(0xFFfb2a0a),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFfb2a0a), width: 1.5),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.local_offer, size: 12, color: Colors.green.shade700),
+                              const Icon(Icons.local_offer, size: 12, color: Colors.white),
                               const SizedBox(width: 4),
                               Text(
                                 order.promoCode!,
                                 style: GoogleFonts.poppins(
-                                  color: Colors.green.shade700,
+                                  color: Colors.white,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -527,17 +527,17 @@ class _OrderItem extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
+                    color: const Color(0xFFb71000),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     order.statusDisplay,
                     style: GoogleFonts.poppins(
-                      color: Colors.grey[700],
+                      color: Colors.white,
                       fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -872,7 +872,7 @@ class _CourierSearchDialogState extends State<_CourierSearchDialog> {
                 height: 60,
                 child: CircularProgressIndicator(
                   strokeWidth: 6,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFfb2a0a)),
                 ),
               ),
               const SizedBox(height: 24),

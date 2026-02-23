@@ -114,8 +114,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSection('Support', [
                 _SettingsItem(icon: Iconsax.message_question, label: 'Help Center', onTap: () => _showHelpCenterSheet(context)),
                 _SettingsItem(icon: Iconsax.message, label: 'Contact Support', onTap: () => _showContactSupportSheet(context)),
-                _SettingsItem(icon: Iconsax.document_text, label: 'Terms of Service', onTap: () => _showTermsSheet(context)),
-                _SettingsItem(icon: Iconsax.shield_tick, label: 'Privacy Policy', onTap: () => _showPrivacySheet(context)),
               ]),
               const SizedBox(height: 24),
               _buildLogoutButton(context),
@@ -736,7 +734,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: Colors.black, size: 20)),
+        leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: const Color(0xFFfb2a0a), size: 20)),
         title: Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Colors.black)),
         subtitle: Text(subtitle, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
         trailing: Icon(Iconsax.arrow_right_3, color: Colors.grey[400], size: 18),
@@ -840,7 +838,7 @@ class _SettingsItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: Colors.black, size: 20)),
+      leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: const Color(0xFFfb2a0a), size: 20)),
       title: Text(label, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
       trailing: trailing ?? Icon(Iconsax.arrow_right_3, color: Colors.grey[400], size: 18),
       onTap: onTap,

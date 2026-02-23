@@ -146,10 +146,10 @@ class _NavItem extends StatelessWidget {
             AnimatedScale(
               scale: isSelected ? 1.1 : 1.0,
               duration: const Duration(milliseconds: 200),
-              child: Icon(isSelected ? activeIcon : icon, size: 24, color: isSelected ? Colors.black : Colors.grey[400]),
+              child: Icon(isSelected ? activeIcon : icon, size: 24, color: isSelected ? const Color(0xFFb71000) : Colors.grey[400]),
             ),
             const SizedBox(height: 4),
-            Text(label, style: GoogleFonts.poppins(fontSize: 11, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400, color: isSelected ? Colors.black : Colors.grey[400])),
+            Text(label, style: GoogleFonts.poppins(fontSize: 11, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400, color: isSelected ? const Color(0xFFb71000) : Colors.grey[400])),
           ],
         ),
       ),
@@ -204,7 +204,7 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
         child: Container(
           height: MediaQuery.of(context).size.height * 0.85,
           decoration: const BoxDecoration(
-            color: Color(0xFF1C1C1E),
+            color: Color(0xFFb71000),
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -271,7 +271,7 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 12, bottom: 8),
-      child: Text(title, style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1)),
+      child: Text(title, style: GoogleFonts.poppins(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
     );
   }
 
@@ -300,8 +300,8 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
                 onTap: onTap,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.grey[800], borderRadius: BorderRadius.circular(6)),
-                  child: Text('View', style: GoogleFonts.poppins(color: Colors.white, fontSize: 12)),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+                  child: Text('View', style: GoogleFonts.poppins(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -341,13 +341,13 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(color: Colors.grey[800], borderRadius: BorderRadius.circular(24)),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Iconsax.setting_2, color: Colors.white, size: 20),
+                  const Icon(Iconsax.setting_2, color: Colors.black, size: 20),
                   const SizedBox(width: 8),
-                  Text('Settings', style: GoogleFonts.poppins(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
+                  Text('Settings', style: GoogleFonts.poppins(color: Colors.black, fontSize: 15, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -357,8 +357,8 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
             onTap: () => Navigator.pop(context),
             child: Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.grey[800], shape: BoxShape.circle),
-              child: const Icon(Iconsax.close_circle, color: Colors.white, size: 22),
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              child: const Icon(Iconsax.close_circle, color: Colors.black, size: 22),
             ),
           ),
         ],

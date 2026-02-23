@@ -312,59 +312,65 @@ class _StoreVerificationScreenState extends State<StoreVerificationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Black and White Card with rotation
-                Transform.rotate(
-                  angle: -0.02, // Slight rotation (about -1 degree)
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    clipBehavior: Clip.antiAlias,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
+                // Professional gradient card
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  clipBehavior: Clip.antiAlias,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFFb71000), // Button red
+                          Color(0xFFfb2a0a), // Main red
+                          Color(0xFFe02509), // Hover red
                         ],
+                        stops: [0.0, 0.5, 1.0],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            storeName,
-                            style: GoogleFonts.poppins(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFfb2a0a).withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          storeName,
+                          style: GoogleFonts.poppins(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Verified since $verifiedDate',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              color: Colors.white.withOpacity(0.9),
-                              fontWeight: FontWeight.w500,
-                            ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Verified since $verifiedDate',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.w500,
                           ),
-                          const SizedBox(height: 40),
-                          Text(
-                            'Trust is the cornerstone of our community, and identity verification is part of how we build it.',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.white.withOpacity(0.85),
-                              height: 1.5,
-                            ),
+                        ),
+                        const SizedBox(height: 40),
+                        Text(
+                          'Trust is the cornerstone of our community, and identity verification is part of how we build it.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.white.withOpacity(0.85),
+                            height: 1.5,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -392,7 +398,7 @@ class _StoreVerificationScreenState extends State<StoreVerificationScreen> {
                     'Learn more',
                     style: GoogleFonts.poppins(
                       fontSize: 15,
-                      color: Colors.black,
+                      color: const Color(0xFFfb2a0a),
                       fontWeight: FontWeight.w600,
                       decoration: TextDecoration.underline,
                     ),

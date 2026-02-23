@@ -60,66 +60,138 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Iconsax.arrow_left, color: Colors.black), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(
+          icon: const Icon(Iconsax.arrow_left, color: Colors.black), 
+          onPressed: () => Navigator.pop(context)
+        ),
       ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 60),
+              // Email icon in circle
               Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
-                child: const Icon(Iconsax.sms, color: Colors.black, size: 28),
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F5F5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Iconsax.sms, color: Colors.black, size: 36),
               ),
-              const SizedBox(height: 24),
-              Text('Verify Email', style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.black)),
-              const SizedBox(height: 8),
-              Text('We sent a verification link to:', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600])),
-              const SizedBox(height: 4),
-              Text(email, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
               const SizedBox(height: 32),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
-                child: Row(
-                  children: [
-                    Icon(Iconsax.info_circle, color: Colors.grey[600], size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text('Click the link in your email, then tap the button below', style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]))),
-                  ],
+              // Title
+              Text(
+                'Verify Your Email',
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Description
+              Text(
+                'We sent a verification link to',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                email,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              // Info text
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Click the link in your email to verify your account. This page will automatically redirect once verified.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
               const SizedBox(height: 32),
+              // Resend link
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Didn't receive the email? ",
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _isResending ? null : _resendEmail,
+                    child: Text(
+                      _isResending ? 'Sending...' : 'Resend',
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFFfb2a0a),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              // Verify button - Using Button Red per guidelines
               GestureDetector(
                 onTap: _isLoading ? null : _checkVerification,
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(color: _isLoading ? Colors.grey : Colors.black, borderRadius: BorderRadius.circular(12)),
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: _isLoading ? Colors.grey[400] : const Color(0xFFb71000),
+                    borderRadius: BorderRadius.circular(26), // height / 2 = 52 / 2 = 26
+                  ),
                   child: Center(
                     child: _isLoading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text("I've Verified", style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            "I've Verified My Email",
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-              Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text("Didn't receive email? ", style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 14)),
-                    GestureDetector(
-                      onTap: _isResending ? null : _resendEmail,
-                      child: Text(_isResending ? 'Sending...' : 'Resend', style: GoogleFonts.poppins(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w600)),
-                    ),
-                  ],
+              const SizedBox(height: 12),
+              // Spam folder hint
+              Text(
+                "Check your spam folder if you don't see the email",
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.grey[400],
                 ),
+                textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),

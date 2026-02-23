@@ -163,7 +163,7 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           decoration: BoxDecoration(
-                            color: isGenerating ? Colors.grey : Colors.black,
+                            color: isGenerating ? Colors.grey : const Color(0xFFb71000),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Center(
@@ -228,7 +228,7 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Code copied to clipboard', style: GoogleFonts.poppins()),
-                              backgroundColor: Colors.black,
+                              backgroundColor: const Color(0xFFb71000),
                             ),
                           );
                         },
@@ -267,14 +267,14 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Invite code generated successfully', style: GoogleFonts.poppins()),
-                              backgroundColor: Colors.black,
+                              backgroundColor: const Color(0xFFb71000),
                             ),
                           );
                         },
                         child: Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
+                          decoration: BoxDecoration(color: const Color(0xFFb71000), borderRadius: BorderRadius.circular(12)),
                           child: Center(
                             child: Text('Done', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
                           ),
@@ -339,7 +339,7 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: Colors.black,
+                  backgroundColor: const Color(0xFFb71000),
                   child: Text(member['name'][0], style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 20)),
                 ),
                 const SizedBox(width: 16),
@@ -381,7 +381,7 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('New code: $newCode (expires in 15 min)', style: GoogleFonts.poppins()),
-                          backgroundColor: Colors.black,
+                          backgroundColor: const Color(0xFFb71000),
                           duration: const Duration(seconds: 5),
                         ),
                       );
@@ -459,10 +459,10 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                       onPressed: () {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Permissions updated', style: GoogleFonts.poppins()), backgroundColor: Colors.black),
+                          SnackBar(content: Text('Permissions updated', style: GoogleFonts.poppins()), backgroundColor: const Color(0xFFb71000)),
                         );
                       },
-                      child: Text('Save', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
+                      child: Text('Save', style: GoogleFonts.poppins(color: const Color(0xFFb71000), fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),
@@ -493,7 +493,7 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                             onChanged: entry.key == 'Payments' ? null : (value) {
                               setSheetState(() => permissions[entry.key] = value);
                             },
-                            activeColor: Colors.black,
+                            activeColor: const Color(0xFFb71000),
                           ),
                         ],
                       ),
@@ -562,7 +562,7 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                   if (success) {
                     setState(() => _teamMembers.remove(member));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${member['name']} removed from team', style: GoogleFonts.poppins()), backgroundColor: Colors.black),
+                      SnackBar(content: Text('${member['name']} removed from team', style: GoogleFonts.poppins()), backgroundColor: const Color(0xFFb71000)),
                     );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -586,7 +586,7 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
   void _cancelInvite(Map<String, dynamic> invite) {
     setState(() => _pendingInvites.remove(invite));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Invite cancelled', style: GoogleFonts.poppins()), backgroundColor: Colors.black),
+      SnackBar(content: Text('Invite cancelled', style: GoogleFonts.poppins()), backgroundColor: const Color(0xFFb71000)),
     );
   }
 
@@ -598,15 +598,15 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Iconsax.arrow_left, color: Colors.black),
+          icon: const Icon(Iconsax.arrow_left, color: const Color(0xFFb71000)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Team', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w700)),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.black,
+          labelColor: const Color(0xFFb71000),
           unselectedLabelColor: Colors.grey[500],
-          indicatorColor: Colors.black,
+          indicatorColor: const Color(0xFFb71000),
           indicatorWeight: 2,
           labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
           unselectedLabelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 14),
@@ -618,12 +618,12 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showInviteRunnerSheet,
-        backgroundColor: Colors.black,
+        backgroundColor: const Color(0xFFb71000),
         icon: const Icon(Iconsax.user_add, color: Colors.white, size: 20),
         label: Text('Add Runner', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.black))
+          ? const Center(child: CircularProgressIndicator(color: const Color(0xFFb71000)))
           : TabBarView(
         controller: _tabController,
         children: [
@@ -655,7 +655,7 @@ class _UsersScreenState extends State<UsersScreen> with SingleTickerProviderStat
                       onCopyCode: () {
                         Clipboard.setData(ClipboardData(text: invite['code']));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Code copied', style: GoogleFonts.poppins()), backgroundColor: Colors.black),
+                          SnackBar(content: Text('Code copied', style: GoogleFonts.poppins()), backgroundColor: const Color(0xFFb71000)),
                         );
                       },
                     );
@@ -712,7 +712,7 @@ class _MemberCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: Colors.black,
+                  backgroundColor: const Color(0xFFb71000),
                   child: Text(
                     member['name'][0],
                     style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 18),
@@ -885,7 +885,7 @@ class _PendingInviteCard extends StatelessWidget {
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 4,
-                        color: isExpired ? Colors.grey : Colors.black,
+                        color: isExpired ? Colors.grey : const Color(0xFFb71000),
                       ),
                     ),
                   ],
@@ -972,7 +972,7 @@ class _OptionTile extends StatelessWidget {
               label,
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w500,
-                color: isDestructive ? Colors.red : Colors.black,
+                color: isDestructive ? Colors.red : const Color(0xFFb71000),
               ),
             ),
             const Spacer(),

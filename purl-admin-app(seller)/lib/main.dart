@@ -39,7 +39,7 @@ class PurlAdminApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Wibble Seller',
+      title: 'POP Manager',
       debugShowCheckedModeBanner: false,
       theme: lightTheme,
       routerConfig: router,

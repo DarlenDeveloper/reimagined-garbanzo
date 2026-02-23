@@ -103,7 +103,7 @@ class _StoreScreenState extends State<StoreScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Store link copied to clipboard', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.black,
+          backgroundColor: const Color(0xFFfb2a0a),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -116,7 +116,7 @@ class _StoreScreenState extends State<StoreScreen> {
       return const Scaffold(
         backgroundColor: Colors.white,
         body: Center(
-          child: CircularProgressIndicator(color: Colors.black),
+          child: CircularProgressIndicator(color: const Color(0xFFfb2a0a)),
         ),
       );
     }
@@ -141,7 +141,7 @@ class _StoreScreenState extends State<StoreScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
-                          child: const Icon(Iconsax.arrow_left, color: Colors.black, size: 22),
+                          child: const Icon(Iconsax.arrow_left, color: const Color(0xFFfb2a0a), size: 22),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -157,7 +157,7 @@ class _StoreScreenState extends State<StoreScreen> {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: Colors.black,
+                  color: const Color(0xFFfb2a0a),
                   borderRadius: BorderRadius.circular(20),
                   image: logoUrl != null
                       ? DecorationImage(
@@ -249,9 +249,9 @@ class _StoreStatCard extends StatelessWidget {
       decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
-          Icon(icon, color: Colors.black, size: 24),
+          Icon(icon, color: const Color(0xFFfb2a0a), size: 24),
           const SizedBox(height: 8),
-          Text(value, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
+          Text(value, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFFfb2a0a))),
           Text(label, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
         ],
       ),
@@ -281,7 +281,7 @@ class _QuickLinkItem extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
-          child: Icon(icon, color: Colors.black, size: 22),
+          child: Icon(icon, color: const Color(0xFFfb2a0a), size: 22),
         ),
         title: Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 14, color: Colors.black)),
         subtitle: Text(subtitle, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),

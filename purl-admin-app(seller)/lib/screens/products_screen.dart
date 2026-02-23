@@ -435,7 +435,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       backgroundColor: Colors.white,
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddProductSheet,
-        backgroundColor: Colors.black,
+        backgroundColor: const Color(0xFFb71000),
         child: const Icon(Iconsax.add, color: Colors.white),
       ),
       body: SafeArea(
@@ -572,7 +572,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'To start selling on Wibble, add your products or import from another platform.',
+              'To start selling on POP, add your products or import from another platform.',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 14,

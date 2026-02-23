@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/store_service.dart';
 import '../services/currency_service.dart';
 import 'currency_selection_screen.dart';
@@ -31,7 +32,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Colors.black,
+      systemNavigationBarColor: Color(0xFFfb2a0a),
       systemNavigationBarIconBrightness: Brightness.light,
     ));
     
@@ -50,36 +51,67 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
     // Start fade in
     _fadeController.forward();
     
-    // Load store data in background
+    // Check user's onboarding status
     try {
-      _storeId = await _storeService.getUserStoreId();
-      if (_storeId != null) {
-        final storeData = await _storeService.getStore(_storeId!);
-        if (storeData != null && mounted) {
-          setState(() {
-            _storeName = storeData['name'];
-            _logoUrl = storeData['logoUrl'];
-          });
-          
-          // Pre-cache the logo
-          if (_logoUrl != null && _logoUrl!.isNotEmpty) {
-            await precacheImage(CachedNetworkImageProvider(_logoUrl!), context);
-          }
+      final user = FirebaseAuth.instance.currentUser;
+      
+      if (user == null) {
+        // No user logged in, go to login
+        if (mounted) context.go('/login');
+        return;
+      }
+      
+      // Check if email is verified
+      await user.reload();
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null && !currentUser.emailVerified) {
+        // Email not verified, go to verify-email screen
+        if (mounted) {
+          await Future.delayed(const Duration(seconds: 1));
+          context.go('/verify-email');
         }
-
-        // Initialize currency service and check if currency is set
-        await _currencyService.init(_storeId);
+        return;
+      }
+      
+      // Check if store exists
+      _storeId = await _storeService.getUserStoreId();
+      if (_storeId == null) {
+        // No store found, check if they've selected account type
+        // If not, go to account-type, otherwise go to store-setup
+        if (mounted) {
+          await Future.delayed(const Duration(seconds: 1));
+          context.go('/account-type');
+        }
+        return;
+      }
+      
+      // Store exists, load store data
+      final storeData = await _storeService.getStore(_storeId!);
+      if (storeData != null && mounted) {
+        setState(() {
+          _storeName = storeData['name'];
+          _logoUrl = storeData['logoUrl'];
+        });
         
-        if (!_currencyService.hasCurrencySet) {
-          // Store doesn't have a currency set - show selection screen
-          if (mounted) {
-            setState(() => _needsCurrencySelection = true);
-          }
-          return; // Don't navigate to dashboard yet
+        // Pre-cache the logo
+        if (_logoUrl != null && _logoUrl!.isNotEmpty) {
+          await precacheImage(CachedNetworkImageProvider(_logoUrl!), context);
         }
       }
+
+      // Initialize currency service and check if currency is set
+      await _currencyService.init(_storeId);
+      
+      if (!_currencyService.hasCurrencySet) {
+        // Store doesn't have a currency set - show selection screen
+        if (mounted) {
+          setState(() => _needsCurrencySelection = true);
+        }
+        return; // Don't navigate to dashboard yet
+      }
     } catch (e) {
-      // Continue anyway
+      print('Error in loading screen: $e');
+      // On error, try to go to dashboard anyway
     }
     
     // Minimum 3 seconds loading time for professional feel
@@ -112,7 +144,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFFfb2a0a),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Center(
@@ -121,59 +153,69 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
             children: [
               // Store logo or app logo
               Container(
-                width: 80,
-                height: 80,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.white,
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(24),
                   child: _logoUrl != null && _logoUrl!.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: _logoUrl!,
                           fit: BoxFit.cover,
-                          placeholder: (context, url) => Image.asset(
-                            'assets/images/wibblelogo.png',
-                            fit: BoxFit.cover,
+                          placeholder: (context, url) => Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Image.asset(
+                              'assets/images/popstoreslogo.PNG',
+                              fit: BoxFit.contain,
+                            ),
                           ),
-                          errorWidget: (context, url, error) => Image.asset(
-                            'assets/images/wibblelogo.png',
-                            fit: BoxFit.cover,
+                          errorWidget: (context, url, error) => Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Image.asset(
+                              'assets/images/popstoreslogo.PNG',
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         )
-                      : Image.asset(
-                          'assets/images/wibblelogo.png',
-                          fit: BoxFit.cover,
+                      : Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Image.asset(
+                            'assets/images/popstoreslogo.PNG',
+                            fit: BoxFit.contain,
+                          ),
                         ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               // Store name or app name
               Text(
-                _storeName ?? 'Wibble Seller',
+                _storeName ?? 'POP Manager',
                 style: GoogleFonts.poppins(
                   color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 40),
               // Loading indicator
               const SizedBox(
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 child: CircularProgressIndicator(
                   color: Colors.white,
-                  strokeWidth: 2.5,
+                  strokeWidth: 3,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               Text(
                 'Setting up your store...',
                 style: GoogleFonts.poppins(
-                  color: Colors.grey[600],
-                  fontSize: 13,
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],

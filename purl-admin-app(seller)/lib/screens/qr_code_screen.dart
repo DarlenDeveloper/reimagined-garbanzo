@@ -47,7 +47,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
 
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: 'Scan to visit ${widget.storeName} on Purl!\n$_webLink',
+        text: 'Scan to visit ${widget.storeName} on POP!\n$_webLink',
       );
     } catch (e) {
       if (mounted) {
@@ -178,7 +178,7 @@ class _QRCodeScreenState extends State<QRCodeScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Customers can scan this QR code to visit your store in the Purl app',
+                      'Customers can scan this QR code to visit your store in the POP app',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Colors.grey[700],

@@ -55,13 +55,13 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Iconsax.arrow_left, color: Colors.black87),
+          icon: const Icon(Iconsax.arrow_left, color: const Color(0xFFb71000)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Discounts',
           style: GoogleFonts.inter(
-            color: Colors.black87,
+            color: Colors.black,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
@@ -72,9 +72,9 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
             children: [
               TabBar(
                 controller: _tabController,
-                labelColor: Colors.black87,
+                labelColor: const Color(0xFFb71000),
                 unselectedLabelColor: Colors.grey,
-                indicatorColor: Colors.black87,
+                indicatorColor: const Color(0xFFb71000),
                 indicatorWeight: 2,
                 labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
                 tabs: const [
@@ -99,7 +99,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                 ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCreateDiscountDialog(),
-        backgroundColor: Colors.black87,
+        backgroundColor: const Color(0xFFb71000),
         icon: const Icon(Iconsax.add),
         label: Text('Create Discount', style: GoogleFonts.inter()),
       ),
@@ -173,15 +173,15 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.black87.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFFfb2a0a).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       discount.code,
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: const Color(0xFFb71000),
                       ),
                     ),
                   ),
@@ -211,7 +211,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: const Color(0xFFb71000),
                 ),
               ),
               const SizedBox(height: 12),
@@ -346,7 +346,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: const Color(0xFFb71000),
             ),
           ),
         ],
@@ -432,7 +432,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.black87, width: 1),
+                            borderSide: const BorderSide(color: const Color(0xFFb71000), width: 1),
                           ),
                         ),
                         textCapitalization: TextCapitalization.characters,
@@ -457,7 +457,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.black87, width: 1),
+                            borderSide: const BorderSide(color: const Color(0xFFb71000), width: 1),
                           ),
                         ),
                         items: const [
@@ -491,7 +491,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.black87, width: 1),
+                            borderSide: const BorderSide(color: const Color(0xFFb71000), width: 1),
                           ),
                         ),
                         keyboardType: TextInputType.number,
@@ -516,7 +516,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.black87, width: 1),
+                            borderSide: const BorderSide(color: const Color(0xFFb71000), width: 1),
                           ),
                         ),
                         keyboardType: TextInputType.number,
@@ -555,7 +555,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                               : 'Set Expiry Date (Optional)',
                           style: GoogleFonts.inter(
                             fontSize: 14,
-                            color: selectedExpiry != null ? Colors.black87 : Colors.grey.shade600,
+                            color: selectedExpiry != null ? const Color(0xFFb71000) : Colors.grey.shade600,
                           ),
                         ),
                       ],
@@ -596,7 +596,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: applyToAllProducts ? Colors.black87 : Colors.white,
+                                  color: applyToAllProducts ? const Color(0xFFb71000) : Colors.white,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -605,7 +605,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
-                                    color: applyToAllProducts ? Colors.white : Colors.black87,
+                                    color: applyToAllProducts ? Colors.white : const Color(0xFFb71000),
                                   ),
                                 ),
                               ),
@@ -623,7 +623,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: !applyToAllProducts ? Colors.black87 : Colors.white,
+                                  color: !applyToAllProducts ? const Color(0xFFb71000) : Colors.white,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -632,7 +632,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
-                                    color: !applyToAllProducts ? Colors.white : Colors.black87,
+                                    color: !applyToAllProducts ? Colors.white : const Color(0xFFb71000),
                                   ),
                                 ),
                               ),
@@ -685,7 +685,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                           child: Text(
                             'Cancel',
                             style: GoogleFonts.inter(
-                              color: Colors.black87,
+                              color: const Color(0xFFb71000),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -729,7 +729,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black87,
+                            backgroundColor: const Color(0xFFb71000),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -877,7 +877,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                                   ),
                                   child: const Icon(Iconsax.box, size: 24),
                                 ),
-                          activeColor: Colors.black87,
+                          activeColor: const Color(0xFFb71000),
                           contentPadding: const EdgeInsets.symmetric(vertical: 8),
                         );
                       },
@@ -912,7 +912,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                         child: Text(
                           'Cancel',
                           style: GoogleFonts.inter(
-                            color: Colors.black87,
+                            color: const Color(0xFFb71000),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -926,7 +926,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black87,
+                          backgroundColor: const Color(0xFFb71000),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

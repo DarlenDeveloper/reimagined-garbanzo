@@ -16,6 +16,78 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final NotificationService _notificationService = NotificationService();
+  String _selectedFilter = 'This Week'; // Default filter
+
+  DateTime _getFilterStartDate() {
+    final now = DateTime.now();
+    switch (_selectedFilter) {
+      case 'Today':
+        return DateTime(now.year, now.month, now.day);
+      case 'This Week':
+        return now.subtract(const Duration(days: 7)); // Last 7 days
+      case 'This Month':
+        return DateTime(now.year, now.month, 1); // Start of month
+      default:
+        return now.subtract(const Duration(days: 7)); // Default to 7 days
+    }
+  }
+
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Filter Notifications',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ...['Today', 'This Week', 'This Month'].map((filter) {
+              final isSelected = _selectedFilter == filter;
+              return ListTile(
+                title: Text(
+                  filter,
+                  style: GoogleFonts.poppins(
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected ? const Color(0xFFfb2a0a) : Colors.black,
+                  ),
+                ),
+                trailing: isSelected
+                    ? const Icon(Iconsax.tick_circle, color: Color(0xFFfb2a0a))
+                    : null,
+                onTap: () {
+                  setState(() => _selectedFilter = filter);
+                  Navigator.pop(ctx);
+                },
+              );
+            }),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
 
   IconData _getIconForType(String type) {
     switch (type) {
@@ -89,6 +161,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
         title: Text('Notifications', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
         actions: [
+          // Filter button
+          IconButton(
+            icon: const Icon(Iconsax.filter, color: Colors.black),
+            onPressed: _showFilterSheet,
+          ),
           StreamBuilder<int>(
             stream: _notificationService.getUnreadCount(),
             builder: (context, snapshot) {
@@ -101,12 +178,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('All marked as read', style: GoogleFonts.poppins()),
-                          backgroundColor: Colors.black,
+                          backgroundColor: const Color(0xFFfb2a0a),
                         ),
                       );
                     }
                   },
-                  child: Text('Mark all read', style: GoogleFonts.poppins(color: Colors.black, fontSize: 14)),
+                  child: Text('Mark all read', style: GoogleFonts.poppins(color: const Color(0xFFfb2a0a), fontSize: 14)),
                 );
               }
               return const SizedBox.shrink();
@@ -122,7 +199,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             .get(),
         builder: (context, storeSnapshot) {
           if (storeSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Colors.black));
+            return const Center(child: CircularProgressIndicator(color: Color(0xFFfb2a0a)));
           }
 
           if (!storeSnapshot.hasData || storeSnapshot.data!.docs.isEmpty) {
@@ -138,11 +215,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 .collection('stores')
                 .doc(storeId)
                 .collection('notifications')
+                .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(_getFilterStartDate()))
                 .orderBy('createdAt', descending: true)
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: Colors.black));
+                return const Center(child: CircularProgressIndicator(color: Color(0xFFfb2a0a)));
               }
 
               if (snapshot.hasError) {
@@ -216,10 +294,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: Colors.grey[100],
+                              color: const Color(0xFFfb2a0a),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Icon(_getIconForType(type), color: Colors.black, size: 20),
+                            child: Icon(_getIconForType(type), color: Colors.white, size: 20),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -243,7 +321,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         width: 8,
                                         height: 8,
                                         decoration: const BoxDecoration(
-                                          color: Colors.black,
+                                          color: Color(0xFFfb2a0a),
                                           shape: BoxShape.circle,
                                         ),
                                       ),

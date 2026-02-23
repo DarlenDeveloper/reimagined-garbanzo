@@ -16,22 +16,22 @@ class AccountTypeScreen extends StatelessWidget {
           child: Column(
             children: [
               const SizedBox(height: 40),
-              // Welcome message
+              // Logo
               Container(
                 width: 70,
                 height: 70,
                 decoration: BoxDecoration(
-                  color: Colors.black,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(18),
-                  child: Image.asset('assets/images/wibblelogo.png', fit: BoxFit.cover),
+                  child: Image.asset('assets/images/popstoreslogo.PNG', fit: BoxFit.cover),
                 ),
               ),
               const SizedBox(height: 24),
               Text(
-                'Welcome to Wibble',
+                'Welcome to POP',
                 style: GoogleFonts.poppins(
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
@@ -51,7 +51,7 @@ class AccountTypeScreen extends StatelessWidget {
               _AccountTypeCard(
                 icon: Iconsax.shop,
                 title: 'Create My Store',
-                subtitle: 'Start selling your products on Wibble',
+                subtitle: 'Start selling your products on POP',
                 features: const [
                   'Set up your own store',
                   'Add products & manage inventory',
@@ -129,18 +129,9 @@ class _AccountTypeCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isPrimary ? Colors.black : Colors.white,
+          color: isPrimary ? const Color(0xFFfb2a0a) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: isPrimary ? null : Border.all(color: Colors.grey[300]!),
-          boxShadow: isPrimary
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
-              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -51,9 +51,16 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
             Text('Filter by Time', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             ...['Today', 'This Week', 'This Month', 'All Time'].map((filter) {
+              final isSelected = _selectedTimeFilter == filter;
               return ListTile(
-                title: Text(filter, style: GoogleFonts.poppins()),
-                trailing: _selectedTimeFilter == filter ? const Icon(Iconsax.tick_circle) : null,
+                title: Text(
+                  filter,
+                  style: GoogleFonts.poppins(
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected ? const Color(0xFFfb2a0a) : Colors.black,
+                  ),
+                ),
+                trailing: isSelected ? const Icon(Iconsax.tick_circle, color: Color(0xFFfb2a0a)) : null,
                 onTap: () {
                   setState(() => _selectedTimeFilter = filter);
                   Navigator.pop(context);
@@ -130,12 +137,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                 // Tabs
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+                  height: 48,
+                  decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(24)),
                   child: TabBar(
                     controller: _tabController,
                     labelColor: Colors.white,
                     unselectedLabelColor: Colors.grey[600],
-                    indicator: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(10)),
+                    indicator: BoxDecoration(color: const Color(0xFFfb2a0a), borderRadius: BorderRadius.circular(20)),
                     indicatorSize: TabBarIndicatorSize.tab,
                     dividerColor: Colors.transparent,
                     labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
@@ -292,8 +300,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                 child: GestureDetector(
                   onTap: () => _showMarkDeliveredDialog(order),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey[300]!)),
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -310,8 +322,11 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                 child: GestureDetector(
                   onTap: () => _requestDeliveryForOrder(order),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(10)),
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFb71000),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

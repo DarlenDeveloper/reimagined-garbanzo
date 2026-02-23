@@ -108,8 +108,8 @@ class NotificationService {
 
     // Create notification channel for Android with custom sound
     const androidChannel = AndroidNotificationChannel(
-      'purl_seller_channel_v2',
-      'Purl Seller Notifications',
+      'pop_manager_channel',
+      'POP Manager Notifications',
       description: 'Notifications for store owners',
       importance: Importance.high,
       sound: RawResourceAndroidNotificationSound('notification'),
@@ -145,8 +145,8 @@ class NotificationService {
 
     // Create notification channel for Android
     const androidChannel = AndroidNotificationChannel(
-      'purl_seller_channel_v2',
-      'Purl Seller Notifications',
+      'pop_manager_channel',
+      'POP Manager Notifications',
       description: 'Notifications for store owners',
       importance: Importance.high,
       sound: RawResourceAndroidNotificationSound('notification'),
@@ -303,8 +303,8 @@ class NotificationService {
     if (notification == null) return;
 
     const androidDetails = AndroidNotificationDetails(
-      'purl_seller_channel_v2',
-      'Purl Seller Notifications',
+      'pop_manager_channel',
+      'POP Manager Notifications',
       channelDescription: 'Notifications for store owners',
       importance: Importance.high,
       priority: Priority.high,

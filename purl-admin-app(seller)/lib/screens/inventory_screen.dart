@@ -112,7 +112,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Stock updated', style: GoogleFonts.poppins()),
-            backgroundColor: Colors.black,
+            backgroundColor: const Color(0xFFfb2a0a),
           ),
         );
       }
@@ -240,7 +240,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       _updateStock(product, newStock);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: const Color(0xFFb71000),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -305,7 +305,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.black))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFfb2a0a)))
           : _error != null
               ? _buildErrorState()
               : _products.isEmpty
@@ -335,8 +335,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 _initializeStore();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
+                backgroundColor: const Color(0xFFb71000),
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: Text('Retry', style: GoogleFonts.poppins()),
             ),
@@ -385,7 +388,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       onRefresh: () async {
         _subscribeToProducts();
       },
-      color: Colors.black,
+      color: const Color(0xFFfb2a0a),
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -471,13 +474,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Widget _filterChip(String label, String value, int count) {
     final isSelected = _filter == value;
+    const double chipHeight = 40;
     return GestureDetector(
       onTap: () => setState(() => _filter = value),
       child: Container(
+        height: chipHeight,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black : Colors.grey[100],
-          borderRadius: BorderRadius.circular(20),
+          color: isSelected ? const Color(0xFFfb2a0a) : Colors.grey[100],
+          borderRadius: BorderRadius.circular(chipHeight / 2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -486,7 +491,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               label,
               style: GoogleFonts.poppins(
                 fontSize: 13,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: isSelected ? Colors.white : Colors.black,
               ),
             ),

@@ -189,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                               child: Container(
                                                 width: 18,
                                                 height: 18,
-                                                decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+                                                decoration: const BoxDecoration(color: Color(0xFFfb2a0a), shape: BoxShape.circle),
                                                 child: Center(
                                                   child: Text(
                                                     unreadCount > 99 ? '99+' : '$unreadCount',
@@ -508,7 +508,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             title: 'Get Verified',
             subtitle: 'Stand out with a verified badge • \$4.99/month',
             buttonText: 'Get Started',
-            color: Colors.blue,
+            color: const Color(0xFFfb2a0a),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -546,7 +546,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black,
+        color: const Color(0xFFfb2a0a),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -660,8 +660,8 @@ class _AnalyticCardState extends State<_AnalyticCard> with SingleTickerProviderS
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                  child: Icon(widget.icon, color: Colors.black, size: 20),
+                  decoration: BoxDecoration(color: const Color(0xFFfb2a0a), borderRadius: BorderRadius.circular(10)),
+                  child: Icon(widget.icon, color: Colors.white, size: 20),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -734,8 +734,8 @@ class _OrderCardState extends State<_OrderCard> with SingleTickerProviderStateMi
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Iconsax.shopping_bag, color: Colors.black, size: 22),
+                decoration: BoxDecoration(color: const Color(0xFFfb2a0a), borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Iconsax.shopping_bag, color: Colors.white, size: 22),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -787,12 +787,12 @@ class _ActionButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 18),
-        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(14)),
+        decoration: BoxDecoration(color: const Color(0xFFfb2a0a), borderRadius: BorderRadius.circular(14)),
         child: Column(
           children: [
-            Icon(icon, color: Colors.black, size: 26),
+            Icon(icon, color: Colors.white, size: 26),
             const SizedBox(height: 8),
-            Text(label, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey[700]), textAlign: TextAlign.center),
+            Text(label, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white), textAlign: TextAlign.center),
           ],
         ),
       ),
