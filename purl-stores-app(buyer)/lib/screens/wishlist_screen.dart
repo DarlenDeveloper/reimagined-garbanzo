@@ -35,10 +35,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
           backgroundColor: Colors.white,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Iconsax.arrow_left, color: Colors.black),
+            icon: const Icon(Iconsax.arrow_left, color: Color(0xFF1a1a1a)),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text('Wishlist', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
+          title: Text('Wishlist', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF1a1a1a))),
           centerTitle: true,
         ),
         body: Center(
@@ -53,14 +53,14 @@ class _WishlistScreenState extends State<WishlistScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Iconsax.arrow_left, color: Colors.black),
+          icon: const Icon(Iconsax.arrow_left, color: Color(0xFF1a1a1a)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Wishlist', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
+        title: Text('Wishlist', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF1a1a1a))),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Iconsax.trash, color: Colors.grey),
+            icon: const Icon(Iconsax.trash, color: Color(0xFFfb2a0a)),
             onPressed: _clearAll,
           ),
         ],
@@ -69,7 +69,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
         stream: _wishlistService.getWishlist(_userId!),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Colors.black));
+            return const Center(child: CircularProgressIndicator(color: Color(0xFFfb2a0a)));
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -100,7 +100,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
         children: [
           Icon(Iconsax.heart, size: 80, color: Colors.grey[300]),
           const SizedBox(height: 16),
-          Text('Your wishlist is empty', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
+          Text('Your wishlist is empty', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF1a1a1a))),
           const SizedBox(height: 8),
           Text('Save items you love for later', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
         ],
@@ -179,7 +179,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         color: Colors.white,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Iconsax.heart5, size: 18, color: Colors.red),
+                      child: const Icon(Iconsax.heart5, size: 18, color: Color(0xFFfb2a0a)),
                     ),
                   ),
                 ),
@@ -202,7 +202,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                             style: GoogleFonts.poppins(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black,
+                              color: const Color(0xFF1a1a1a),
                             ),
                           ),
                         ),
@@ -233,7 +233,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black,
+                      color: const Color(0xFF1a1a1a),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -242,7 +242,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      color: const Color(0xFF1a1a1a),
                     ),
                   ),
                 ],
@@ -266,7 +266,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Removed from wishlist', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.black,
+          backgroundColor: const Color(0xFFfb2a0a),
           duration: const Duration(seconds: 1),
         ),
       );
@@ -288,7 +288,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Clear', style: GoogleFonts.poppins(color: Colors.red)),
+            child: Text('Clear', style: GoogleFonts.poppins(color: const Color(0xFFfb2a0a))),
           ),
         ],
       ),
@@ -300,7 +300,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Wishlist cleared', style: GoogleFonts.poppins()),
-            backgroundColor: Colors.black,
+            backgroundColor: const Color(0xFFfb2a0a),
           ),
         );
       }
