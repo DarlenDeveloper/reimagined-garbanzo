@@ -13,7 +13,7 @@ class BnplPlansScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Iconsax.arrow_left, color: Colors.black),
+          icon: const Icon(Iconsax.arrow_left, color: Color(0xFF1a1a1a)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -21,7 +21,7 @@ class BnplPlansScreen extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Colors.black,
+            color: const Color(0xFF1a1a1a),
           ),
         ),
         centerTitle: true,
@@ -51,7 +51,7 @@ class BnplPlansScreen extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black,
+                  color: const Color(0xFF1a1a1a),
                 ),
               ),
               const SizedBox(height: 16),
