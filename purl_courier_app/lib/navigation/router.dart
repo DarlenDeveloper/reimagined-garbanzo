@@ -12,6 +12,7 @@ import '../screens/email_verification_screen.dart';
 import '../screens/profile_completion_screen.dart';
 import '../screens/phone_verification_screen.dart';
 import '../screens/pending_verification_screen.dart';
+import '../screens/withdraw_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/',
@@ -67,6 +68,10 @@ final router = GoRouter(
     GoRoute(
       path: '/deliveries',
       builder: (context, state) => const DeliveriesScreen(),
+    ),
+    GoRoute(
+      path: '/withdraw',
+      builder: (context, state) => const WithdrawScreen(),
     ),
   ],
 );

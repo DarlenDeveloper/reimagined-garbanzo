@@ -34,9 +34,14 @@ class _SignInScreenState extends State<SignInScreen> {
         password: _passwordController.text,
       );
       
-      // Go directly to home after sign in
+      // Check onboarding status and navigate accordingly
       if (mounted) {
-        context.go('/home');
+        final nextStep = await _onboardingService.getNextOnboardingStep();
+        if (nextStep == null) {
+          context.go('/home');
+        } else {
+          context.go(nextStep);
+        }
       }
     } on FirebaseAuthException catch (e) {
       _showError(_getErrorMessage(e.code));
@@ -53,7 +58,12 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final result = await _authService.signInWithGoogle();
       if (result != null && mounted) {
-        context.go('/home');
+        final nextStep = await _onboardingService.getNextOnboardingStep();
+        if (nextStep == null) {
+          context.go('/home');
+        } else {
+          context.go(nextStep);
+        }
       }
     } on FirebaseAuthException catch (e) {
       _showError(_getErrorMessage(e.code));
@@ -226,15 +236,35 @@ class _SignInScreenState extends State<SignInScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: ElevatedButton(
                       onPressed: _isLoading ? null : _signInWithGoogle,
-                      icon: const Icon(Icons.g_mobiledata, size: 28),
-                      label: const Text('Google'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                          side: BorderSide(color: Colors.grey[300]!, width: 1),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/google_logo.png',
+                            width: 20,
+                            height: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Google'),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: ElevatedButton.icon(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -243,12 +273,17 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                         );
                       },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                      ),
                       icon: const Icon(Icons.apple, size: 20),
                       label: const Text('Apple'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.grey,
-                        side: BorderSide(color: Colors.grey[300]!),
-                      ),
                     ),
                   ),
                 ],

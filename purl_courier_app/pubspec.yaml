@@ -1,5 +1,5 @@
 name: purl_courier_app
-description: "Wibble Rider - Deliver with Wibble"
+description: "POP Rider - Deliver with POP"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -44,9 +44,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/wibble_courier_logo.png"
+  image_path: "assets/images/pop_rider_logo.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/wibble_courier_logo.png"
+  adaptive_icon_foreground: "assets/images/pop_rider_logo.png"
 
 flutter:
   uses-material-design: true

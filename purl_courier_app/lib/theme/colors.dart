@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Black & White Theme
+  // POP Brand Colors
+  static const Color mainRed = Color(0xFFfb2a0a); // Primary brand color
+  static const Color darkRed = Color(0xFFd91400); // Secondary/hover states
+  static const Color buttonRed = Color(0xFFb71000); // Buttons and CTAs
+  static const Color darkText = Color(0xFF1a1a1a); // Readable text
+  static const Color background = Color(0xFFF9F9F9); // Card backgrounds
+  
+  // Black & White
   static const Color black = Color(0xFF000000);
   static const Color white = Color(0xFFFFFFFF);
   static const Color grey = Color(0xFF9E9E9E);

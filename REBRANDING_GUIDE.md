@@ -7,6 +7,23 @@
 
 ## ✅ COMPLETED TASKS (Feb 23, 2026)
 
+### POP Rider (Courier App) - COMPLETED ✅
+- ✅ Updated splash screen to POP main red (#fb2a0a)
+- ✅ Removed white container around logo on splash
+- ✅ Applied Poppins font throughout theme
+- ✅ Updated all colors to POP brand palette
+- ✅ Changed green colors to POP red (#fb2a0a)
+- ✅ Removed text field borders
+- ✅ Updated button border radius to height/2 (28px)
+- ✅ Google button: white with thin border
+- ✅ Apple button: black background
+- ✅ Fixed auth flow to check verification status
+- ✅ Updated delivery cards to white background
+- ✅ Status pills use button red (#b71000)
+- ✅ Recent deliveries icon uses main red (#fb2a0a)
+- ✅ Bottom navigation uses button red (#b71000) for active state
+- ✅ Support email updated to POP
+
 ### Product Detail Screen
 - ✅ Updated AppBar title to show product name instead of "Details"
 - ✅ Changed tab indicator to main red (#fb2a0a)

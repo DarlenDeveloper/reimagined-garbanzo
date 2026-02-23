@@ -112,7 +112,7 @@ class _PendingVerificationScreenState extends State<PendingVerificationScreen> {
                   // TODO: Add customer support contact (WhatsApp, Email, etc.)
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Contact support: support@purl.com'),
+                      content: Text('Contact support: support@pop.co.za'),
                       behavior: SnackBarBehavior.floating,
                     ),
                   );

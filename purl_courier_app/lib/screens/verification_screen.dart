@@ -471,10 +471,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: captured ? Colors.green[50] : Colors.grey[50],
+          color: captured ? const Color(0xFFfb2a0a).withOpacity(0.1) : Colors.grey[50],
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: captured ? Colors.green : Colors.grey[300]!,
+            color: captured ? const Color(0xFFfb2a0a) : Colors.grey[300]!,
             width: 1,
           ),
         ),
@@ -482,7 +482,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
           children: [
             Icon(
               captured ? Iconsax.tick_circle : icon,
-              color: captured ? Colors.green : Colors.grey[600],
+              color: captured ? const Color(0xFFfb2a0a) : Colors.grey[600],
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -490,7 +490,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 captured ? '$label ✓' : label,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: captured ? Colors.green : Colors.black,
+                      color: captured ? const Color(0xFFfb2a0a) : Colors.black,
                     ),
               ),
             ),

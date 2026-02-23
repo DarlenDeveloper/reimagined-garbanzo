@@ -291,10 +291,10 @@ class ProfileScreen extends StatelessWidget {
                     );
 
                     if (confirmed == true && context.mounted) {
-                      await authService.signOut();
-                      if (context.mounted) {
-                        context.go('/welcome');
-                      }
+                      // Navigate immediately for better UX
+                      context.go('/welcome');
+                      // Sign out in background
+                      authService.signOut();
                     }
                   },
                   style: OutlinedButton.styleFrom(

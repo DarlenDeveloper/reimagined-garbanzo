@@ -14,16 +14,16 @@ void main() async {
   // Initialize FCM and request notification permissions
   await FCMService().initialize();
   
-  runApp(const WibbleRiderApp());
+  runApp(const PopRiderApp());
 }
 
-class WibbleRiderApp extends StatelessWidget {
-  const WibbleRiderApp({super.key});
+class PopRiderApp extends StatelessWidget {
+  const PopRiderApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Wibble Rider',
+      title: 'POP Rider',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: router,

@@ -49,21 +49,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
           padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
           child: Column(
             children: [
-              // Skip button
-              Align(
-                alignment: Alignment.topRight,
-                child: TextButton(
-                  onPressed: () => context.push('/signin'),
-                  child: Text(
-                    'Skip',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 24),
               
               const Spacer(),
               
@@ -103,7 +89,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: Text(
-                  'Welcome to Wibble Rider!',
+                  'Welcome to POP Rider!',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         letterSpacing: -0.5,
@@ -159,29 +145,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
               // Next Button
               FadeTransition(
                 opacity: _fadeAnimation,
-                child: Container(
+                child: SizedBox(
                   width: double.infinity,
                   height: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => context.push('/signin'),
-                      borderRadius: BorderRadius.circular(16),
-                      child: const Center(
-                        child: Text(
-                          'Next',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
+                  child: ElevatedButton(
+                    onPressed: () => context.push('/signin'),
+                    child: const Text('Next'),
                   ),
                 ),
               ),

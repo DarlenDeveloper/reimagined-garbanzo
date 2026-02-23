@@ -235,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: _isOnline ? Colors.green : Colors.grey,
+                        color: _isOnline ? const Color(0xFFfb2a0a) : Colors.grey,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -372,11 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1a1a1a), Color(0xFF2d2d2d)],
-          ),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -391,13 +387,13 @@ class _HomeScreenState extends State<HomeScreen> {
             // Header
             Row(
               children: [
-                const Icon(Iconsax.box, color: Colors.white, size: 20),
+                const Icon(Iconsax.box, color: Colors.black, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     delivery.orderNumber,
                     style: GoogleFonts.poppins(
-                      color: Colors.white,
+                      color: Colors.black,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -405,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: const Color(0xFFb71000),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -868,10 +864,10 @@ class _HomeScreenState extends State<HomeScreen> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: const Color(0xFFfb2a0a).withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Iconsax.tick_circle, size: 24, color: Colors.black),
+            child: const Icon(Iconsax.tick_circle, size: 24, color: Color(0xFFfb2a0a)),
           ),
           const SizedBox(width: 12),
           Expanded(

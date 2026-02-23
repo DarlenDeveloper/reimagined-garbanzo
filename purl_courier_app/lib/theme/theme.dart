@@ -7,7 +7,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      primaryColor: AppColors.black,
+      primaryColor: AppColors.mainRed,
       scaffoldBackgroundColor: AppColors.white,
       
       // Text theme with Poppins
@@ -75,12 +75,12 @@ class AppTheme {
       // Button themes
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.black,
+          backgroundColor: AppColors.buttonRed,
           foregroundColor: AppColors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(28), // height/2 for 56px height button
           ),
           textStyle: const TextStyle(
             fontSize: 16,
@@ -91,11 +91,12 @@ class AppTheme {
       
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.black,
-          side: const BorderSide(color: AppColors.black, width: 1.5),
+          foregroundColor: AppColors.darkText,
+          side: BorderSide.none,
+          backgroundColor: AppColors.lightGrey,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(28), // height/2 for 56px height button
           ),
           textStyle: const TextStyle(
             fontSize: 16,
@@ -109,20 +110,24 @@ class AppTheme {
         filled: true,
         fillColor: AppColors.lightGrey,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.black, width: 2),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.error, width: 1),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         hintStyle: GoogleFonts.poppins(
@@ -147,8 +152,8 @@ class AppTheme {
       ),
       
       colorScheme: const ColorScheme.light(
-        primary: AppColors.black,
-        secondary: AppColors.darkGrey,
+        primary: AppColors.mainRed,
+        secondary: AppColors.darkRed,
         surface: AppColors.white,
         error: AppColors.error,
       ),

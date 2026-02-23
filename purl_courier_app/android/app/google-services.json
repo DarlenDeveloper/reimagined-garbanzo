@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "255612064321-k5lllgn7uu7js69lh4os9ekun606mb72.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.purl_courier_app",
+            "certificate_hash": "fe52bbb33a384c86bfbcb27806e3821231ce2e16"
+          }
+        },
+        {
           "client_id": "255612064321-8p09as8bg59k9nph3p7n7dp6p1nk50vg.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -50,6 +58,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "255612064321-2voq70fgdintfnh45jplmcgmc3pac1i7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.purl.admin",
+            "certificate_hash": "fe52bbb33a384c86bfbcb27806e3821231ce2e16"
+          }
+        },
+        {
           "client_id": "255612064321-8p09as8bg59k9nph3p7n7dp6p1nk50vg.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -85,6 +101,14 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "255612064321-f700ifq3r3rr1qfu1frk3d24afp5dq52.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.purl.stores",
+            "certificate_hash": "fe52bbb33a384c86bfbcb27806e3821231ce2e16"
+          }
+        },
         {
           "client_id": "255612064321-8p09as8bg59k9nph3p7n7dp6p1nk50vg.apps.googleusercontent.com",
           "client_type": 3

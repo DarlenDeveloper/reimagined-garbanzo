@@ -3,6 +3,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'withdraw_screen.dart';
 
 class EarningsScreen extends StatelessWidget {
   const EarningsScreen({super.key});
@@ -86,7 +87,7 @@ class EarningsScreen extends StatelessWidget {
                       margin: const EdgeInsets.all(16),
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.black,
+                        color: const Color(0xFFfb2a0a),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Column(
@@ -224,8 +225,13 @@ class EarningsScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {},
-        backgroundColor: Colors.black,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const WithdrawScreen()),
+          );
+        },
+        backgroundColor: const Color(0xFFb71000),
         icon: const Icon(Iconsax.wallet_add, color: Colors.white),
         label: const Text(
           'Withdraw',

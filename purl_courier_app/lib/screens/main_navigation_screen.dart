@@ -116,16 +116,16 @@ class _NavItem extends StatelessWidget {
               child: Icon(
                 isSelected ? activeIcon : icon,
                 size: 24,
-                color: isSelected ? Colors.black : Colors.grey[400],
+                color: isSelected ? const Color(0xFFb71000) : Colors.grey[400],
               ),
             ),
             const SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? Colors.black : Colors.grey[400],
+                color: isSelected ? const Color(0xFFb71000) : Colors.grey[400],
               ),
             ),
           ],
