@@ -889,7 +889,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _sharePost(Map<String, dynamic> post) {
-    final shareText = '${post['storeName']}: ${post['content']}\n\nShop on Wibble';
+    final shareText = '${post['storeName']}: ${post['content']}\n\nShop on POP';
     Share.share(shareText);
   }
 

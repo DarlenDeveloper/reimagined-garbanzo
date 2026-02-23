@@ -13,8 +13,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  static const darkGreen = Color(0xFF1B4332);
-  static const accentGreen = Color(0xFFA8D5A2);
+  static const purlRed = Color(0xFFEB1700);
+  static const purlButtonRed = Color(0xFFB71000);
 
   final List<_SlideData> _slides = [
     _SlideData(
@@ -114,11 +114,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: accentGreen,
+                color: purlRed,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: accentGreen.withAlpha(80),
+                    color: purlRed.withAlpha(80),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -126,7 +126,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               child: const Icon(
                 Icons.chevron_right,
-                color: Colors.black87,
+                color: Colors.white,
                 size: 28,
               ),
             ),
@@ -147,7 +147,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           width: isActive ? 24 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: isActive ? darkGreen : Colors.grey[300],
+            color: isActive ? purlRed : Colors.grey[300],
             borderRadius: BorderRadius.circular(4),
           ),
         );
@@ -173,7 +173,7 @@ class _SlideContent extends StatelessWidget {
 
   const _SlideContent({required this.slide});
 
-  static const lightGreen = Color(0xFFE8F5E3);
+  static const lightRed = Color(0xFFFFF5F5);
 
   @override
   Widget build(BuildContext context) {
@@ -186,7 +186,7 @@ class _SlideContent extends StatelessWidget {
             width: double.infinity,
             margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: lightGreen,
+              color: lightRed,
               borderRadius: BorderRadius.circular(32),
             ),
             child: ClipRRect(

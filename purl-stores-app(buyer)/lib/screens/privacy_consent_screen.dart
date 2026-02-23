@@ -48,7 +48,7 @@ class PrivacyConsentScreen extends StatelessWidget {
               
               // Description paragraphs
               Text(
-                'We and our trusted third parties use tracking technologies to gain insight into how you use Wibble. This helps us enhance and personalise your experience on our platform.',
+                'We and our trusted third parties use tracking technologies to gain insight into how you use POP. This helps us enhance and personalise your experience on our platform.',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: Colors.grey[700],
@@ -59,7 +59,7 @@ class PrivacyConsentScreen extends StatelessWidget {
               const SizedBox(height: 20),
               
               Text(
-                'With your consent, we will use your data to personalise ads and experiences to make them more relevant on Wibble and other platforms.',
+                'With your consent, we will use your data to personalise ads and experiences to make them more relevant on POP and other platforms.',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: Colors.grey[700],

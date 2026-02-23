@@ -39,7 +39,7 @@ class PurlStoresApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Wibble',
+      title: 'POP',
       debugShowCheckedModeBanner: false,
       theme: lightTheme,
       routerConfig: router,

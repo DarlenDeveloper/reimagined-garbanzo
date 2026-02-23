@@ -1,7 +1,7 @@
 # Rebranding Guide: PURL/Wibble → POP
 
-**Target Completion**: Before Launch (This Week)  
-**Status**: Awaiting Assets
+**Target Completion**: Before Launch (Feb 27, 2026)  
+**Status**: IN PROGRESS - Buyer App Phase
 
 ---
 
@@ -18,29 +18,69 @@
 
 ---
 
-## Required Assets (Awaiting)
+## Brand Assets (CONFIRMED)
 
-### Color Palette
-- [ ] Primary color
-- [ ] Secondary color
-- [ ] Accent color
-- [ ] Background colors
-- [ ] Text colors
-- [ ] Error/success/warning colors
-- [ ] Gradient definitions (if any)
+### Color Palette ✅
+See `BRAND_GUIDELINES.md` for complete specifications:
+- **Main Red**: #EB1700 (primary brand color)
+- **Dark Red**: #D91400 (secondary/hover states)
+- **Button Red**: #B71000 (buttons and CTAs)
+- **Black**: #000000 (text, icons)
+- **White**: #FFFFFF (backgrounds)
 
-### Logo Assets
-- [ ] POP main logo (SVG + PNG)
-- [ ] POP Seller logo (SVG + PNG)
-- [ ] POP Rider logo (SVG + PNG)
-- [ ] App icons (1024x1024 for all apps)
-- [ ] Splash screen assets
-- [ ] In-app branding elements
+### Typography ✅
+- **Primary Font**: Poppins (all weights)
+- **Weights**: Regular (400), Medium (500), SemiBold (600), Bold (700)
+- **Usage**: ALL text across all apps must use Poppins
 
-### Typography
-- [ ] Primary font family
-- [ ] Secondary font family (if different)
-- [ ] Font weights to use
+### Logo Assets ✅
+- **App Launcher Logo**: `/home/wibbleapp/Downloads/popstoreslogo.PNG`
+- **Splash Screen**: `/home/wibbleapp/Downloads/allsplashscreen.PNG` (used for all apps)
+
+---
+
+## CURRENT TASK: Buyer App Rebranding
+
+**App**: `purl-stores-app(buyer)`  
+**Priority**: HIGH  
+**Scope**: Frontend UI/UX ONLY - NO backend changes
+
+### Requirements
+
+#### 1. Typography (CRITICAL)
+- [ ] Replace ALL fonts with Poppins across every screen
+- [ ] Apply appropriate weights (Regular, Medium, SemiBold, Bold)
+- [ ] Update theme configuration
+- [ ] Verify on all screens
+
+#### 2. Naming (CRITICAL)
+- [ ] Find and replace "Wibble" → "POP" everywhere
+- [ ] Check: Screen titles, labels, text, comments, variable names
+- [ ] Maintain proper casing (POP, Pop, pop as contextually appropriate)
+- [ ] Update app name in pubspec.yaml
+- [ ] Update display name in Android/iOS configs
+
+#### 3. Logo & Splash Screen
+- [ ] Copy `/home/wibbleapp/Downloads/popstoreslogo.PNG` to assets
+- [ ] Update app launcher icon with popstoreslogo.PNG
+- [ ] Copy `/home/wibbleapp/Downloads/allsplashscreen.PNG` to assets
+- [ ] Update splash screen to use allsplashscreen.PNG
+- [ ] Configure for Android and iOS
+
+#### 4. Colors
+- [ ] Apply brand color palette from BRAND_GUIDELINES.md
+- [ ] Update theme files with new colors
+- [ ] Remove any green colors (not in brand palette)
+- [ ] Update button styles to use Button Red (#B71000)
+- [ ] Verify contrast and accessibility
+
+### Out of Scope (DO NOT TOUCH)
+- ❌ Backend/Cloud Functions
+- ❌ Seller app (separate task later)
+- ❌ Courier app (separate task later)
+- ❌ Database/Firestore
+- ❌ Firebase configuration
+- ❌ Package names (will change later)
 
 ---
 

@@ -101,18 +101,15 @@ class _SignScreenState extends State<SignScreen> {
               Center(
                 child: Column(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Image.asset(
-                        'assets/images/wibblelogo.png',
-                        width: 70,
-                        height: 70,
-                        fit: BoxFit.cover,
-                      ),
+                    Image.asset(
+                      'assets/images/popstoreslogo.PNG',
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.contain,
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Wibble',
+                      'POP',
                       style: GoogleFonts.poppins(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
