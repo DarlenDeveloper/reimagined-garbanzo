@@ -477,7 +477,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.asset(
-              'assets/images/wibblelogo.png',
+              'assets/images/popstoreslogo.PNG',
               width: 32,
               height: 32,
               fit: BoxFit.cover,
@@ -492,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          Text('Wibble', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
+          Text('POP STORE', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
           const Spacer(),
           _buildHeaderIcon(Iconsax.search_normal, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()))),
           const SizedBox(width: 16),
@@ -643,7 +643,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(storeName, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
                           if (isStoreVerified) ...[
                             const SizedBox(width: 4),
-                            const Icon(Icons.verified, size: 18, color: Colors.blue),
+                            const Icon(Icons.verified, size: 18, color: Color(0xFFfb2a0a)),
                           ],
                         ],
                       ),
@@ -656,7 +656,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onTap: () => _toggleFollow(storeId),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(16)),
+                          decoration: BoxDecoration(color: const Color(0xFFfb2a0a), borderRadius: BorderRadius.circular(16)),
                           child: Text('Follow', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white)),
                         ),
                       ),

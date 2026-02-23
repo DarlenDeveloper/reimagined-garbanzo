@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary - Black & White
-  static const Color primary = Color(0xFF000000);
-  static const Color primaryLight = Color(0xFF333333);
-  static const Color primaryDark = Color(0xFF000000);
+  // POP Brand Colors (TESTED)
+  static const Color primary = Color(0xFFfb2a0a); // Main POP red
+  static const Color primaryLight = Color(0xFFe02509); // Dark red for hover
+  static const Color primaryDark = Color(0xFFc72008); // Button red
 
-  // Backward compatibility aliases (all map to black/grey)
-  static const Color darkGreen = Color(0xFF000000);
-  static const Color limeAccent = Color(0xFF000000);
-  static const Color accent = Color(0xFFF5F5F5); // grey100 for accent areas
+  // Backward compatibility aliases
+  static const Color darkGreen = Color(0xFFfb2a0a); // Map to POP red
+  static const Color limeAccent = Color(0xFFfb2a0a); // Map to POP red
+  static const Color accent = Color(0xFFfb2a0a); // POP red for accents
 
   // Backgrounds
   static const Color background = Color(0xFFFFFFFF);
@@ -39,14 +39,14 @@ class AppColors {
   static const Color inputFill = Color(0xFFF5F5F5);
   static const Color inputBorder = Color(0xFFE0E0E0);
 
-  // Status (all black for consistency)
-  static const Color success = Color(0xFF000000);
-  static const Color warning = Color(0xFF000000);
-  static const Color error = Color(0xFF000000);
-  static const Color info = Color(0xFF000000);
+  // Status colors
+  static const Color success = Color(0xFF10B981); // Green
+  static const Color warning = Color(0xFFF59E0B); // Amber
+  static const Color error = Color(0xFFfb2a0a); // POP red
+  static const Color info = Color(0xFF3B82F6); // Blue
 
   // Other
-  static const Color favoriteActive = Color(0xFF000000);
+  static const Color favoriteActive = Color(0xFFfb2a0a); // POP red
   static const Color white = Color(0xFFFFFFFF);
   static const Color black = Color(0xFF000000);
   static const Color grey100 = Color(0xFFF5F5F5);

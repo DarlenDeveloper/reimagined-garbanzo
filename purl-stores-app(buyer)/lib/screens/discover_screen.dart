@@ -6,13 +6,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product.dart';
-import '../models/ad.dart';
 import '../services/product_service.dart';
 import '../services/currency_service.dart';
 import '../services/messages_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/cart_service.dart';
-import '../services/ads_service.dart';
 import 'search_screen.dart';
 import 'product_detail_screen.dart';
 import 'order_history_screen.dart';
@@ -35,12 +33,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   final CurrencyService _currencyService = CurrencyService();
   final WishlistService _wishlistService = WishlistService();
   final CartService _cartService = CartService();
-  final AdsService _adsService = AdsService();
   final ScrollController _scrollController = ScrollController();
   
   int _selectedCategoryIndex = 0;
   List<Product> _products = [];
-  List<Ad> _ads = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
   bool _isSwitchingCategory = false; // New flag for category switching
@@ -78,7 +74,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _subscribeToProducts();
-    _subscribeToAds();
     _loadWishlistStatus();
   }
 
@@ -107,22 +102,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           _wishlistedProductIds = wishlistItems.map((item) => item['productId'] as String).toSet();
         });
       }
-    });
-  }
-
-  void _subscribeToAds() {
-    _adsService.getActiveAdsStream(limit: 10).listen((ads) {
-      print('📢 Ads loaded: ${ads.length} ads');
-      for (var ad in ads) {
-        print('  - ${ad.storeName}: ${ad.images.length} images, ${ad.viewsRemaining} views remaining');
-      }
-      if (mounted) {
-        setState(() {
-          _ads = ads;
-        });
-      }
-    }, onError: (error) {
-      print('❌ Error loading ads: $error');
     });
   }
 
@@ -240,17 +219,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 child: CustomScrollView(
                   controller: _scrollController,
                   slivers: [
-                    // Ad card section (scrollable)
-                    if (_ads.isNotEmpty && !_isLoading)
-                      SliverToBoxAdapter(
-                        child: Column(
-                          children: [
-                            _buildAdsCard(),
-                            const SizedBox(height: 12),
-                          ],
-                        ),
-                      ),
-                    
                     // Pinned search bar - sticks when it reaches the top
                     SliverAppBar(
                       pinned: true,
@@ -409,99 +377,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
-  Widget _buildAdsCard() {
-    // Hide completely if no ads
-    if (_ads.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    // Show only the first ad
-    final ad = _ads.first;
-    
-    // Debug logging
-    print('🎯 Ad Card Data:');
-    print('  Store ID: ${ad.storeId}');
-    print('  Store Name: ${ad.storeName}');
-    print('  Store Logo: ${ad.storeLogo}');
-    print('  Images: ${ad.images.length} images');
-    
-    _adsService.recordAdView(ad.id);
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 20, right: 20),
-      child: SizedBox(
-        height: 240,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Main ad card
-            _AdCard(
-              ad: ad,
-              onShopNow: () {
-                print('🛍️ Card clicked for store: ${ad.storeName} (${ad.storeId})');
-                _adsService.recordAdClick(ad.id);
-                _adsService.recordStoreVisit(ad.id);
-                _openStoreProfile(ad.storeId, ad.storeName);
-              },
-            ),
-            
-            // Professional CTA button - compact pill design
-            Positioned(
-              right: 12,
-              bottom: 12,
-              child: GestureDetector(
-                onTap: () {
-                  print('🛍️ Shop Now tapped for: ${ad.storeName} (${ad.storeId})');
-                  _adsService.recordAdClick(ad.id);
-                  _adsService.recordStoreVisit(ad.id);
-                  _openStoreProfile(ad.storeId, ad.storeName);
-                },
-                child: Container(
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18), // height / 2 for perfect pill
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // "Shop Now" text
-                      Text(
-                        'Shop Now',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
-                      ),
-                      
-                      const SizedBox(width: 6),
-                      
-                      // Arrow icon
-                      const Icon(
-                        Icons.arrow_forward,
-                        size: 16,
-                        color: Colors.black,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildHeaderIcon(IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
@@ -533,10 +408,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                height: 52,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(26), // 52/2
                 ),
                 child: Row(
                   children: [
@@ -599,7 +475,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.black : Colors.grey[100],
+                color: isSelected ? const Color(0xFFfb2a0a) : Colors.grey[100],
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Center(
@@ -804,7 +680,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                               ),
                               if (product.isStoreVerified) ...[
                                 const SizedBox(width: 3),
-                                const Icon(Icons.verified, size: 12, color: Colors.blue),
+                                const Icon(Icons.verified, size: 12, color: Color(0xFFfb2a0a)),
                               ],
                             ],
                           ),
@@ -847,6 +723,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   // Price button
                   SizedBox(
                     width: double.infinity,
+                    height: 36,
                     child: ElevatedButton(
                       onPressed: product.isInStock
                           ? () async {
@@ -895,13 +772,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                             }
                           : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
+                        backgroundColor: const Color(0xFFfb2a0a),
                         foregroundColor: Colors.white,
                         disabledBackgroundColor: Colors.grey[300],
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: EdgeInsets.zero,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(18), // 36/2
                         ),
                       ),
                       child: Row(
@@ -1209,165 +1086,5 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         );
       }
     }
-  }
-}
-
-
-// Ad Card Widget with Auto-scrolling Image Carousel
-class _AdCard extends StatefulWidget {
-  final Ad ad;
-  final VoidCallback onShopNow;
-
-  const _AdCard({
-    required this.ad,
-    required this.onShopNow,
-  });
-
-  @override
-  State<_AdCard> createState() => _AdCardState();
-}
-
-class _AdCardState extends State<_AdCard> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
-  Timer? _autoScrollTimer;
-  bool _userInteracting = false; // Track user interaction
-
-  @override
-  void initState() {
-    super.initState();
-    _startAutoScroll();
-  }
-
-  void _startAutoScroll() {
-    if (widget.ad.images.length <= 1) return;
-    
-    _autoScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      // Only auto-scroll if user is not interacting
-      if (_pageController.hasClients && !_userInteracting) {
-        final nextPage = (_currentPage + 1) % widget.ad.images.length;
-        _pageController.animateToPage(
-          nextPage,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
-      }
-    });
-  }
-
-  void _onUserInteraction() {
-    setState(() => _userInteracting = true);
-    // Resume auto-scroll after 5 seconds of no interaction
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) {
-        setState(() => _userInteracting = false);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _autoScrollTimer?.cancel();
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 240,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.black,
-      ),
-      child: Stack(
-        children: [
-          // Image Carousel
-          if (widget.ad.images.isNotEmpty)
-            Positioned.fill(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: (index) {
-                    setState(() => _currentPage = index);
-                    _onUserInteraction();
-                  },
-                  itemCount: widget.ad.images.length,
-                  itemBuilder: (context, index) {
-                    return CachedNetworkImage(
-                      imageUrl: widget.ad.images[index],
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: Colors.grey[300],
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.grey[600],
-                            strokeWidth: 2,
-                          ),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.grey[300],
-                        child: Center(
-                          child: Icon(Iconsax.image, size: 50, color: Colors.grey[600]),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          
-          // Gradient overlay
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.7),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Content
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Spacer(),
-
-                // Page indicators
-                if (widget.ad.images.length > 1)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      widget.ad.images.length,
-                      (index) => Container(
-                        width: 6,
-                        height: 6,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _currentPage == index
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.4),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

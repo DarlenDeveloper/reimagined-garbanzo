@@ -13,12 +13,33 @@ class SignScreen extends StatefulWidget {
   State<SignScreen> createState() => _SignScreenState();
 }
 
-class _SignScreenState extends State<SignScreen> {
+class _SignScreenState extends State<SignScreen> with SingleTickerProviderStateMixin {
   final _authService = AuthService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
+  // Brand colors
+  static const Color popRed = Color(0xFFfb2a0a);
+  static const Color popDarkRed = Color(0xFFe02509);
+  static const Color popButtonRed = Color(0xFFb71000);
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    );
+    _fadeController.forward();
+  }
 
   Future<void> _signInWithEmail() async {
     final email = _emailController.text.trim();
@@ -32,7 +53,6 @@ class _SignScreenState extends State<SignScreen> {
     setState(() => _isLoading = true);
     try {
       await _authService.signInWithEmail(email: email, password: password);
-      // Start preloading posts immediately after successful login
       PostsPreloaderService().preloadPosts();
       if (mounted) context.go('/home');
     } on FirebaseAuthException catch (e) {
@@ -49,7 +69,6 @@ class _SignScreenState extends State<SignScreen> {
     try {
       final result = await _authService.signInWithGoogle();
       if (result != null && mounted) {
-        // Start preloading posts immediately after successful Google sign in
         PostsPreloaderService().preloadPosts();
         context.go('/interests');
       }
@@ -74,7 +93,7 @@ class _SignScreenState extends State<SignScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: GoogleFonts.poppins()),
-        backgroundColor: Colors.red[600],
+        backgroundColor: popRed,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -82,6 +101,7 @@ class _SignScreenState extends State<SignScreen> {
 
   @override
   void dispose() {
+    _fadeController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -91,167 +111,303 @@ class _SignScreenState extends State<SignScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 40),
-              Center(
-                child: Column(
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 60),
+                
+                // Logo with rounded corners
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Image.asset(
+                    'assets/images/popstoreslogo.PNG',
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Welcome text
+                Text(
+                  'Welcome to POP',
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Sign in to continue shopping',
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 48),
+                
+                // Google Sign In - Premium style
+                _buildPremiumSocialButton(
+                  image: 'assets/images/googlelogo.png',
+                  label: 'Continue with Google',
+                  onTap: _isLoading ? null : _signInWithGoogle,
+                  backgroundColor: Colors.white,
+                  textColor: Colors.black,
+                  borderColor: Colors.grey[300]!,
+                ),
+                const SizedBox(height: 16),
+                
+                // Apple Sign In - Premium style
+                _buildPremiumSocialButton(
+                  icon: Icons.apple,
+                  label: 'Continue with Apple',
+                  onTap: _isLoading ? null : () {},
+                  backgroundColor: Colors.black,
+                  textColor: Colors.white,
+                  iconColor: Colors.white,
+                ),
+                const SizedBox(height: 32),
+                
+                // Divider
+                Row(
                   children: [
-                    Image.asset(
-                      'assets/images/popstoreslogo.PNG',
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.contain,
+                    Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'or sign in with email',
+                        style: GoogleFonts.poppins(
+                          color: Colors.grey[500],
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                
+                // Email field
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      'POP',
+                      'Email',
                       style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                         color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(26), // 52/2
+                      ),
+                      child: TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        enabled: !_isLoading,
+                        style: GoogleFonts.poppins(fontSize: 15),
+                        decoration: InputDecoration(
+                          hintText: 'Enter your email',
+                          hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 32),
-              _SocialButton(
-                icon: Icons.g_mobiledata,
-                label: 'Continue with Google',
-                onTap: _isLoading ? null : _signInWithGoogle,
-              ),
-              const SizedBox(height: 12),
-              _SocialButton(
-                icon: Icons.apple,
-                label: 'Continue with Apple',
-                onTap: _isLoading ? null : () {},
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(child: Divider(color: Colors.grey[300])),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('or', style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 13)),
-                  ),
-                  Expanded(child: Divider(color: Colors.grey[300])),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text('Email', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                enabled: !_isLoading,
-                keyboardAppearance: Brightness.light,
-                style: GoogleFonts.poppins(fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'Enter your email',
-                  hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 1.5)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text('Password', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _passwordController,
-                obscureText: _obscurePassword,
-                enabled: !_isLoading,
-                keyboardAppearance: Brightness.light,
-                style: GoogleFonts.poppins(fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'Enter your password',
-                  hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 1.5)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Iconsax.eye_slash : Iconsax.eye, color: Colors.grey[500], size: 20),
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: GestureDetector(
-                  onTap: () => context.push('/forgot-password'),
-                  child: Text('Forgot Password?', style: GoogleFonts.poppins(color: Colors.black, fontSize: 13, fontWeight: FontWeight.w500)),
-                ),
-              ),
-              const SizedBox(height: 28),
-              GestureDetector(
-                onTap: _isLoading ? null : _signInWithEmail,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: _isLoading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text('Sign In', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                const SizedBox(height: 20),
+                
+                // Password field
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Don't have an account? ", style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 14)),
-                    GestureDetector(
-                      onTap: () => context.push('/signup'),
-                      child: Text('Sign Up', style: GoogleFonts.poppins(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Password',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(26), // 52/2
+                      ),
+                      child: TextField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        enabled: !_isLoading,
+                        style: GoogleFonts.poppins(fontSize: 15),
+                        decoration: InputDecoration(
+                          hintText: 'Enter your password',
+                          hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
+                              color: Colors.grey[500],
+                              size: 20,
+                            ),
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 12),
+                
+                // Forgot password
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () => context.push('/forgot-password'),
+                    child: Text(
+                      'Forgot Password?',
+                      style: GoogleFonts.poppins(
+                        color: popRed,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // Sign in button
+                GestureDetector(
+                  onTap: _isLoading ? null : _signInWithEmail,
+                  child: Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: popButtonRed,
+                      borderRadius: BorderRadius.circular(26), // 52/2
+                    ),
+                    child: Center(
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              'Sign In',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // Sign up link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Don't have an account? ",
+                      style: GoogleFonts.poppins(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => context.push('/signup'),
+                      child: Text(
+                        'Sign Up',
+                        style: GoogleFonts.poppins(
+                          color: popRed,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-}
 
-class _SocialButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-
-  const _SocialButton({required this.icon, required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildPremiumSocialButton({
+    String? image,
+    IconData? icon,
+    required String label,
+    required VoidCallback? onTap,
+    required Color backgroundColor,
+    required Color textColor,
+    Color? borderColor,
+    Color? iconColor,
+  }) {
+    const double height = 52;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+        height: height,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(height / 2), // 26
+          border: borderColor != null ? Border.all(color: borderColor, width: 1.5) : null,
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 24, color: Colors.black),
+            if (image != null)
+              Image.asset(
+                image,
+                width: 24,
+                height: 24,
+              ),
+            if (icon != null)
+              Icon(
+                icon,
+                size: 24,
+                color: iconColor ?? textColor,
+              ),
             const SizedBox(width: 12),
-            Text(label, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
           ],
         ),
       ),

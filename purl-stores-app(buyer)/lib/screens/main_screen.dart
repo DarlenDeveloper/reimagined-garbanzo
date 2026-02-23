@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/colors.dart';
 import 'home_screen.dart';
 import 'discover_screen.dart';
@@ -111,6 +112,9 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Brand color
+    const Color popButtonRed = Color(0xFFb71000);
+    
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -118,7 +122,7 @@ class _NavItem extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.darkGreen : Colors.transparent,
+          color: isActive ? popButtonRed : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -127,7 +131,7 @@ class _NavItem extends StatelessWidget {
             Icon(isActive ? activeIcon : icon, size: 22, color: isActive ? Colors.white : Colors.grey[400]),
             if (isActive) ...[
               const SizedBox(width: 6),
-              Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+              Text(label, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
             ],
           ],
         ),

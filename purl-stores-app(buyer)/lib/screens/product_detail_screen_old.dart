@@ -227,14 +227,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          widget.productName ?? _product?.name ?? 'Product',
+          'Details',
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w600,
             color: Colors.black,
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
         centerTitle: true,
         actions: [
@@ -310,11 +308,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
             controller: _tabController,
             labelColor: Colors.black,
             unselectedLabelColor: Colors.grey,
-            indicatorColor: const Color(0xFFfb2a0a), // main red
+            indicatorColor: Colors.black,
             indicatorWeight: 2,
             labelStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500),
-            splashFactory: NoSplash.splashFactory, // Remove click highlight
-            overlayColor: WidgetStateProperty.all(Colors.transparent), // Remove overlay
             tabs: [
               const Tab(text: 'Details'),
               Tab(text: 'Reviews ${_product!.reviewCount}'),
@@ -524,12 +520,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                           color: Colors.black,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.verified,
-                        size: 16,
-                        color: Color(0xFFfb2a0a), // main red
-                      ),
                       const Spacer(),
                       const Icon(Iconsax.arrow_right_3, size: 16, color: Colors.grey),
                     ],
@@ -547,7 +537,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFfb2a0a), // main red
+                  color: Colors.black,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Iconsax.message, size: 20, color: Colors.white),
@@ -777,13 +767,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       children: [
         Text(
           'Specifications',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
+          style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black),
         ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.grey[50],
+            color: Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -792,7 +782,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
               final value = _formatValue(entry.value, entry.key);
               
               return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -800,21 +790,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                       width: 120,
                       child: Text(
                         label,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]),
                       ),
                     ),
                     Expanded(
                       child: Text(
                         value,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
+                        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.black),
                       ),
                     ),
                   ],
@@ -967,13 +949,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                   }
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFb71000), // button red
+              backgroundColor: Colors.black,
               foregroundColor: Colors.white,
               disabledBackgroundColor: Colors.grey[300],
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(26), // height 52 / 2 = 26
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,

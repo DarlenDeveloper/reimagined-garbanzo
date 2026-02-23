@@ -11,22 +11,23 @@
 ### Primary Colors
 
 #### Main Red
-- **Hex:** `#EB1700`
-- **RGB:** `rgb(235, 23, 0)`
-- **Usage:** Primary brand color, headers, highlights, active states
-- **Flutter:** `Color(0xFFEB1700)`
+- **Hex:** `#fb2a0a`
+- **RGB:** `rgb(251, 42, 10)`
+- **Usage:** Primary brand color, headers, highlights, active states, splash screen
+- **Flutter:** `Color(0xFFfb2a0a)`
 
 #### Dark Red
-- **Hex:** `#D91400`
-- **RGB:** `rgb(217, 20, 0)`
+- **Hex:** `#e02509`
+- **RGB:** `rgb(224, 37, 9)`
 - **Usage:** Hover states, secondary elements, accents
-- **Flutter:** `Color(0xFFD91400)`
+- **Flutter:** `Color(0xFFe02509)`
 
 #### Button Red
-- **Hex:** `#B71000`
+- **Hex:** `#b71000`
 - **RGB:** `rgb(183, 16, 0)`
 - **Usage:** Buttons, CTAs, interactive elements
-- **Flutter:** `Color(0xFFB71000)`
+- **Flutter:** `Color(0xFFb71000)`
+- **IMPORTANT:** Always use solid color, NO GRADIENTS
 
 ### Neutral Colors
 
@@ -45,9 +46,9 @@
 ### Color Palette Summary
 ```dart
 // Brand Colors
-const Color purlRed = Color(0xFFEB1700);        // Main brand color
-const Color purlDarkRed = Color(0xFFD91400);    // Secondary/hover
-const Color purlButtonRed = Color(0xFFB71000);  // Buttons/CTAs
+const Color purlRed = Color(0xFFfb2a0a);        // Main brand color
+const Color purlDarkRed = Color(0xFFe02509);    // Secondary/hover
+const Color purlButtonRed = Color(0xFFb71000);  // Buttons/CTAs - NO GRADIENTS
 const Color purlBlack = Color(0xFF000000);      // Text/icons
 const Color purlWhite = Color(0xFFFFFFFF);      // Backgrounds
 
@@ -246,15 +247,15 @@ TextField(
     filled: true,
     fillColor: Colors.grey[100],
     border: InputBorder.none,  // NO BORDERS
-    enabledBorder: InputBorder.none,
-    focusedBorder: InputBorder.none,
+    enabledBorder: InputBorder.none,  // NO BORDERS
+    focusedBorder: InputBorder.none,  // NO BORDERS
     contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
   ),
   style: GoogleFonts.poppins(fontSize: 14),
 )
 ```
 
-**IMPORTANT:** All text inputs must have `border: InputBorder.none` - no visible borders!
+**CRITICAL RULE:** All text inputs must have `border: InputBorder.none` - NO visible borders!
 
 ### Cards
 
@@ -369,11 +370,14 @@ const double space48 = 48.0;
 
 ### Border Radius
 ```dart
-const double radiusSmall = 8.0;   // Small elements
-const double radiusMedium = 12.0; // Cards, buttons
-const double radiusLarge = 16.0;  // Modals, sheets
-const double radiusXL = 20.0;     // Large containers
-const double radiusFull = 999.0;  // Pills, circular
+// RULE: Always use height / 2 for border radius
+const double buttonHeight = 52.0;
+const double buttonRadius = 26.0; // 52 / 2
+
+// Examples:
+BorderRadius.circular(height / 2)  // For buttons
+BorderRadius.circular(50)          // For 100px logo
+BorderRadius.circular(26)          // For 52px button
 ```
 
 ### Padding Guidelines
@@ -387,26 +391,15 @@ const double radiusFull = 999.0;  // Pills, circular
 ## 🎭 Visual Style
 
 ### Shadows
+**IMPORTANT: Do not add shadows unless explicitly requested**
+
+If shadows are needed:
 ```dart
-// Subtle shadow (cards)
+// Subtle shadow (only when requested)
 BoxShadow(
   color: Colors.black.withOpacity(0.05),
   blurRadius: 10,
   offset: Offset(0, 2),
-)
-
-// Medium shadow (elevated elements)
-BoxShadow(
-  color: Colors.black.withOpacity(0.08),
-  blurRadius: 15,
-  offset: Offset(0, 4),
-)
-
-// Strong shadow (modals)
-BoxShadow(
-  color: Colors.black.withOpacity(0.12),
-  blurRadius: 20,
-  offset: Offset(0, 8),
 )
 ```
 
@@ -434,18 +427,24 @@ BoxShadow(
 
 ### Deprecated Styles
 ❌ **Borders on text inputs** - Use filled backgrounds only
-❌ **Gradients** - Use solid colors
+❌ **Gradients** - Use solid colors ONLY (especially for buttons)
+❌ **Shadows** - Do not add shadows unless explicitly requested
 ❌ **Drop shadows on text** - Use proper contrast instead
 ❌ **Logos with background circles** - Use transparent PNGs
+
+### Border Radius Rule
+✅ **Always use height / 2 for border radius** on buttons and containers
+- Example: 52px height button = 26px border radius
+- Example: 100px logo = 50px border radius
 
 ---
 
 ## 📱 App-Specific Guidelines
 
 ### Buyer App (purl-stores-app)
-- Primary color: `purlRed` (#EB1700)
-- Buttons: `purlButtonRed` (#B71000)
-- Active states: `purlDarkRed` (#D91400)
+- Primary color: `purlRed` (#fb2a0a)
+- Buttons: `purlButtonRed` (#b71000) - SOLID COLOR ONLY, NO GRADIENTS
+- Active states: `purlDarkRed` (#e02509)
 - Background: White
 - Cards: White with subtle shadow
 
@@ -477,7 +476,7 @@ BoxShadow(
 
 ### Status Colors
 - **Success:** `Color(0xFF10B981)` (Green)
-- **Error:** `purlRed` (#EB1700)
+- **Error:** `purlRed` (#fb2a0a)
 - **Warning:** `Color(0xFFF59E0B)` (Amber)
 - **Info:** `Color(0xFF3B82F6)` (Blue)
 
@@ -485,7 +484,7 @@ BoxShadow(
 - **Primary text:** `purlBlack` (#000000)
 - **Secondary text:** `Colors.grey[600]`
 - **Disabled text:** `Colors.grey[400]`
-- **Link text:** `purlRed` (#EB1700)
+- **Link text:** `purlRed` (#fb2a0a)
 
 ---
 

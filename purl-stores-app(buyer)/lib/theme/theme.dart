@@ -6,13 +6,13 @@ final lightTheme = ThemeData(
   useMaterial3: true,
   brightness: Brightness.light,
   colorScheme: const ColorScheme.light(
-    primary: AppColors.black,
+    primary: AppColors.primary, // POP red
     onPrimary: AppColors.white,
-    secondary: AppColors.black,
+    secondary: AppColors.primaryLight, // Dark red
     onSecondary: AppColors.white,
     surface: AppColors.white,
     onSurface: AppColors.black,
-    error: AppColors.black,
+    error: AppColors.error, // POP red
   ),
   scaffoldBackgroundColor: AppColors.white,
   textTheme: GoogleFonts.poppinsTextTheme(),
@@ -21,7 +21,7 @@ final lightTheme = ThemeData(
     elevation: 0,
     centerTitle: true,
     titleTextStyle: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.black),
-    iconTheme: const IconThemeData(color: AppColors.black),
+    iconTheme: const IconThemeData(color: AppColors.black), // Keep icons black
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(

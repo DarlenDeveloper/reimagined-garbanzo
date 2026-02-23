@@ -16,6 +16,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _isLoading = false;
   bool _emailSent = false;
 
+  // Brand colors
+  static const Color popRed = Color(0xFFfb2a0a);
+  static const Color popButtonRed = Color(0xFFb71000);
+
   Future<void> _sendResetEmail() async {
     final email = _emailController.text.trim();
     
@@ -39,7 +43,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: GoogleFonts.poppins()),
-        backgroundColor: Colors.red[600],
+        backgroundColor: popRed,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -72,7 +76,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   height: 40,
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(20), // 40/2
                   ),
                   child: const Icon(Icons.chevron_left, size: 24, color: Colors.black),
                 ),
@@ -119,13 +123,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         onTap: () => context.go('/'),
                         child: Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          height: 52,
                           decoration: BoxDecoration(
-                            color: Colors.black,
-                            borderRadius: BorderRadius.circular(12),
+                            color: popButtonRed,
+                            borderRadius: BorderRadius.circular(26), // 52/2
                           ),
                           child: Center(
-                            child: Text('Back to Login', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                            child: Text(
+                              'Back to Login',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -134,7 +145,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         onTap: () => setState(() => _emailSent = false),
                         child: Text(
                           'Try a different email',
-                          style: GoogleFonts.poppins(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: popRed,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
@@ -145,7 +160,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 Center(
                   child: Text(
                     'Forgot Password',
-                    style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.black),
+                    style: GoogleFonts.poppins(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
                 
@@ -155,45 +174,84 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   child: Text(
                     'Enter your email address and we\'ll send\nyou a link to reset your password.',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600], height: 1.5),
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      height: 1.5,
+                    ),
                   ),
                 ),
                 
                 const SizedBox(height: 48),
                 
-                Text('Email', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  enabled: !_isLoading,
-                  style: GoogleFonts.poppins(fontSize: 15),
-                  decoration: InputDecoration(
-                    hintText: 'Enter your email',
-                    hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 1.5)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  ),
+                // Email field
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Email',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(26), // 52/2
+                      ),
+                      child: TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        enabled: !_isLoading,
+                        style: GoogleFonts.poppins(fontSize: 15),
+                        decoration: InputDecoration(
+                          hintText: 'Enter your email',
+                          hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 
                 const SizedBox(height: 32),
                 
+                // Send button
                 GestureDetector(
                   onTap: _isLoading ? null : _sendResetEmail,
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    height: 52,
                     decoration: BoxDecoration(
-                      color: _isLoading ? Colors.grey : Colors.black,
-                      borderRadius: BorderRadius.circular(12),
+                      color: _isLoading ? Colors.grey[400] : popButtonRed,
+                      borderRadius: BorderRadius.circular(26), // 52/2
                     ),
                     child: Center(
                       child: _isLoading
-                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : Text('Send Reset Link', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              'Send Reset Link',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
                 ),
@@ -201,14 +259,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               
               const Spacer(),
               
+              // Back to login link
               Center(
                 child: GestureDetector(
                   onTap: () => context.go('/'),
-                  child: Text('Back to Login', style: GoogleFonts.poppins(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Back to Login',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: popRed,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
               
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
             ],
           ),
         ),

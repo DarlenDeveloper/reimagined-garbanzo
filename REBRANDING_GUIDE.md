@@ -22,9 +22,9 @@
 
 ### Color Palette ✅
 See `BRAND_GUIDELINES.md` for complete specifications:
-- **Main Red**: #EB1700 (primary brand color)
-- **Dark Red**: #D91400 (secondary/hover states)
-- **Button Red**: #B71000 (buttons and CTAs)
+- **Main Red**: #fb2a0a (primary brand color, splash screen)
+- **Dark Red**: #d91400 (secondary/hover states)
+- **Button Red**: #b71000 (buttons and CTAs)
 - **Black**: #000000 (text, icons)
 - **White**: #FFFFFF (backgrounds)
 

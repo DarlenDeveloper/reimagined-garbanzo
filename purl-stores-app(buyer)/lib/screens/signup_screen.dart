@@ -13,7 +13,7 @@ class SignupScreen extends StatefulWidget {
   State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderStateMixin {
   final _authService = AuthService();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -22,6 +22,27 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
+  // Brand colors
+  static const Color popRed = Color(0xFFfb2a0a);
+  static const Color popDarkRed = Color(0xFFe02509);
+  static const Color popButtonRed = Color(0xFFb71000);
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    );
+    _fadeController.forward();
+  }
 
   Future<void> _signUpWithEmail() async {
     final name = _nameController.text.trim();
@@ -67,7 +88,6 @@ class _SignupScreenState extends State<SignupScreen> {
     try {
       final result = await _authService.signInWithGoogle();
       if (result != null && mounted) {
-        // Start preloading posts immediately after successful Google sign up
         PostsPreloaderService().preloadPosts();
         context.go('/interests');
       }
@@ -78,19 +98,9 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  void _showAppleNotAvailable() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Please use other auth methods', style: GoogleFonts.poppins()),
-        backgroundColor: Colors.black,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   String _getErrorMessage(String code) {
     switch (code) {
-      case 'email-already-in-use': return 'An account already exists with this email';
+      case 'email-already-in-use': return 'This email is already registered';
       case 'invalid-email': return 'Invalid email address';
       case 'weak-password': return 'Password is too weak';
       default: return 'An error occurred. Please try again';
@@ -101,7 +111,7 @@ class _SignupScreenState extends State<SignupScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: GoogleFonts.poppins()),
-        backgroundColor: Colors.red[600],
+        backgroundColor: popRed,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -109,6 +119,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   void dispose() {
+    _fadeController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -119,199 +130,301 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
       backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 40),
-              
-              // Logo and title
-              Center(
-                child: Column(
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 60),
+                
+                // Logo with rounded corners
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Image.asset(
+                    'assets/images/popstoreslogo.PNG',
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Welcome text
+                Text(
+                  'Create Account',
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Sign up to start shopping',
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 48),
+                
+                // Google Sign Up
+                _buildSocialButton(
+                  image: 'assets/images/googlelogo.png',
+                  label: 'Continue with Google',
+                  onTap: _isLoading ? null : _signUpWithGoogle,
+                  backgroundColor: Colors.white,
+                  textColor: Colors.black,
+                  borderColor: Colors.grey[300]!,
+                ),
+                const SizedBox(height: 16),
+                
+                // Apple Sign Up
+                _buildSocialButton(
+                  icon: Icons.apple,
+                  label: 'Continue with Apple',
+                  onTap: _isLoading ? null : () {},
+                  backgroundColor: Colors.black,
+                  textColor: Colors.white,
+                  iconColor: Colors.white,
+                ),
+                const SizedBox(height: 32),
+                
+                // Divider
+                Row(
                   children: [
-                    Image.asset(
-                      'assets/images/popstoreslogo.PNG',
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.contain,
+                    Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'or sign up with email',
+                        style: GoogleFonts.poppins(
+                          color: Colors.grey[500],
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                
+                // Name field
+                _buildTextField(
+                  label: 'Full Name',
+                  hint: 'Enter your full name',
+                  controller: _nameController,
+                ),
+                const SizedBox(height: 20),
+                
+                // Email field
+                _buildTextField(
+                  label: 'Email',
+                  hint: 'Enter your email',
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 20),
+                
+                // Password field
+                _buildTextField(
+                  label: 'Password',
+                  hint: 'Enter your password',
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
+                      color: Colors.grey[500],
+                      size: 20,
+                    ),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Confirm Password field
+                _buildTextField(
+                  label: 'Confirm Password',
+                  hint: 'Re-enter your password',
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmPassword,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureConfirmPassword ? Iconsax.eye_slash : Iconsax.eye,
+                      color: Colors.grey[500],
+                      size: 20,
+                    ),
+                    onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // Sign up button
+                GestureDetector(
+                  onTap: _isLoading ? null : _signUpWithEmail,
+                  child: Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: popButtonRed,
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                    child: Center(
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              'Sign Up',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // Sign in link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                     Text(
-                      'POP',
+                      'Already have an account? ',
                       style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => context.go('/'),
+                      child: Text(
+                        'Sign In',
+                        style: GoogleFonts.poppins(
+                          color: popRed,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-              
-              const SizedBox(height: 32),
-              
-              // Social buttons
-              _buildSocialButton(Icons.g_mobiledata, 'Continue with Google', onTap: _signUpWithGoogle),
-              const SizedBox(height: 12),
-              _buildSocialButton(Icons.apple, 'Continue with Apple', onTap: _showAppleNotAvailable),
-              
-              const SizedBox(height: 24),
-              
-              // Divider
-              Row(
-                children: [
-                  Expanded(child: Divider(color: Colors.grey[300])),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('or', style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 13)),
-                  ),
-                  Expanded(child: Divider(color: Colors.grey[300])),
-                ],
-              ),
-              
-              const SizedBox(height: 24),
-              
-              // Name field
-              Text('Name', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
-              const SizedBox(height: 8),
-              _buildTextField(_nameController, 'Enter your name', false, TextInputType.name, capitalize: true),
-              
-              const SizedBox(height: 20),
-              
-              // Email field
-              Text('Email', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
-              const SizedBox(height: 8),
-              _buildTextField(_emailController, 'Enter your email', false, TextInputType.emailAddress),
-              
-              const SizedBox(height: 20),
-              
-              // Password field
-              Text('Password', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
-              const SizedBox(height: 8),
-              _buildTextField(_passwordController, 'Enter your password', true, TextInputType.visiblePassword),
-              
-              const SizedBox(height: 20),
-              
-              // Confirm Password field
-              Text('Confirm Password', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
-              const SizedBox(height: 8),
-              _buildConfirmPasswordField(),
-              
-              const SizedBox(height: 28),
-              
-              // Create Account button
-              GestureDetector(
-                onTap: _isLoading ? null : _signUpWithEmail,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: _isLoading ? Colors.grey : Colors.black,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: _isLoading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text('Create Account', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 24),
-              
-              // Login link
-              Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text("Already have an account? ", style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 14)),
-                    GestureDetector(
-                      onTap: () => context.go('/'),
-                      child: Text('Sign In', style: GoogleFonts.poppins(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w600)),
-                    ),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 40),
-            ],
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSocialButton(IconData icon, String label, {VoidCallback? onTap}) {
+  Widget _buildTextField({
+    required String label,
+    required String hint,
+    required TextEditingController controller,
+    TextInputType? keyboardType,
+    bool obscureText = false,
+    Widget? suffixIcon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 52,
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            obscureText: obscureText,
+            enabled: !_isLoading,
+            style: GoogleFonts.poppins(fontSize: 15),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              suffixIcon: suffixIcon,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSocialButton({
+    String? image,
+    IconData? icon,
+    required String label,
+    required VoidCallback? onTap,
+    required Color backgroundColor,
+    required Color textColor,
+    Color? borderColor,
+    Color? iconColor,
+  }) {
+    const double height = 52;
     return GestureDetector(
-      onTap: _isLoading ? null : onTap,
+      onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        height: height,
         decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(height / 2),
+          border: borderColor != null ? Border.all(color: borderColor, width: 1.5) : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 24, color: Colors.black),
+            if (image != null)
+              Image.asset(
+                image,
+                width: 24,
+                height: 24,
+              ),
+            if (icon != null)
+              Icon(
+                icon,
+                size: 24,
+                color: iconColor ?? textColor,
+              ),
             const SizedBox(width: 12),
-            Text(label, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black)),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(TextEditingController controller, String hint, bool isPassword, TextInputType type, {bool capitalize = false}) {
-    return TextField(
-      controller: controller,
-      obscureText: isPassword ? _obscurePassword : false,
-      keyboardType: type,
-      textCapitalization: capitalize ? TextCapitalization.words : TextCapitalization.none,
-      enabled: !_isLoading,
-      style: GoogleFonts.poppins(fontSize: 15),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-        filled: true,
-        fillColor: Colors.grey[100],
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 1.5)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        suffixIcon: isPassword
-            ? IconButton(
-                icon: Icon(_obscurePassword ? Iconsax.eye_slash : Iconsax.eye, color: Colors.grey[500], size: 20),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-              )
-            : null,
-      ),
-    );
-  }
-
-  Widget _buildConfirmPasswordField() {
-    return TextField(
-      controller: _confirmPasswordController,
-      obscureText: _obscureConfirmPassword,
-      keyboardType: TextInputType.visiblePassword,
-      enabled: !_isLoading,
-      style: GoogleFonts.poppins(fontSize: 15),
-      decoration: InputDecoration(
-        hintText: 'Confirm your password',
-        hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-        filled: true,
-        fillColor: Colors.grey[100],
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 1.5)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        suffixIcon: IconButton(
-          icon: Icon(_obscureConfirmPassword ? Iconsax.eye_slash : Iconsax.eye, color: Colors.grey[500], size: 20),
-          onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
         ),
       ),
     );
