@@ -5,6 +5,25 @@
 
 ---
 
+## ✅ COMPLETED TASKS (Feb 23, 2026)
+
+### Product Detail Screen
+- ✅ Updated AppBar title to show product name instead of "Details"
+- ✅ Changed tab indicator to main red (#fb2a0a)
+- ✅ Removed click highlight/splash effect from tabs
+- ✅ Added verification badge next to store name (main red)
+- ✅ Changed message icon background to main red (#fb2a0a)
+- ✅ Updated specifications section for better visibility
+- ✅ Changed price button to button red (#b71000) with height/2 border radius
+
+### Discover Screen
+- ✅ Removed ad card and all ad-related content
+- ✅ Cleaned up unused imports and variables
+- ✅ Removed _AdCard widget class
+- ✅ Removed _subscribeToAds method
+
+---
+
 ## Brand Identity
 
 ### Old Names

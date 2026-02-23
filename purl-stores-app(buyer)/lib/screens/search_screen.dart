@@ -211,15 +211,14 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.black : Colors.transparent,
+          color: isSelected ? const Color(0xFFfb2a0a) : Colors.transparent, // Main red
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? AppColors.black : Colors.grey[300]!),
         ),
         child: Text(
           label,
           style: GoogleFonts.poppins(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             color: isSelected ? Colors.white : Colors.grey[600],
           ),
         ),
@@ -279,7 +278,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildSuggestions() {
     if (isLoadingSuggestions) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.black));
+      return const Center(child: CircularProgressIndicator(color: Color(0xFFfb2a0a))); // Main red
     }
 
     if (searchSuggestions.isEmpty) {
@@ -317,7 +316,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildSearchResults() {
     if (isSearching) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.black));
+      return const Center(child: CircularProgressIndicator(color: Color(0xFFfb2a0a))); // Main red
     }
 
     final results = _selectedTab == 0 ? searchResults : storeResults;
@@ -467,7 +466,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.black,
+                          color: const Color(0xFFfb2a0a), // Main red
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -694,7 +693,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+                          decoration: const BoxDecoration(color: Color(0xFFfb2a0a), shape: BoxShape.circle), // Main red
                           child: const Icon(Icons.check, size: 12, color: Colors.white),
                         ),
                       ],

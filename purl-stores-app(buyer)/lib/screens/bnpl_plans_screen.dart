@@ -17,7 +17,7 @@ class BnplPlansScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'BNPL Plans',
+          'Buy Now Pay Later',
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -28,7 +28,7 @@ class BnplPlansScreen extends StatelessWidget {
       ),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -36,52 +36,63 @@ class BnplPlansScreen extends StatelessWidget {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  shape: BoxShape.circle,
+                  color: const Color(0xFFfb2a0a).withValues(alpha: 0.1), // Main red light
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
+                child: const Icon(
                   Iconsax.lock,
                   size: 40,
-                  color: Colors.grey[600],
+                  color: Color(0xFFfb2a0a), // Main red
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
               Text(
-                'Not Eligible Yet',
+                'Not Qualified Yet',
                 style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: Colors.black,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               Text(
-                'Keep making orders to unlock BNPL payment plans',
+                'You haven\'t made enough orders to qualify for Buy Now Pay Later service.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  color: Colors.grey[600],
+                  height: 1.6,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Keep shopping with us to unlock this feature!',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
                   fontSize: 14,
-                  color: Colors.grey[600],
+                  color: Colors.grey[500],
                   height: 1.5,
                 ),
               ),
-              const SizedBox(height: 32),
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFb71000), // Button red
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28), // height / 2
+                    ),
                   ),
-                  child: Center(
-                    child: Text(
-                      'Continue Shopping',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
+                  child: Text(
+                    'Continue Shopping',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),

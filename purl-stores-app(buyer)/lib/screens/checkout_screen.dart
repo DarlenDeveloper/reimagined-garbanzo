@@ -160,7 +160,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Please enable location services', style: GoogleFonts.poppins()),
-              backgroundColor: Colors.orange,
+              backgroundColor: const Color(0xFFfb2a0a), // Main red
               action: SnackBarAction(
                 label: 'Settings',
                 textColor: Colors.white,
@@ -546,17 +546,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
+              height: 56,
               child: ElevatedButton.icon(
                 onPressed: _openMapPicker,
                 icon: const Icon(Iconsax.map, size: 18),
                 label: Text(
                   'Set on Map', 
-                  style: GoogleFonts.poppins(fontSize: 14),
+                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.black,
-                  foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: const Color(0xFFb71000), // Button red
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), // height / 2
                 ),
               ),
             ),
@@ -730,7 +732,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.red.shade50,
+              color: const Color(0xFFfb2a0a).withValues(alpha: 0.1), // Main red light
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -919,6 +921,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
+                height: 52,
                 child: ElevatedButton(
                   onPressed: () {
                     if (addressController.text.isNotEmpty && cityController.text.isNotEmpty) {
@@ -940,8 +943,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: const Color(0xFFb71000), // Button red
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)), // height / 2
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: Text('Save Address', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
                 ),
@@ -1074,11 +1080,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
+                  color: const Color(0xFFfb2a0a).withValues(alpha: 0.1), // Main red light
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: const Color(0xFFfb2a0a).withOpacity(0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -1089,17 +1095,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Iconsax.truck_fast, size: 16, color: Colors.orange.shade700),
+                        Icon(Iconsax.truck_fast, size: 16, color: const Color(0xFFfb2a0a)), // Main red
                         const SizedBox(width: 8),
                         Text(
                           'Total Delivery Fee',
-                          style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.orange.shade900),
+                          style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFFfb2a0a)),
                         ),
                       ],
                     ),
                     Text(
                       _currencyService.formatPrice(_totalDeliveryFee, 'UGX'),
-                      style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.orange.shade900),
+                      style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFFfb2a0a)),
                     ),
                   ],
                 ),
@@ -1237,14 +1243,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           // Main Pay Button
           SizedBox(
             width: double.infinity,
-            height: 54,
+            height: 56,
             child: ElevatedButton(
               onPressed: _isProcessing ? null : () => _processOrder(itemsByStore, totalsByStore),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.black,
-                foregroundColor: AppColors.white,
+                backgroundColor: const Color(0xFFb71000), // Button red
+                foregroundColor: Colors.white,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), // height / 2
+                disabledBackgroundColor: Colors.grey[400],
               ),
               child: _isProcessing
                   ? const SizedBox(
@@ -1283,7 +1290,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             ],
           ),
-          backgroundColor: Colors.orange,
+          backgroundColor: const Color(0xFFfb2a0a), // Main red
           behavior: SnackBarBehavior.floating,
           action: SnackBarAction(
             label: 'Allow',
@@ -1423,8 +1430,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         MainScreen.navigateToOrders(context); // Navigate to orders tab
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: const Color(0xFFb71000), // Button red
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       child: Text('View Orders', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
                     ),

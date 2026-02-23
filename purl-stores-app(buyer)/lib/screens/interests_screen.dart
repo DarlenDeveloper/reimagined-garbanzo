@@ -98,7 +98,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.black,
+        color: const Color(0xFFfb2a0a), // Main red
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -141,7 +141,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: _selectedInterests.length >= 3 ? Colors.black : Colors.grey[100],
+                color: _selectedInterests.length >= 3 ? const Color(0xFFfb2a0a) : Colors.grey[100], // Main red
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -187,7 +187,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black : Colors.grey[100],
+          color: isSelected ? const Color(0xFFfb2a0a) : Colors.grey[100], // Main red
           borderRadius: BorderRadius.circular(16),
         ),
         child: Stack(
@@ -265,7 +265,7 @@ class _InterestsScreenState extends State<InterestsScreen> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: (canContinue && !_isSaving) ? Colors.black : Colors.grey[200],
+                color: (canContinue && !_isSaving) ? const Color(0xFFb71000) : Colors.grey[200], // Button red
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Center(

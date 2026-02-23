@@ -97,10 +97,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             children: [
               // Tabs
               Container(
+                height: 52,
                 margin: const EdgeInsets.symmetric(horizontal: 20),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(26), // height / 2
                 ),
                 child: TabBar(
                   controller: _tabController,
@@ -108,11 +109,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                   unselectedLabelColor: Colors.grey.shade600,
                   indicatorSize: TabBarIndicatorSize.tab,
                   dividerColor: Colors.transparent,
+                  splashFactory: NoSplash.splashFactory, // Remove tap glow
+                  overlayColor: WidgetStateProperty.all(Colors.transparent), // Remove tap glow
                   indicator: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(14),
+                    color: const Color(0xFFfb2a0a), // Main red
+                    borderRadius: BorderRadius.circular(26), // height / 2
                   ),
-                  labelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+                  labelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
                   unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
                   padding: const EdgeInsets.all(4),
                   tabs: [
@@ -201,12 +204,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: _getStatusColor(order.status).withValues(alpha: 0.1),
+                          color: const Color(0xFFb71000).withValues(alpha: 0.1), // Button red light
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           _getStatusIcon(order.status),
-                          color: _getStatusColor(order.status),
+                          color: const Color(0xFFb71000), // Button red
                           size: 22,
                         ),
                       ),
@@ -233,7 +236,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(order.status).withValues(alpha: 0.1),
+                          color: _getStatusBadgeColor(order.status).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -241,7 +244,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                           style: GoogleFonts.poppins(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: _getStatusColor(order.status),
+                            color: _getStatusBadgeColor(order.status),
                           ),
                         ),
                       ),
@@ -327,11 +330,26 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       case 'delivered':
         return const Color(0xFF22C55E);
       case 'shipped':
-        return Colors.blue;
+        return const Color(0xFFfb2a0a);
       case 'pending':
-        return const Color(0xFFFF9800); // Brighter orange
+        return const Color(0xFFb71000); // Button red
       case 'refunded':
         return const Color(0xFFEF4444);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _getStatusBadgeColor(String status) {
+    switch (status) {
+      case 'delivered':
+        return const Color(0xFF22C55E); // Green
+      case 'shipped':
+        return const Color(0xFFfb2a0a); // Main red
+      case 'pending':
+        return const Color(0xFFb71000); // Button red
+      case 'refunded':
+        return const Color(0xFFEF4444); // Red
       default:
         return Colors.grey;
     }

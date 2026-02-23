@@ -150,7 +150,7 @@ class PaymentSuccessScreen extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppColors.black,
+                                    color: const Color(0xFF22C55E), // Green for success
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
@@ -250,18 +250,18 @@ class PaymentSuccessScreen extends StatelessWidget {
               // Track Order Button
               SizedBox(
                 width: double.infinity,
-                height: 54,
+                height: 56,
                 child: ElevatedButton(
                   onPressed: () {
                     // Navigate to home and then to orders tab
                     context.go('/');
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.black,
+                    backgroundColor: const Color(0xFFb71000), // Button red
                     foregroundColor: AppColors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(27),
+                      borderRadius: BorderRadius.circular(28), // height / 2
                     ),
                   ),
                   child: Text(

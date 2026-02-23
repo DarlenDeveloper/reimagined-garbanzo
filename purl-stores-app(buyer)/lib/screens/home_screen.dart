@@ -73,7 +73,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _storeDataCache[key] = Map<String, dynamic>.from(value);
           }
         });
-        print('📦 Loaded ${_storeDataCache.length} stores from cache');
         
         // Check cache age and refresh if older than 1 hour
         final cacheTimestamp = _prefs?.getInt('store_cache_timestamp') ?? 0;
@@ -82,12 +81,11 @@ class _HomeScreenState extends State<HomeScreen> {
         final oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
         
         if (cacheAge > oneHour) {
-          print('🔄 Cache is older than 1 hour, will refresh on next fetch');
           // Don't clear cache immediately, but mark it for refresh
           _prefs?.setBool('cache_needs_refresh', true);
         }
       } catch (e) {
-        print('Error loading cache: $e');
+        // Error loading cache
       }
     }
   }
@@ -109,7 +107,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadFeed() async {
     // Check if posts are already preloaded
     if (_preloaderService.isPreloaded && _preloaderService.cachedPosts != null) {
-      print('📦 Using preloaded posts');
       setState(() {
         _posts = List.from(_preloaderService.cachedPosts!);
         _lastDocument = _preloaderService.lastDocument;
@@ -135,7 +132,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     
     // Fallback to normal loading if preload didn't happen
-    print('🔄 Loading posts from Firestore');
     setState(() => _isLoading = true);
     _lastDocument = null;
     _posts.clear();
@@ -162,7 +158,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _enrichPreloadedPosts() async {
     // Get unique store IDs from preloaded posts
     final storeIds = _posts.map((post) => post['storeId'] as String).toSet();
-    print('🔍 Enriching ${_posts.length} preloaded posts from ${storeIds.length} stores');
     
     final storeDataMap = <String, Map<String, dynamic>>{};
     final storesToFetch = <String>[];
@@ -596,9 +591,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final likes = post['likes'] ?? 0;
     final createdAt = post['createdAt'] as Timestamp?;
     final mediaList = post['mediaUrls'] as List?;
-    
-    // Debug logging
-    print('🎨 Building post card: postId=$postId, storeId=$storeId, storeName=$storeName, verificationStatus=$storeVerificationStatus, isVerified=$isStoreVerified');
     
     final isLiked = _likedPosts.contains(postId);
     final isSaved = _savedPosts.contains(postId);

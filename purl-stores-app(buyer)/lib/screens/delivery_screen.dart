@@ -217,31 +217,28 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
     final isCurrent = _currentStep == step;
     return Column(
       children: [
-        AnimatedBuilder(
-          animation: _animController,
-          builder: (context, child) => Transform.scale(
-            scale: isCurrent ? _pulseAnimation.value : 1.0,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: isCompleted ? AppColors.darkGreen : Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: isCurrent ? [BoxShadow(color: AppColors.darkGreen.withValues(alpha: 0.3), blurRadius: 12, spreadRadius: 2)] : null,
-              ),
-              child: Icon(icon, size: 18, color: isCompleted ? Colors.white : AppColors.textSecondary),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isCompleted ? const Color(0xFFb71000) : Colors.white, // Button red
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isCompleted ? const Color(0xFFb71000) : Colors.grey[300]!,
+              width: 2,
             ),
           ),
+          child: Icon(icon, size: 18, color: isCompleted ? Colors.white : AppColors.textSecondary),
         ),
         const SizedBox(height: 6),
-        Text(label, style: GoogleFonts.poppins(fontSize: 10, fontWeight: isCompleted ? FontWeight.w600 : FontWeight.w400, color: isCompleted ? AppColors.darkGreen : AppColors.textSecondary)),
+        Text(label, style: GoogleFonts.poppins(fontSize: 10, fontWeight: isCompleted ? FontWeight.w600 : FontWeight.w400, color: isCompleted ? const Color(0xFFb71000) : AppColors.textSecondary)),
       ],
     );
   }
 
   Widget _buildProgressLine(int afterStep) {
     final isCompleted = _currentStep > afterStep;
-    return Expanded(child: Container(height: 3, margin: const EdgeInsets.only(bottom: 20), decoration: BoxDecoration(color: isCompleted ? AppColors.darkGreen : AppColors.surfaceVariant, borderRadius: BorderRadius.circular(2))));
+    return Expanded(child: Container(height: 3, margin: const EdgeInsets.only(bottom: 20), decoration: BoxDecoration(color: isCompleted ? const Color(0xFFb71000) : AppColors.surfaceVariant, borderRadius: BorderRadius.circular(2))));
   }
 
   Widget _buildLottieAnimation() {
@@ -285,8 +282,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
         Container(
           width: 36,
           height: 36,
-          decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, size: 18, color: AppColors.darkGreen),
+          decoration: BoxDecoration(
+            color: const Color(0xFFb71000).withValues(alpha: 0.1), // Button red light
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFb71000).withValues(alpha: 0.2), width: 1),
+          ),
+          child: Icon(icon, size: 18, color: const Color(0xFFb71000)), // Button red
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -294,7 +295,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textSecondary)),
-              Text(value, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+              Text(value, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             ],
           ),
         ),
@@ -327,8 +328,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                       Container(
                         width: 50,
                         height: 50,
-                        decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12)),
-                        child: const Icon(Iconsax.box, size: 24, color: AppColors.darkGreen),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFb71000).withValues(alpha: 0.1), // Button red light
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFb71000).withValues(alpha: 0.2), width: 1),
+                        ),
+                        child: const Icon(Iconsax.box, size: 24, color: Color(0xFFb71000)), // Button red
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -345,7 +350,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                         builder: (context, priceSnapshot) {
                           return Text(
                             priceSnapshot.data ?? _currencyService.formatPrice(price, currency),
-                            style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.darkGreen),
+                            style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black),
                           );
                         },
                       ),
@@ -358,7 +363,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Total paid', style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textSecondary)),
+                  Text('Total paid', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
                   FutureBuilder<String>(
                     future: _currencyService.formatPriceWithConversion(
                       total,
@@ -367,7 +372,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                     builder: (context, totalSnapshot) {
                       return Text(
                         totalSnapshot.data ?? _currencyService.formatPrice(total, 'KES'),
-                        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.darkGreen),
+                        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black),
                       );
                     },
                   ),

@@ -62,12 +62,14 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.backgroundColor,
-      body: SafeArea(
-        child: StreamBuilder<Map<String, List<CartItemData>>>(
-          stream: _cartService.getCartItemsByStoreStream(),
-          builder: (context, snapshot) {
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: context.backgroundColor,
+        body: SafeArea(
+          child: StreamBuilder<Map<String, List<CartItemData>>>(
+            stream: _cartService.getCartItemsByStoreStream(),
+            builder: (context, snapshot) {
             // Use cached data if available to prevent flickering
             final itemsByStore = snapshot.hasData ? snapshot.data! : (_cachedCartData ?? {});
             
@@ -154,21 +156,83 @@ class _CartScreenState extends State<CartScreen> {
           },
         ),
       ),
+    ),
     );
   }
 
   Widget _buildEmptyCart() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.shopping_cart_outlined, size: 80, color: context.textSecondaryColor.withValues(alpha: 0.5)),
-          const SizedBox(height: 16),
-          Text('Your cart is empty', style: GoogleFonts.poppins(color: context.textSecondaryColor, fontSize: 16)),
-          const SizedBox(height: 8),
-          Text('Add items to get started', style: GoogleFonts.poppins(color: context.textSecondaryColor.withValues(alpha: 0.7))),
-        ],
-      ),
+    return Column(
+      children: [
+        _buildHeader(),
+        Expanded(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFfb2a0a).withValues(alpha: 0.1), // Main red light
+                    borderRadius: BorderRadius.circular(20), // Rounded square
+                  ),
+                  child: const Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 60,
+                    color: Color(0xFFfb2a0a), // Main red
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Your cart is empty',
+                  style: GoogleFonts.poppins(
+                    color: context.textPrimaryColor,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Add items to get started',
+                  style: GoogleFonts.poppins(
+                    color: context.textSecondaryColor,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Navigate to discover tab (index 1)
+                      final mainScreenContext = context.findAncestorStateOfType<State>();
+                      if (mainScreenContext != null) {
+                        DefaultTabController.of(context)?.animateTo(1);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFb71000), // Button red
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(26), // height / 2
+                      ),
+                    ),
+                    child: Text(
+                      'Start Shopping',
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -234,7 +298,7 @@ class _CartScreenState extends State<CartScreen> {
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.only(right: 24),
             decoration: BoxDecoration(
-              color: Colors.black,
+              color: const Color(0xFFb71000), // Button red
               borderRadius: BorderRadius.circular(16),
             ),
             alignment: Alignment.centerRight,
@@ -445,9 +509,10 @@ class _CartScreenState extends State<CartScreen> {
 
   Widget _buildQuantitySelector(CartItemData item) {
     return Container(
+      height: 40,
       decoration: BoxDecoration(
         color: context.surfaceVariantColor,
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(20), // height / 2
       ),
       child: Row(
         children: [
@@ -483,11 +548,11 @@ class _CartScreenState extends State<CartScreen> {
             child: Container(
               width: 32,
               height: 32,
-              decoration: BoxDecoration(
-                color: context.primaryColor,
+              decoration: const BoxDecoration(
+                color: Color(0xFFfb2a0a), // POP red
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.add, size: 16, color: context.isDark ? Colors.black : Colors.white),
+              child: const Icon(Icons.add, size: 16, color: Colors.white),
             ),
           ),
         ],
@@ -499,48 +564,49 @@ class _CartScreenState extends State<CartScreen> {
     return Row(
       children: [
         Expanded(
-          child: TextField(
-            controller: _promoController,
-            enabled: !_promoApplied,
-            style: GoogleFonts.poppins(color: AppColors.textPrimary, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: _promoApplied ? _appliedPromo : 'Promo code',
-              hintStyle: GoogleFonts.poppins(
-                color: _promoApplied ? context.textPrimaryColor : Colors.grey.shade400,
-                fontSize: 14,
-                fontWeight: _promoApplied ? FontWeight.w500 : FontWeight.w400,
+          child: Container(
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(26), // height / 2
+            ),
+            child: TextField(
+              controller: _promoController,
+              enabled: !_promoApplied,
+              style: GoogleFonts.poppins(color: AppColors.textPrimary, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: _promoApplied ? _appliedPromo : 'Promo code',
+                hintStyle: GoogleFonts.poppins(
+                  color: _promoApplied ? context.textPrimaryColor : Colors.grey.shade400,
+                  fontSize: 14,
+                  fontWeight: _promoApplied ? FontWeight.w500 : FontWeight.w400,
+                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                filled: false,
               ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
-                borderSide: const BorderSide(color: Colors.black, width: 1.5),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              filled: false,
             ),
           ),
         ),
         const SizedBox(width: 12),
         if (_promoApplied)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             decoration: BoxDecoration(
-              color: context.primaryColor,
-              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFFfb2a0a), // POP red
+              borderRadius: BorderRadius.circular(26), // height / 2
             ),
-            child: Text(
-              'Promo-code Confirmed',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: context.isDark ? Colors.black : Colors.white,
+            child: Center(
+              child: Text(
+                'Applied',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
           )
@@ -548,28 +614,31 @@ class _CartScreenState extends State<CartScreen> {
           GestureDetector(
             onTap: _isValidatingPromo ? null : _applyPromo,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              height: 52,
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               decoration: BoxDecoration(
-                color: _isValidatingPromo ? Colors.grey : context.primaryColor,
-                borderRadius: BorderRadius.circular(12),
+                color: _isValidatingPromo ? Colors.grey : const Color(0xFFb71000), // Button red
+                borderRadius: BorderRadius.circular(26), // height / 2
               ),
-              child: _isValidatingPromo
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              child: Center(
+                child: _isValidatingPromo
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        'Apply',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
-                    )
-                  : Text(
-                      'Apply',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: context.isDark ? Colors.black : Colors.white,
-                      ),
-                    ),
+              ),
             ),
           ),
       ],
@@ -771,7 +840,7 @@ class _CartScreenState extends State<CartScreen> {
       color: Colors.transparent,
       child: SizedBox(
         width: double.infinity,
-        height: 54,
+        height: 56,
         child: ElevatedButton(
           onPressed: () {
             // Pass promo data to checkout via route parameters
@@ -781,19 +850,14 @@ class _CartScreenState extends State<CartScreen> {
               extra['promoDiscount'] = _appliedDiscountAmount;
               extra['discountId'] = _appliedDiscountId;
               extra['discountStoreId'] = _appliedDiscountStoreId;
-              print('🎟️ Cart sending promo data:');
-              print('   Code: ${extra['promoCode']}');
-              print('   Discount: ${extra['promoDiscount']}');
-              print('   Discount ID: ${extra['discountId']}');
-              print('   Store ID: ${extra['discountStoreId']}');
             }
             context.push('/checkout', extra: extra.isNotEmpty ? extra : null);
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: context.primaryColor,
-            foregroundColor: context.isDark ? Colors.black : Colors.white,
+            backgroundColor: const Color(0xFFb71000), // Button red
+            foregroundColor: Colors.white,
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), // height / 2
           ),
           child: Text(
             'Proceed Transactions',

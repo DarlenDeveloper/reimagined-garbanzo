@@ -51,7 +51,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           ),
           title: Text('Messages', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600, color: context.textPrimaryColor)),
         ),
-        body: const Center(child: CircularProgressIndicator(color: Colors.black)),
+        body: const Center(child: CircularProgressIndicator(color: Color(0xFFfb2a0a))), // Main red
       );
     }
 
@@ -91,10 +91,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: Container(
+              height: 48,
               decoration: BoxDecoration(
                 color: context.surfaceVariantColor,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(24), // height / 2
               ),
+              clipBehavior: Clip.antiAlias,
               child: TextField(
                 controller: _searchController,
                 style: GoogleFonts.poppins(color: context.textPrimaryColor),
@@ -106,8 +108,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   ),
                   prefixIcon: Icon(Iconsax.search_normal, size: 20, color: context.textSecondaryColor),
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  filled: false,
                 ),
+                onChanged: (value) {
+                  setState(() {}); // Trigger rebuild to filter conversations
+                },
               ),
             ),
           ),
@@ -131,7 +139,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               stream: _messagesService.getUserConversations(_userId!),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: Colors.black));
+                  return const Center(child: CircularProgressIndicator(color: Color(0xFFfb2a0a))); // Main red
                 }
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -150,10 +158,42 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 }
 
                 final conversations = snapshot.data!;
+                
+                // Filter conversations offline based on search query
+                final searchQuery = _searchController.text.toLowerCase().trim();
+                final filteredConversations = searchQuery.isEmpty
+                    ? conversations
+                    : conversations.where((conv) {
+                        final storeName = (conv['storeName'] ?? '').toString().toLowerCase();
+                        final lastMessage = (conv['lastMessage'] ?? '').toString().toLowerCase();
+                        return storeName.contains(searchQuery) || lastMessage.contains(searchQuery);
+                      }).toList();
+                
+                if (filteredConversations.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Iconsax.search_status, size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          searchQuery.isEmpty ? 'No conversations yet' : 'No results found',
+                          style: GoogleFonts.poppins(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          searchQuery.isEmpty ? 'Start chatting with stores' : 'Try a different search term',
+                          style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: conversations.length,
-                  itemBuilder: (context, index) => _buildConversationTile(conversations[index]),
+                  itemCount: filteredConversations.length,
+                  itemBuilder: (context, index) => _buildConversationTile(filteredConversations[index]),
                 );
               },
             ),
@@ -244,7 +284,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: context.primaryColor,
+                      color: const Color(0xFFfb2a0a), // Main red
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -252,7 +292,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       style: GoogleFonts.poppins(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: context.isDark ? Colors.black : Colors.white,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -353,7 +393,7 @@ class _ChatScreenState extends State<_ChatScreen> {
               stream: _messagesService.getMessages(widget.conversationId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: Colors.black));
+                  return const Center(child: CircularProgressIndicator(color: Color(0xFFfb2a0a))); // Main red
                 }
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -374,37 +414,36 @@ class _ChatScreenState extends State<_ChatScreen> {
                 final messages = snapshot.data!;
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
+                  reverse: true, // Show newest at bottom
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message = messages[index];
+                    // Messages come oldest first, so reverse to show newest at bottom
+                    final message = messages[messages.length - 1 - index];
                     final isMe = message['senderId'] == widget.userId;
-                    final createdAt = message['createdAt'] as Timestamp?;
-                    final time = createdAt != null ? _messagesService.getMessageTime(createdAt) : '';
 
                     return Align(
                       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
+                        margin: const EdgeInsets.only(bottom: 4),
                         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                        child: Column(
-                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isMe ? Colors.black : Colors.grey[100],
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(16),
-                                  topRight: const Radius.circular(16),
-                                  bottomLeft: Radius.circular(isMe ? 16 : 4),
-                                  bottomRight: Radius.circular(isMe ? 4 : 16),
-                                ),
-                              ),
-                              child: Text(message['text'] ?? '', style: GoogleFonts.poppins(fontSize: 14, color: isMe ? Colors.white : Colors.black)),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isMe ? const Color(0xFFfb2a0a) : Colors.grey[100], // Main red for sent messages
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(16),
+                              topRight: const Radius.circular(16),
+                              bottomLeft: Radius.circular(isMe ? 16 : 4),
+                              bottomRight: Radius.circular(isMe ? 4 : 16),
                             ),
-                            const SizedBox(height: 4),
-                            Text(time, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
-                          ],
+                          ),
+                          child: Text(
+                            message['text'] ?? '',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: isMe ? Colors.white : Colors.black,
+                            ),
+                          ),
                         ),
                       ),
                     );
@@ -419,16 +458,24 @@ class _ChatScreenState extends State<_ChatScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    style: GoogleFonts.poppins(fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Type a message...',
-                      hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: TextField(
+                      controller: _messageController,
+                      style: GoogleFonts.poppins(fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'Type a message...',
+                        hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        filled: false,
+                      ),
                     ),
                   ),
                 ),
@@ -436,9 +483,13 @@ class _ChatScreenState extends State<_ChatScreen> {
                 GestureDetector(
                   onTap: _sendMessage,
                   child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Iconsax.send_1, color: Colors.white, size: 20),
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFb71000), // Button red
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 24),
                   ),
                 ),
               ],

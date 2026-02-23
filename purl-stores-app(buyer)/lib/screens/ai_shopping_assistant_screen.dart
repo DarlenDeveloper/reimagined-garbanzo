@@ -292,8 +292,8 @@ class _AIShoppingAssistantScreenState extends State<AIShoppingAssistantScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFFfb2a0a), // POP red
+                borderRadius: BorderRadius.circular(16), // Increased from 12
               ),
               child: Column(
                 children: [

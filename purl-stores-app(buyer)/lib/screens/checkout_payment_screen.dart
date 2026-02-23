@@ -125,17 +125,6 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        TextButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.add, size: 18),
-                          label: Text(
-                            'Add',
-                            style: GoogleFonts.poppins(fontSize: 14),
-                          ),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.black,
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -219,18 +208,20 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
       child: Container(
         width: 80,
         height: 60,
-        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.grey100 : AppColors.white,
+          color: isSelected ? const Color(0xFFfb2a0a).withValues(alpha: 0.05) : AppColors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.black : AppColors.grey300,
+            color: isSelected ? const Color(0xFFfb2a0a) : AppColors.grey300,
             width: isSelected ? 2 : 1,
           ),
         ),
-        child: Image.asset(
-          logoPath,
-          fit: BoxFit.contain,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(11),
+          child: Image.asset(
+            logoPath,
+            fit: BoxFit.cover, // Changed to cover to fill the container
+          ),
         ),
       ),
     );
@@ -249,20 +240,24 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        TextFormField(
-          controller: _cardHolderController,
-          decoration: InputDecoration(
-            hintText: 'Ryan Ghoslet',
-            hintStyle: GoogleFonts.poppins(color: AppColors.grey400),
-            filled: true,
-            fillColor: AppColors.grey100,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.grey100,
+            borderRadius: BorderRadius.circular(26), // height / 2
           ),
-          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+          child: TextFormField(
+            controller: _cardHolderController,
+            decoration: InputDecoration(
+              hintText: 'Ryan Ghoslet',
+              hintStyle: GoogleFonts.poppins(color: AppColors.grey400),
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            ),
+            validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+          ),
         ),
         const SizedBox(height: 16),
         
@@ -275,32 +270,36 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        TextFormField(
-          controller: _cardNumberController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(16),
-            _CardNumberFormatter(),
-          ],
-          decoration: InputDecoration(
-            hintText: '4444 - 0006 - 6569 - 0559',
-            hintStyle: GoogleFonts.poppins(color: AppColors.grey400),
-            filled: true,
-            fillColor: AppColors.grey100,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.grey100,
+            borderRadius: BorderRadius.circular(26),
           ),
-          validator: (value) {
-            if (value == null || value.isEmpty) return 'Required';
-            if (value.replaceAll(' ', '').replaceAll('-', '').length < 15) {
-              return 'Invalid card number';
-            }
-            return null;
-          },
+          child: TextFormField(
+            controller: _cardNumberController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(16),
+              _CardNumberFormatter(),
+            ],
+            decoration: InputDecoration(
+              hintText: '4444 - 0006 - 6569 - 0559',
+              hintStyle: GoogleFonts.poppins(color: AppColors.grey400),
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) return 'Required';
+              if (value.replaceAll(' ', '').replaceAll('-', '').length < 15) {
+                return 'Invalid card number';
+              }
+              return null;
+            },
+          ),
         ),
         const SizedBox(height: 16),
         
@@ -319,30 +318,34 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _expiryController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(4),
-                      _ExpiryDateFormatter(),
-                    ],
-                    decoration: InputDecoration(
-                      hintText: '02 / 28',
-                      hintStyle: GoogleFonts.poppins(color: AppColors.grey400),
-                      filled: true,
-                      fillColor: AppColors.grey100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.grey100,
+                      borderRadius: BorderRadius.circular(26),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) return 'Required';
-                      if (!value.contains('/') || value.length < 5) return 'Invalid';
-                      return null;
-                    },
+                    child: TextFormField(
+                      controller: _expiryController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(4),
+                        _ExpiryDateFormatter(),
+                      ],
+                      decoration: InputDecoration(
+                        hintText: '02 / 28',
+                        hintStyle: GoogleFonts.poppins(color: AppColors.grey400),
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Required';
+                        if (!value.contains('/') || value.length < 5) return 'Invalid';
+                        return null;
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -360,30 +363,34 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _cvvController,
-                    keyboardType: TextInputType.number,
-                    obscureText: true,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(4),
-                    ],
-                    decoration: InputDecoration(
-                      hintText: '***',
-                      hintStyle: GoogleFonts.poppins(color: AppColors.grey400),
-                      filled: true,
-                      fillColor: AppColors.grey100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.grey100,
+                      borderRadius: BorderRadius.circular(26),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) return 'Required';
-                      if (value.length < 3) return 'Invalid';
-                      return null;
-                    },
+                    child: TextFormField(
+                      controller: _cvvController,
+                      keyboardType: TextInputType.number,
+                      obscureText: true,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(4),
+                      ],
+                      decoration: InputDecoration(
+                        hintText: '***',
+                        hintStyle: GoogleFonts.poppins(color: AppColors.grey400),
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Required';
+                        if (value.length < 3) return 'Invalid';
+                        return null;
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -409,53 +416,59 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        TextFormField(
-          controller: _phoneController,
-          keyboardType: TextInputType.phone,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(10),
-          ],
-          decoration: InputDecoration(
-            hintText: '0700000000',
-            hintStyle: GoogleFonts.poppins(color: AppColors.grey400),
-            prefixText: '+256 ',
-            prefixStyle: GoogleFonts.poppins(
-              color: AppColors.black,
-              fontWeight: FontWeight.w500,
-            ),
-            filled: true,
-            fillColor: AppColors.grey100,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.grey100,
+            borderRadius: BorderRadius.circular(26),
           ),
-          validator: (value) {
-            if (value == null || value.isEmpty) return 'Required';
-            if (value.length < 9) return 'Invalid phone number';
-            return null;
-          },
+          child: TextFormField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
+            decoration: InputDecoration(
+              hintText: '0700000000',
+              hintStyle: GoogleFonts.poppins(color: AppColors.grey400),
+              prefixText: '+256 ',
+              prefixStyle: GoogleFonts.poppins(
+                color: AppColors.black,
+                fontWeight: FontWeight.w500,
+              ),
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) return 'Required';
+              if (value.length < 9) return 'Invalid phone number';
+              return null;
+            },
+          ),
         ),
         const SizedBox(height: 16),
         // Show selected network info
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.blue.shade50,
+            color: const Color(0xFFfb2a0a).withValues(alpha: 0.1), // Main red light
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFfb2a0a).withValues(alpha: 0.3), width: 1),
           ),
           child: Row(
             children: [
-              Icon(Iconsax.info_circle, color: Colors.blue.shade700, size: 16),
+              Icon(Iconsax.info_circle, color: const Color(0xFFfb2a0a), size: 16), // Main red
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'You\'ll receive a prompt on your $networkName number to complete payment',
                   style: GoogleFonts.poppins(
                     fontSize: 12,
-                    color: Colors.blue.shade700,
+                    color: const Color(0xFFfb2a0a), // Main red
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -488,16 +501,16 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
       child: SafeArea(
         child: SizedBox(
           width: double.infinity,
-          height: 54,
+          height: 56,
           child: ElevatedButton(
             onPressed: _isProcessing ? null : _processPayment,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.black,
+              backgroundColor: const Color(0xFFb71000), // Button red
               foregroundColor: AppColors.white,
               disabledBackgroundColor: AppColors.grey300,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(27),
+                borderRadius: BorderRadius.circular(28), // height / 2
               ),
             ),
             child: _isProcessing
@@ -743,13 +756,13 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
       builder: (context) => WillPopScope(
         onWillPop: () async => false,
         child: Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(color: AppColors.black),
+                const CircularProgressIndicator(color: Color(0xFFfb2a0a)), // Main red
                 const SizedBox(height: 20),
                 Text(
                   'Processing Payment',
@@ -873,10 +886,12 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
               Navigator.of(context).pop(verified);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.black,
+              backgroundColor: const Color(0xFFb71000), // Button red
               foregroundColor: AppColors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
             ),
-            child: Text('I Completed It', style: GoogleFonts.poppins()),
+            child: Text('I Completed It', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -974,13 +989,13 @@ class _PollingDialogState extends State<_PollingDialog> {
     return WillPopScope(
       onWillPop: () async => false,
       child: Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(color: AppColors.black),
+              const CircularProgressIndicator(color: Color(0xFFfb2a0a)), // Main red
               const SizedBox(height: 20),
               Text(
                 'Waiting for Payment',

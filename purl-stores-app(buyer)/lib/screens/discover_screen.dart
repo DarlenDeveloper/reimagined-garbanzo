@@ -745,7 +745,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text('Added to cart', style: GoogleFonts.poppins()),
-                                      backgroundColor: Colors.black,
+                                      backgroundColor: const Color(0xFFfb2a0a), // Main red
                                       behavior: SnackBarBehavior.floating,
                                       duration: const Duration(seconds: 3),
                                       action: SnackBarAction(

@@ -7,7 +7,8 @@ class StoresService {
 
   Future<List<Map<String, dynamic>>> getNearbyStores(double userLat, double userLon, {double radiusKm = 10}) async {
     try {
-      final snapshot = await _firestore.collection('stores').get();
+      // Limit to 100 stores for performance - filter by distance after
+      final snapshot = await _firestore.collection('stores').limit(100).get();
       
       final stores = <Map<String, dynamic>>[];
       

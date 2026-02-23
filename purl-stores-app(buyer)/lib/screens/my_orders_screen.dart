@@ -104,16 +104,27 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
                     children: [
                       Container(
                         margin: const EdgeInsets.symmetric(horizontal: 20),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(26), // height / 2
+                          border: Border.all(color: Colors.grey[200]!, width: 1),
+                        ),
                         child: TabBar(
                           controller: _tabController,
                           labelColor: Colors.white,
                           unselectedLabelColor: AppColors.textSecondary,
                           indicatorSize: TabBarIndicatorSize.tab,
                           dividerColor: Colors.transparent,
-                          indicator: BoxDecoration(color: AppColors.darkGreen, borderRadius: BorderRadius.circular(14)),
-                          labelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+                          indicator: BoxDecoration(
+                            color: const Color(0xFFfb2a0a), // POP red
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          labelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                          unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
                           padding: const EdgeInsets.all(4),
+                          splashFactory: NoSplash.splashFactory,
+                          overlayColor: WidgetStateProperty.all(Colors.transparent),
                           tabs: [
                             Tab(text: 'Active (${activeOrders.length})'),
                             Tab(text: 'Completed (${completedOrders.length})'),
@@ -184,7 +195,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
           child: Container(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9F9F9),
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Column(
               children: [
                 Row(
@@ -193,10 +207,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
                       width: 50,
                       height: 50,
                       decoration: BoxDecoration(
-                        color: _getStatusColor(order.status).withValues(alpha: 0.1),
+                        color: const Color(0xFFb71000).withValues(alpha: 0.1), // Button red light
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(_getStatusIcon(order.status), color: _getStatusColor(order.status), size: 24),
+                      child: Icon(_getStatusIcon(order.status), color: const Color(0xFFb71000), size: 24), // Button red
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -232,7 +246,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
                           builder: (context, priceSnapshot) {
                             return Text(
                               priceSnapshot.data ?? _currencyService.formatPrice(order.total, userCurrency),
-                              style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.darkGreen),
+                              style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black),
                             );
                           },
                         ),
@@ -241,15 +255,19 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
                   ],
                 ),
                 const SizedBox(height: 14),
-                Container(height: 1, color: AppColors.surfaceVariant),
+                Container(height: 1, color: Colors.grey[200]),
                 const SizedBox(height: 14),
                 Row(
                   children: [
+                    // Store logo placeholder - will be populated with actual store image
                     Container(
                       width: 40,
                       height: 40,
-                      decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Iconsax.box, size: 18, color: AppColors.darkGreen),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Iconsax.shop, size: 18, color: Colors.black),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -260,7 +278,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
                             order.storeName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+                            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                           ),
                           Text(
                             'Order details',
@@ -284,16 +302,16 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
     switch (status) {
       case 'confirmed':
       case 'pending':
-        return const Color(0xFF3B82F6);
+        return const Color(0xFF22C55E); // Green
       case 'preparing':
       case 'shipped':
-        return const Color(0xFFF59E0B);
+        return const Color(0xFFF59E0B); // Amber
       case 'picked':
       case 'picked_up':
       case 'in_transit':
-        return AppColors.darkGreen;
+        return const Color(0xFFfb2a0a); // POP red
       case 'delivered':
-        return const Color(0xFF22C55E);
+        return const Color(0xFF22C55E); // Green
       default:
         return AppColors.textSecondary;
     }

@@ -104,7 +104,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           // Map
           _isLoading
               ? const Center(
-                  child: CircularProgressIndicator(color: Colors.black),
+                  child: CircularProgressIndicator(color: Color(0xFFfb2a0a)), // Main red
                 )
               : GoogleMap(
                   initialCameraPosition: CameraPosition(
@@ -130,13 +130,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   const Icon(
                     Icons.location_pin,
                     size: 50,
-                    color: Colors.red,
+                    color: Color(0xFFfb2a0a), // Main red
                   ),
                   Container(
                     width: 4,
                     height: 4,
                     decoration: const BoxDecoration(
-                      color: Colors.red,
+                      color: Color(0xFFfb2a0a), // Main red
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -265,22 +265,23 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
+                    height: 56,
                     child: ElevatedButton(
                       onPressed: _selectedLocation != null
                           ? _confirmLocation
                           : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: const Color(0xFFb71000), // Button red
+                        foregroundColor: Colors.white,
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(28), // height / 2
                         ),
                         disabledBackgroundColor: Colors.grey[300],
                       ),
                       child: Text(
                         'Confirm Location',
                         style: GoogleFonts.poppins(
-                          color: Colors.white,
                           fontWeight: FontWeight.w600,
                           fontSize: 16,
                         ),
