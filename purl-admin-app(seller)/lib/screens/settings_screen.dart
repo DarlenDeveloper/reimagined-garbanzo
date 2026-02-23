@@ -22,7 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _currencyService = CurrencyService();
   bool _notificationsEnabled = true;
   String _language = 'English';
-  String _currency = 'KES';
+  String _currency = 'UGX';
   
   // User data
   String _userName = '';
@@ -264,7 +264,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Center(
       child: Column(
         children: [
-          Text('Wibble Seller', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[600])),
+          Text('POP Manager', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[600])),
           Text('Version 1.0.0', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[400])),
         ],
       ),
@@ -652,6 +652,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showPoliciesSheet(BuildContext context) {
     _showBottomSheet(context, 'Store Policies', Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildPolicyRule('1', 'Deliver in 24 Hours', 'All orders must be delivered within 24 hours of confirmation'),
+        const SizedBox(height: 16),
+        _buildPolicyRule('2', 'Price Well', 'Set fair and competitive prices for your products'),
+        const SizedBox(height: 16),
+        _buildPolicyRule('3', 'Sell the Right Products', 'Only sell authentic, legal, and quality products'),
+        const SizedBox(height: 16),
+        _buildPolicyRule('4', 'No Cash Outside Platform', 'Never ask for cash payments outside the platform or you will be banned'),
+      ],
+    ));
+  }
+
+  Widget _buildPolicyRule(String number, String title, String description) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: const Color(0xFFfb2a0a),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showPoliciesSheetOld(BuildContext context) {
+    _showBottomSheet(context, 'Store Policies', Column(
       children: [
         _buildPolicyItem('Return Policy', 'Define your return and refund policy'),
         _buildPolicyItem('Shipping Policy', 'Set shipping terms and conditions'),
@@ -734,7 +800,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: const Color(0xFFfb2a0a), size: 20)),
+        leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: Colors.black, size: 20)),
         title: Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Colors.black)),
         subtitle: Text(subtitle, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
         trailing: Icon(Iconsax.arrow_right_3, color: Colors.grey[400], size: 18),
@@ -791,15 +857,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Text('Last updated: December 2024\n', style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 12)),
         Text('1. Acceptance of Terms', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.black)),
         const SizedBox(height: 8),
-        Text('By accessing and using Purl, you accept and agree to be bound by the terms and provision of this agreement.', style: GoogleFonts.poppins(color: Colors.grey[700], fontSize: 13, height: 1.5)),
+        Text('By accessing and using POP, you accept and agree to be bound by the terms and provision of this agreement.', style: GoogleFonts.poppins(color: Colors.grey[700], fontSize: 13, height: 1.5)),
         const SizedBox(height: 16),
         Text('2. Use License', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.black)),
         const SizedBox(height: 8),
-        Text('Permission is granted to temporarily use Purl for personal, non-commercial transitory viewing only.', style: GoogleFonts.poppins(color: Colors.grey[700], fontSize: 13, height: 1.5)),
+        Text('Permission is granted to temporarily use POP for personal, non-commercial transitory viewing only.', style: GoogleFonts.poppins(color: Colors.grey[700], fontSize: 13, height: 1.5)),
         const SizedBox(height: 16),
         Text('3. Disclaimer', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.black)),
         const SizedBox(height: 8),
-        Text('The materials on Purl are provided on an "as is" basis. Purl makes no warranties, expressed or implied.', style: GoogleFonts.poppins(color: Colors.grey[700], fontSize: 13, height: 1.5)),
+        Text('The materials on POP are provided on an "as is" basis. POP makes no warranties, expressed or implied.', style: GoogleFonts.poppins(color: Colors.grey[700], fontSize: 13, height: 1.5)),
         const SizedBox(height: 24),
       ],
     ));

@@ -494,7 +494,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   bottomRight: Radius.circular(isMe ? 4 : 16),
                 ),
               ),
-              child: Text(message['text'] ?? '', style: GoogleFonts.poppins(fontSize: 14, color: isMe ? Colors.white : Colors.black)),
+              child: Text(message['text'] ?? '', style: GoogleFonts.poppins(fontSize: 14, color: isMe ? Colors.white : const Color(0xFFfb2a0a))),
             ),
             const SizedBox(height: 4),
             Text(time, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
@@ -699,7 +699,7 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(userName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15, color: const Color(0xFFfb2a0a))),
+                Text(userName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black)),
                 Text('Buyer', style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
               ],
             ),
@@ -763,7 +763,7 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
                                   bottomRight: Radius.circular(isMe ? 4 : 16),
                                 ),
                               ),
-                              child: Text(message['text'] ?? '', style: GoogleFonts.poppins(fontSize: 14, color: isMe ? Colors.white : Colors.black)),
+                              child: Text(message['text'] ?? '', style: GoogleFonts.poppins(fontSize: 14, color: isMe ? Colors.white : const Color(0xFFfb2a0a))),
                             ),
                             const SizedBox(height: 4),
                             Text(time, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
