@@ -74,5 +74,16 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.255612064321-8r11lhup4pgqfn7io55gbv73aht8qs6n</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -260,4 +260,19 @@ class SearchService {
       print('❌ Error clearing recent searches: $e');
     }
   }
+
+  /// Remove a single search from recent searches
+  Future<void> removeRecentSearch(String query) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      List<String> searches = prefs.getStringList(_recentSearchesKey) ?? [];
+      
+      // Remove the specific search
+      searches.remove(query);
+      
+      await prefs.setStringList(_recentSearchesKey, searches);
+    } catch (e) {
+      print('❌ Error removing recent search: $e');
+    }
+  }
 }

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
@@ -23,56 +22,18 @@ class _AIShoppingAssistantScreenState extends State<AIShoppingAssistantScreen> {
   final CurrencyService _currencyService = CurrencyService();
   bool _isLoading = false;
   String _userCurrency = 'USD';
-  
-  // Countdown timer
-  late DateTime _launchDate;
-  String _countdown = '';
-  Timer? _countdownTimer;
 
   @override
   void initState() {
     super.initState();
     _loadUserCurrency();
-    // Launch date: Feb 27, 2026 at 19:00 EAT (UTC+3)
-    _launchDate = DateTime(2026, 2, 27, 19, 0, 0).toUtc().subtract(const Duration(hours: 3));
-    _startCountdown();
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
-    _countdownTimer?.cancel();
     super.dispose();
-  }
-  
-  void _startCountdown() {
-    _updateCountdown();
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) {
-        _updateCountdown();
-      }
-    });
-  }
-  
-  void _updateCountdown() {
-    final now = DateTime.now();
-    final difference = _launchDate.difference(now);
-    
-    if (difference.isNegative) {
-      setState(() => _countdown = 'Available Now!');
-      _countdownTimer?.cancel();
-      return;
-    }
-    
-    final days = difference.inDays;
-    final hours = difference.inHours % 24;
-    final minutes = difference.inMinutes % 60;
-    final seconds = difference.inSeconds % 60;
-    
-    setState(() {
-      _countdown = '${days}d ${hours}h ${minutes}m ${seconds}s';
-    });
   }
 
   Future<void> _loadUserCurrency() async {
@@ -103,10 +64,17 @@ class _AIShoppingAssistantScreenState extends State<AIShoppingAssistantScreen> {
       // Call AI service
       final response = await _aiService.searchProducts(text, userId: userId);
       
+      // Modify response if it's the "couldn't find" message
+      String modifiedResponse = response.response;
+      if (modifiedResponse.contains("couldn't find exactly what you're looking for") || 
+          modifiedResponse.contains("Could you give me more details")) {
+        modifiedResponse = "I'm still learning! 🤖 Since this is a BETA version, try being more specific with your search. For example:\n\n• \"iPhone 15 Pro\"\n• \"Nike running shoes\"\n• \"Samsung TV 55 inch\"\n\nWhat are you looking for?";
+      }
+      
       setState(() {
         _messages.add(ChatMessage(
           role: 'assistant',
-          content: response.response,
+          content: modifiedResponse,
           timestamp: DateTime.now(),
           products: response.products,
         ));
@@ -191,16 +159,37 @@ class _AIShoppingAssistantScreenState extends State<AIShoppingAssistantScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'POP AI',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'POP AI',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFfb2a0a),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'BETA',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 Text(
-                  'Coming Soon',
+                  'Your AI Shopping Assistant',
                   style: GoogleFonts.poppins(
                     fontSize: 13,
                     color: Colors.grey[600],
@@ -216,10 +205,12 @@ class _AIShoppingAssistantScreenState extends State<AIShoppingAssistantScreen> {
 
   Widget _buildQuickSuggestions() {
     final suggestions = [
-      'Gaming laptops',
-      'Red dresses under \$50',
-      'Wireless headphones',
-      'Running shoes',
+      'iPhone',
+      'T-shirts',
+      'Pants',
+      'Books',
+      'Shoes',
+      'Watch',
     ];
 
     return Container(
@@ -257,82 +248,62 @@ class _AIShoppingAssistantScreenState extends State<AIShoppingAssistantScreen> {
   }
 
   Widget _buildMessageList() {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+    if (_messages.isEmpty) {
+      return GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: ListView(
+          padding: const EdgeInsets.all(20),
           children: [
-            SizedBox(
-              width: 120,
-              height: 120,
-              child: Image.asset(
-                'assets/images/popailogo.png',
-                fit: BoxFit.contain,
+            const SizedBox(height: 40),
+            Center(
+              child: SizedBox(
+                width: 100,
+                height: 100,
+                child: Image.asset(
+                  'assets/images/popailogo.png',
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
             const SizedBox(height: 24),
             Text(
-              'POP AI Shopping Assistant',
+              'Hi! I\'m your POP AI Shopping Assistant',
               style: GoogleFonts.poppins(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: Colors.black,
               ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
-              'Coming Soon',
+              'Ask me anything about products, and I\'ll help you find exactly what you\'re looking for!',
               style: GoogleFonts.poppins(
-                fontSize: 16,
+                fontSize: 14,
                 color: Colors.grey[600],
+                height: 1.5,
               ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFfb2a0a), // POP red
-                borderRadius: BorderRadius.circular(16), // Increased from 12
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    'Launches in',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.white70,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _countdown,
-                    style: GoogleFonts.poppins(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                'We\'re building an intelligent shopping assistant to help you find exactly what you\'re looking for.',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: Colors.grey[500],
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
+            const SizedBox(height: 32),
+            _buildQuickSuggestions(),
           ],
         ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(20),
+        itemCount: _messages.length + (_isLoading ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _messages.length) {
+            return _buildTypingIndicator();
+          }
+          return _buildMessageBubble(_messages[index]);
+        },
       ),
     );
   }
@@ -575,29 +546,63 @@ class _AIShoppingAssistantScreenState extends State<AIShoppingAssistantScreen> {
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.lock_outline, size: 16, color: Colors.grey[400]),
-            const SizedBox(width: 8),
-            Text(
-              'Coming Soon',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey[400],
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: TextField(
+                controller: _messageController,
+                style: GoogleFonts.poppins(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Ask me anything...',
+                  hintStyle: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                maxLines: null,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendMessage(),
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _sendMessage,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: Color(0xFFfb2a0a),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.send_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

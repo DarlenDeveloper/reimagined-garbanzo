@@ -26,6 +26,21 @@ class MainScreen extends StatefulWidget {
     }
   }
 
+  static void navigateToDiscoverWithCategory(BuildContext context, String categoryId) {
+    final state = context.findAncestorStateOfType<_MainScreenState>();
+    if (state != null) {
+      print('🔄 Switching to Discover tab (index 1)');
+      state.setState(() => state._currentIndex = 1);
+      // Notify discover screen about category selection with longer delay
+      Future.delayed(const Duration(milliseconds: 300), () {
+        print('🔄 Selecting category: $categoryId');
+        DiscoverScreen.selectCategory(categoryId);
+      });
+    } else {
+      print('❌ MainScreenState not found in context');
+    }
+  }
+
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
@@ -52,12 +67,12 @@ class _MainScreenState extends State<MainScreen> {
       extendBodyBehindAppBar: true,
       body: IndexedStack(
         index: _currentIndex,
-        children: const [
-          HomeScreen(),
-          DiscoverScreen(),
-          CartScreen(),
-          MyOrdersScreen(),
-          ProfileScreen(),
+        children: [
+          const HomeScreen(),
+          DiscoverScreen(key: DiscoverScreen.discoverKey),
+          const CartScreen(),
+          const MyOrdersScreen(),
+          const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: _buildBottomNavBar(),

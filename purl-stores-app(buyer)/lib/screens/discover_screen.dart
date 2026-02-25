@@ -21,7 +21,35 @@ import 'store_profile_screen.dart';
 import 'main_screen.dart';
 
 class DiscoverScreen extends StatefulWidget {
-  const DiscoverScreen({super.key});
+  final String? initialCategoryId;
+  
+  const DiscoverScreen({super.key, this.initialCategoryId});
+
+  // Global key to access discover screen state
+  static final GlobalKey<_DiscoverScreenState> discoverKey = GlobalKey<_DiscoverScreenState>();
+
+  // Static method to select a category
+  static void selectCategory(String categoryId) {
+    print('📍 selectCategory called with: $categoryId');
+    final state = discoverKey.currentState;
+    if (state != null) {
+      print('📍 DiscoverScreen state found');
+      final categoryIndex = state._categories.indexWhere((cat) => cat['id'] == categoryId);
+      print('📍 Category index: $categoryIndex');
+      if (categoryIndex != -1) {
+        state.setState(() {
+          state._selectedCategoryIndex = categoryIndex;
+          state._isSwitchingCategory = true;
+        });
+        state._subscribeToProducts();
+        print('✅ Category selected successfully');
+      } else {
+        print('❌ Category not found in list');
+      }
+    } else {
+      print('❌ DiscoverScreen state is null');
+    }
+  }
 
   @override
   State<DiscoverScreen> createState() => _DiscoverScreenState();
@@ -73,6 +101,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    
+    // Set initial category if provided
+    if (widget.initialCategoryId != null) {
+      final categoryIndex = _categories.indexWhere((cat) => cat['id'] == widget.initialCategoryId);
+      if (categoryIndex != -1) {
+        _selectedCategoryIndex = categoryIndex;
+      }
+    }
+    
     _subscribeToProducts();
     _loadWishlistStatus();
   }
@@ -399,13 +436,28 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const SearchScreen(),
                   ),
                 );
+                
+                // Handle category selection from search
+                if (result != null && result is Map) {
+                  if (result['action'] == 'selectCategory') {
+                    final categoryId = result['categoryId'] as String;
+                    final categoryIndex = _categories.indexWhere((cat) => cat['id'] == categoryId);
+                    if (categoryIndex != -1) {
+                      setState(() {
+                        _selectedCategoryIndex = categoryIndex;
+                        _isSwitchingCategory = true;
+                      });
+                      _subscribeToProducts();
+                    }
+                  }
+                }
               },
               child: Container(
                 height: 52,

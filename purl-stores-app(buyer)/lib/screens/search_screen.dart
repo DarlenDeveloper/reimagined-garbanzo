@@ -10,6 +10,9 @@ import '../services/wishlist_service.dart';
 import '../theme/colors.dart';
 import 'store_profile_screen.dart';
 import 'product_detail_screen.dart';
+import 'main_screen.dart';
+import 'discover_screen.dart';
+import 'ai_shopping_assistant_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -112,73 +115,101 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(), // Dismiss keyboard when tapping outside
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Iconsax.arrow_left, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Material(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(30),
-          child: Container(
-            height: 44,
-            margin: const EdgeInsets.only(right: 16),
-            child: TextField(
-              controller: _controller,
-              autofocus: true,
-              style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
-              decoration: InputDecoration(
-                hintText: 'Search products, brands...',
-                hintStyle: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[500]),
-                prefixIcon: Icon(Iconsax.search_normal, color: Colors.grey[500], size: 20),
-                suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Iconsax.close_circle, color: Colors.grey[500], size: 20),
-                        onPressed: () {
-                          _controller.clear();
-                          setState(() {
-                            searchQuery = '';
-                            showResults = false;
-                            searchSuggestions = [];
-                          });
-                        },
-                      )
-                    : null,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                filled: true,
-                fillColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Iconsax.arrow_left, color: Colors.black),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Row(
+            children: [
+              Expanded(
+                child: Material(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(30),
+                  child: Container(
+                    height: 44,
+                    child: TextField(
+                      controller: _controller,
+                      autofocus: true,
+                      style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
+                      decoration: InputDecoration(
+                        hintText: 'Search products, brands...',
+                        hintStyle: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[500]),
+                        prefixIcon: Icon(Iconsax.search_normal, color: Colors.grey[500], size: 20),
+                        suffixIcon: searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(Iconsax.close_circle, color: Colors.grey[500], size: 20),
+                                onPressed: () {
+                                  _controller.clear();
+                                  setState(() {
+                                    searchQuery = '';
+                                    showResults = false;
+                                    searchSuggestions = [];
+                                  });
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                        filled: true,
+                        fillColor: Colors.transparent,
+                      ),
+                      onChanged: (value) {
+                        setState(() => searchQuery = value);
+                        _getSuggestions(value);
+                      },
+                      onSubmitted: (query) {
+                        if (query.isNotEmpty) {
+                          _performSearch(query);
+                        }
+                      },
+                    ),
+                  ),
+                ),
               ),
-              onChanged: (value) {
-                setState(() => searchQuery = value);
-                _getSuggestions(value);
-              },
-              onSubmitted: (query) {
-                if (query.isNotEmpty) {
-                  _performSearch(query);
-                }
-              },
-            ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => const AIShoppingAssistantScreen(),
+                  );
+                },
+                child: SizedBox(
+                  height: 56,
+                  width: 56,
+                  child: Image.asset(
+                    'assets/images/popailogo.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ],
           ),
+          titleSpacing: 0,
         ),
-      ),
-      body: Column(
-        children: [
-          // Tabs
-          if (showResults) _buildTabs(),
-          // Content
-          Expanded(
-            child: showResults 
-                ? _buildSearchResults() 
-                : (searchQuery.isEmpty ? _buildEmptyState() : _buildSuggestions()),
-          ),
-        ],
+        body: Column(
+          children: [
+            // Tabs
+            if (showResults) _buildTabs(),
+            // Content
+            Expanded(
+              child: showResults 
+                  ? _buildSearchResults() 
+                  : (searchQuery.isEmpty ? _buildEmptyState() : _buildSuggestions()),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -229,46 +260,42 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildEmptyState() {
     return ListView(
       children: [
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Recent Searches', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
-                  GestureDetector(
-                    onTap: () async {
-                      await _searchService.clearRecentSearches();
-                      _loadRecentSearches();
-                    },
-                    child: Text('Clear all', style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ...recentSearches.map((search) => _buildRecentSearchItem(search)),
-            ],
+        if (recentSearches.isNotEmpty) ...[
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Recent Searches', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+                    GestureDetector(
+                      onTap: () async {
+                        await _searchService.clearRecentSearches();
+                        _loadRecentSearches();
+                      },
+                      child: Text('Clear all', style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...recentSearches.map((search) => _buildRecentSearchItem(search)),
+              ],
+            ),
           ),
-        ),
-        Divider(height: 1, color: Colors.grey[200]),
+          Divider(height: 1, color: Colors.grey[200]),
+        ],
         Container(
           color: Colors.white,
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Popular Categories', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: ['Apparel', 'Electronics', 'Automotive', 'Home', 'Beauty', 'Sports']
-                    .map((cat) => _buildCategoryChip(cat))
-                    .toList(),
-              ),
+              Text('Popular Categories', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              _buildCategoryGrid(),
             ],
           ),
         ),
@@ -574,21 +601,126 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildRecentSearchItem(String search) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Icon(Iconsax.clock, color: Colors.grey[400], size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                _controller.text = search;
+                setState(() => searchQuery = search);
+                _performSearch(search);
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Text(search, style: GoogleFonts.poppins(fontSize: 14)),
+            ),
+          ),
+          GestureDetector(
+            onTap: () async {
+              await _searchService.removeRecentSearch(search);
+              _loadRecentSearches();
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Icon(Iconsax.close_circle, color: Colors.grey[400], size: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryGrid() {
+    final categories = [
+      {'name': 'Apparel', 'id': 'apparel', 'image': 'assets/images/categories/apparel.jpg'},
+      {'name': 'Electronics', 'id': 'electronics', 'image': 'assets/images/categories/electronics.jpg'},
+      {'name': 'Automotive', 'id': 'automotive', 'image': 'assets/images/categories/automotive.jpg'},
+      {'name': 'Home', 'id': 'home_living', 'image': 'assets/images/categories/home.jpeg'},
+      {'name': 'Beauty', 'id': 'beauty', 'image': 'assets/images/categories/beauty.jpg'},
+      {'name': 'Baby & Kids', 'id': 'baby_kids', 'image': 'assets/images/categories/baby_kids.jpg'},
+      {'name': 'Sports', 'id': 'sports', 'image': 'assets/images/categories/sports.jpg'},
+      {'name': 'Books', 'id': 'books', 'image': 'assets/images/categories/books.jpg'},
+      {'name': 'Art', 'id': 'art', 'image': 'assets/images/categories/art.jpg'},
+      {'name': 'Grocery', 'id': 'grocery', 'image': 'assets/images/categories/grocery.jpg'},
+      {'name': 'Other', 'id': 'other', 'image': 'assets/images/categories/other.jpg'},
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.4,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        return _buildCategoryCard(categories[index]);
+      },
+    );
+  }
+
+  Widget _buildCategoryCard(Map<String, String> category) {
     return GestureDetector(
       onTap: () {
-        _controller.text = search;
-        setState(() => searchQuery = search);
-        _performSearch(search);
+        final categoryId = category['id']!;
+        // Pop and then navigate using Navigator result
+        Navigator.pop(context, {'action': 'selectCategory', 'categoryId': categoryId});
       },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            Icon(Iconsax.clock, color: Colors.grey[400], size: 18),
-            const SizedBox(width: 12),
-            Expanded(child: Text(search, style: GoogleFonts.poppins(fontSize: 14))),
-            Icon(Iconsax.arrow_right_3, color: Colors.grey[400], size: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Category image
+              Image.asset(
+                category['image']!,
+                fit: BoxFit.cover,
+              ),
+              // Gradient overlay
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
+                  ),
+                ),
+              ),
+              // Category name
+              Positioned(
+                bottom: 12,
+                left: 12,
+                right: 12,
+                child: Text(
+                  category['name']!,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

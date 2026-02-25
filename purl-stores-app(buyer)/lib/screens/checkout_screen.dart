@@ -80,9 +80,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _loadUserContactDetails();
     _loadUserCurrency();
     _fixCartStoreNames();
-    // Calculate delivery fees if location is already set
+    // Automatically fetch GPS location on screen load
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_currentLocation != null) {
+      if (_currentLocation == null) {
+        _requestLocationPermission(); // Auto-fetch GPS location without opening map
+      } else {
         _calculateDeliveryFees();
       }
     });
@@ -554,9 +556,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               height: 56,
               child: ElevatedButton.icon(
                 onPressed: _openMapPicker,
-                icon: const Icon(Iconsax.map, size: 18),
+                icon: const Icon(Iconsax.location, size: 18),
                 label: Text(
-                  'Set on Map', 
+                  'Use Current Location', 
                   style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -703,33 +705,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                Text('Delivery Address', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 4),
-                const Text('*', style: TextStyle(color: Colors.red, fontSize: 16)),
-              ],
-            ),
-            GestureDetector(
-              onTap: _showAddNewAddressSheet,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.grey100,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Iconsax.add, size: 16),
-                    const SizedBox(width: 4),
-                    Text('Add New', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ),
-            ),
+            Text('Delivery Address', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 4),
+            const Text('*', style: TextStyle(color: Colors.red, fontSize: 16)),
           ],
         ),
         if (_showAddressError && _selectedAddressIndex == -1) ...[

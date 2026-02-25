@@ -496,7 +496,17 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 8),
           Text('POP', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
           const Spacer(),
-          _buildHeaderIcon(Iconsax.search_normal, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()))),
+          _buildHeaderIcon(Iconsax.search_normal, () async {
+            final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
+            // If user selected a category, switch to discover tab
+            if (result != null && result is Map && result['action'] == 'selectCategory') {
+              final categoryId = result['categoryId'] as String;
+              // Switch to discover tab and select category
+              if (mounted) {
+                MainScreen.navigateToDiscoverWithCategory(context, categoryId);
+              }
+            }
+          }),
           const SizedBox(width: 16),
           _buildNotificationIcon(),
           const SizedBox(width: 16),
