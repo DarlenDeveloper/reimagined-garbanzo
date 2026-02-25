@@ -83,8 +83,8 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
     try {
       final result = await _authService.signInWithGoogle();
       if (result != null && mounted) {
-        // After Google signup, go to account type selection
-        context.go('/account-type');
+        // After Google signup, go to loading screen to check store status
+        context.go('/loading');
       }
     } catch (e) {
       _showError('Google sign up failed. Please try again.');

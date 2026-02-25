@@ -37,6 +37,7 @@ class PostsService {
     String? storeLogoUrl,
     required String content,
     List<Map<String, dynamic>> mediaUrls = const [],
+    List<String> taggedProductIds = const [],
     bool isPremium = false,
   }) async {
     // Extract hashtags from content
@@ -48,6 +49,7 @@ class PostsService {
       'content': content,
       'mediaUrls': mediaUrls,
       'hashtags': hashtags,
+      'taggedProductIds': taggedProductIds,
       'likes': 0,
       'likedBy': [], // Track who liked
       'savedBy': [], // Track who saved

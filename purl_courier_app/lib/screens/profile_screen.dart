@@ -187,12 +187,16 @@ class ProfileScreen extends StatelessWidget {
                 _MenuItem(
                   icon: Iconsax.user_edit,
                   title: 'Edit Profile',
-                  onTap: () {},
+                  onTap: () {
+                    context.push('/edit-profile');
+                  },
                 ),
                 _MenuItem(
                   icon: Iconsax.car,
                   title: 'Vehicle Information',
-                  onTap: () {},
+                  onTap: () {
+                    context.push('/vehicle-info');
+                  },
                 ),
                 _MenuItem(
                   icon: Iconsax.card,

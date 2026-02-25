@@ -372,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: const Color(0xFFb71000), // Button red background
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -387,13 +387,13 @@ class _HomeScreenState extends State<HomeScreen> {
             // Header
             Row(
               children: [
-                const Icon(Iconsax.box, color: Colors.black, size: 20),
+                const Icon(Iconsax.box, color: Colors.white, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     delivery.orderNumber,
                     style: GoogleFonts.poppins(
-                      color: Colors.black,
+                      color: Colors.white,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -401,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFb71000),
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -583,11 +583,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1a1a1a), Color(0xFF2d2d2d)],
-        ),
+        color: const Color(0xFFb71000), // Button red background
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1053,12 +1049,7 @@ class _DynamicIslandPopupState extends State<_DynamicIslandPopup>
 
     _controller.forward();
 
-    // Auto dismiss after 10 seconds
-    Future.delayed(const Duration(seconds: 10), () {
-      if (mounted) {
-        _dismiss();
-      }
-    });
+    // Popup stays until user accepts/rejects or delivery is cancelled
   }
 
   @override
@@ -1159,11 +1150,11 @@ class _DynamicIslandPopupState extends State<_DynamicIslandPopup>
                         Row(
                           children: [
                             Expanded(
-                              child: OutlinedButton(
+                              child: ElevatedButton(
                                 onPressed: _dismiss,
-                                style: OutlinedButton.styleFrom(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.black,
                                   foregroundColor: Colors.white,
-                                  side: const BorderSide(color: Colors.white, width: 1.5),
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),

@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>255612064321-iomrg1dpdocpu108uguohhbcr1cbsi4o.apps.googleusercontent.com</string>
+	<string>255612064321-ub34kej8hrv2vs9n77ofovakh9s48l99.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.255612064321-iomrg1dpdocpu108uguohhbcr1cbsi4o</string>
+	<string>com.googleusercontent.apps.255612064321-ub34kej8hrv2vs9n77ofovakh9s48l99</string>
 	<key>ANDROID_CLIENT_ID</key>
 	<string>255612064321-1h5n9sr05l7g35t5t4rr71ce41uh65p1.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.purl.admin</string>
+	<string>com.pop.vendor</string>
 	<key>PROJECT_ID</key>
 	<string>purlstores-za</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:255612064321:ios:79c043ef49d041ade52cc0</string>
+	<string>1:255612064321:ios:62bdb132b63f2530e52cc0</string>
 </dict>
 </plist>

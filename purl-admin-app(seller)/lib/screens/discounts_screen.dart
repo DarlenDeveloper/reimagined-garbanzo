@@ -358,7 +358,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
     final codeController = TextEditingController();
     final valueController = TextEditingController();
     final usageLimitController = TextEditingController();
-    String selectedType = 'percentage';
+    final String selectedType = 'percentage'; // Fixed to percentage
     DateTime? selectedExpiry;
     bool hasUsageLimit = false;
     List<String> selectedProducts = [];
@@ -410,64 +410,61 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                 
-                // Code and Type in a row
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: TextField(
-                        controller: codeController,
-                        decoration: InputDecoration(
-                          labelText: 'Code',
-                          hintText: 'SAVE20',
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: const Color(0xFFb71000), width: 1),
-                          ),
-                        ),
-                        textCapitalization: TextCapitalization.characters,
-                      ),
+                // Code field (full width)
+                TextField(
+                  controller: codeController,
+                  decoration: InputDecoration(
+                    labelText: 'Code',
+                    hintText: 'SAVE20',
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: DropdownButtonFormField<String>(
-                        value: selectedType,
-                        decoration: InputDecoration(
-                          labelText: 'Type',
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: const Color(0xFFb71000), width: 1),
-                          ),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'percentage', child: Text('Percentage')),
-                          DropdownMenuItem(value: 'fixed', child: Text('Fixed')),
-                        ],
-                        onChanged: (value) => setDialogState(() => selectedType = value!),
-                      ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
                     ),
-                  ],
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: const Color(0xFFb71000), width: 1),
+                    ),
+                  ),
+                  textCapitalization: TextCapitalization.characters,
+                ),
+                const SizedBox(height: 16),
+                
+                // Type indicator (read-only)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFfb2a0a).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFfb2a0a).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Iconsax.percentage_circle, color: Color(0xFFfb2a0a), size: 20),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Type',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Percentage',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFfb2a0a),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
                 
@@ -478,7 +475,7 @@ class _DiscountsScreenState extends State<DiscountsScreen> with SingleTickerProv
                       child: TextField(
                         controller: valueController,
                         decoration: InputDecoration(
-                          labelText: selectedType == 'percentage' ? 'Value (%)' : 'Value (\$)',
+                          labelText: 'Value (%)',
                           filled: true,
                           fillColor: Colors.grey.shade50,
                           border: OutlineInputBorder(

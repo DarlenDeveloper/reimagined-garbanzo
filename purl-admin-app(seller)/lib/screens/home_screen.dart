@@ -10,6 +10,7 @@ import 'discounts_screen.dart';
 import 'main_screen.dart';
 import 'messages_screen.dart';
 import 'store_verification_screen.dart';
+import 'live_screen.dart';
 import '../services/store_service.dart';
 import '../services/messages_service.dart';
 import '../services/order_service.dart';
@@ -163,6 +164,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ),
                       Row(
                         children: [
+                          GestureDetector(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const LiveScreen())),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFb71000),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.play_circle, color: Colors.white, size: 24),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
                           GestureDetector(
                             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MessagesScreen())),
                             child: _storeId == null

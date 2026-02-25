@@ -54,13 +54,114 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
         .get();
     
     if (doc.exists) {
+      final data = doc.data();
+      print('📦 Delivery data: storePhone=${data?['storePhone']}, buyerPhone=${data?['buyerPhone']}');
+      
       setState(() {
         _delivery = DeliveryRequest.fromFirestore(doc);
         _currentStatus = _delivery!.status;
       });
+      
+      print('📦 Delivery object: storePhone=${_delivery!.storePhone}, buyerPhone=${_delivery!.buyerPhone}');
+      
+      // If phone numbers are missing, fetch them
+      if (_delivery!.storePhone.isEmpty || _delivery!.buyerPhone.isEmpty) {
+        await _fetchMissingPhoneNumbers();
+      }
+      
       _updateMarkers();
-      // Automatically show route based on status
-      _showAutomaticRoute();
+      // Route will be shown after map is created
+    }
+  }
+
+  Future<void> _fetchMissingPhoneNumbers() async {
+    if (_delivery == null) return;
+    
+    try {
+      String storePhone = _delivery!.storePhone;
+      String buyerPhone = _delivery!.buyerPhone;
+      
+      // Fetch store phone if missing
+      if (storePhone.isEmpty && _delivery!.storeId.isNotEmpty) {
+        final storeDoc = await FirebaseFirestore.instance
+            .collection('stores')
+            .doc(_delivery!.storeId)
+            .get();
+        final storeData = storeDoc.data();
+        storePhone = storeData?['contact']?['phone'] ?? '';
+        print('📞 Fetched store phone: $storePhone');
+      }
+      
+      // Fetch buyer phone if missing
+      if (buyerPhone.isEmpty) {
+        // Try to get buyerId from delivery data first
+        final deliveryDoc = await FirebaseFirestore.instance
+            .collection('deliveries')
+            .doc(widget.deliveryId)
+            .get();
+        
+        final deliveryData = deliveryDoc.data();
+        String userId = deliveryData?['buyerId'] ?? '';
+        
+        // If no buyerId in delivery, get it from order
+        if (userId.isEmpty && _delivery!.orderId.isNotEmpty) {
+          final orderDoc = await FirebaseFirestore.instance
+              .collection('stores')
+              .doc(_delivery!.storeId)
+              .collection('orders')
+              .doc(_delivery!.orderId)
+              .get();
+          
+          final orderData = orderDoc.data();
+          userId = orderData?['userId'] ?? '';
+        }
+        
+        if (userId.isNotEmpty) {
+          // Get phone from user document
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .get();
+          
+          final userData = userDoc.data();
+          buyerPhone = userData?['phoneNumber'] ?? '';
+          print('📞 Fetched buyer phone from user doc: $buyerPhone');
+        }
+      }
+      
+      // Update delivery object with fetched phones
+      if (storePhone.isNotEmpty || buyerPhone.isNotEmpty) {
+        setState(() {
+          _delivery = DeliveryRequest(
+            id: _delivery!.id,
+            orderId: _delivery!.orderId,
+            orderNumber: _delivery!.orderNumber,
+            storeId: _delivery!.storeId,
+            storeName: _delivery!.storeName,
+            storeLocation: _delivery!.storeLocation,
+            storeAddress: _delivery!.storeAddress,
+            storePhone: storePhone.isNotEmpty ? storePhone : _delivery!.storePhone,
+            buyerName: _delivery!.buyerName,
+            buyerPhone: buyerPhone.isNotEmpty ? buyerPhone : _delivery!.buyerPhone,
+            buyerLocation: _delivery!.buyerLocation,
+            buyerAddress: _delivery!.buyerAddress,
+            status: _delivery!.status,
+            packageSize: _delivery!.packageSize,
+            searchExpiresAt: _delivery!.searchExpiresAt,
+            deliveryFee: _delivery!.deliveryFee,
+            distance: _delivery!.distance,
+            items: _delivery!.items,
+            totalAmount: _delivery!.totalAmount,
+            createdAt: _delivery!.createdAt,
+            assignedAt: _delivery!.assignedAt,
+            pickedUpAt: _delivery!.pickedUpAt,
+            deliveredAt: _delivery!.deliveredAt,
+          );
+        });
+        print('✅ Updated delivery with phone numbers');
+      }
+    } catch (e) {
+      print('❌ Error fetching phone numbers: $e');
     }
   }
 
@@ -69,56 +170,115 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
     
     // Show route to pickup if assigned, or to dropoff if picked up
     if (_currentStatus == 'assigned') {
+      print('🗺️ Showing route to store (pickup)');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Loading route to store...', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.black,
+          duration: const Duration(seconds: 2),
+        ),
+      );
       await _getDirections(_delivery!.storeLocation);
-    } else if (_currentStatus == 'picked_up') {
+    } else if (_currentStatus == 'picked_up' || _currentStatus == 'in_transit') {
+      print('🗺️ Showing route to buyer (dropoff)');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Loading route to customer...', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.black,
+          duration: const Duration(seconds: 2),
+        ),
+      );
       await _getDirections(_delivery!.buyerLocation);
     }
   }
 
   void _startLocationUpdates() {
-    // Update courier location every 15 seconds
-    _locationUpdateTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
-      _locationService.updateDeliveryLocation(widget.deliveryId);
+    // Update courier location and route every 15 seconds
+    _locationUpdateTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
+      await _locationService.updateDeliveryLocation(widget.deliveryId);
+      // Refresh markers and route from new location
+      if (_delivery != null) {
+        _updateMarkers();
+        await _showAutomaticRoute();
+      }
     });
   }
 
-  void _updateMarkers() {
+  void _updateMarkers() async {
     if (_delivery == null) return;
 
-    setState(() {
-      _markers.clear();
+    try {
+      // Get current courier location
+      final position = await Geolocator.getCurrentPosition();
+      
+      setState(() {
+        _markers.clear();
 
-      // Store marker (pickup)
-      _markers.add(Marker(
-        markerId: const MarkerId('store'),
-        position: LatLng(
-          _delivery!.storeLocation.latitude,
-          _delivery!.storeLocation.longitude,
-        ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
-        infoWindow: InfoWindow(title: _delivery!.storeName),
-      ));
+        // Courier's current location marker
+        _markers.add(Marker(
+          markerId: const MarkerId('courier'),
+          position: LatLng(position.latitude, position.longitude),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          infoWindow: const InfoWindow(title: 'You'),
+        ));
 
-      // Buyer marker (dropoff)
-      _markers.add(Marker(
-        markerId: const MarkerId('buyer'),
-        position: LatLng(
-          _delivery!.buyerLocation.latitude,
-          _delivery!.buyerLocation.longitude,
-        ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
-        infoWindow: InfoWindow(title: _delivery!.buyerName),
-      ));
-    });
+        // Store marker (pickup)
+        _markers.add(Marker(
+          markerId: const MarkerId('store'),
+          position: LatLng(
+            _delivery!.storeLocation.latitude,
+            _delivery!.storeLocation.longitude,
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+          infoWindow: InfoWindow(title: _delivery!.storeName),
+        ));
+
+        // Buyer marker (dropoff)
+        _markers.add(Marker(
+          markerId: const MarkerId('buyer'),
+          position: LatLng(
+            _delivery!.buyerLocation.latitude,
+            _delivery!.buyerLocation.longitude,
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: InfoWindow(title: _delivery!.buyerName),
+        ));
+      });
+    } catch (e) {
+      print('Error getting courier location: $e');
+      // Fallback without courier marker
+      setState(() {
+        _markers.clear();
+
+        // Store marker (pickup)
+        _markers.add(Marker(
+          markerId: const MarkerId('store'),
+          position: LatLng(
+            _delivery!.storeLocation.latitude,
+            _delivery!.storeLocation.longitude,
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+          infoWindow: InfoWindow(title: _delivery!.storeName),
+        ));
+
+        // Buyer marker (dropoff)
+        _markers.add(Marker(
+          markerId: const MarkerId('buyer'),
+          position: LatLng(
+            _delivery!.buyerLocation.latitude,
+            _delivery!.buyerLocation.longitude,
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: InfoWindow(title: _delivery!.buyerName),
+        ));
+      });
+    }
   }
 
   Future<void> _updateStatus(String newStatus) async {
     try {
       await _deliveryService.updateDeliveryStatus(widget.deliveryId, newStatus);
       setState(() => _currentStatus = newStatus);
-      
-      // Show new route after status change
-      _showAutomaticRoute();
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -130,6 +290,9 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
           duration: const Duration(seconds: 2),
         ),
       );
+
+      // Show new route after status change
+      await _showAutomaticRoute();
 
       if (newStatus == 'delivered') {
         // Navigate back after delivery is complete
@@ -166,12 +329,46 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
+    print('📞 Attempting to call: $phoneNumber');
+    
+    if (phoneNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Phone number not available', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    // Clean phone number (remove spaces, dashes, etc)
+    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    print('📞 Cleaned number: $cleanNumber');
+    
     final Uri launchUri = Uri(
       scheme: 'tel',
-      path: phoneNumber,
+      path: cleanNumber,
     );
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri, mode: LaunchMode.externalApplication);
+    
+    try {
+      final canLaunch = await canLaunchUrl(launchUri);
+      print('📞 Can launch: $canLaunch');
+      
+      if (canLaunch) {
+        await launchUrl(launchUri);
+      } else {
+        throw 'Phone dialer not available';
+      }
+    } catch (e) {
+      print('📞 Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not make call: $e', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -205,31 +402,9 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
             zoomControlsEnabled: false,
             onMapCreated: (controller) {
               _mapController = controller;
-              // Fit bounds to show both markers
+              // Show route after map is ready
               Future.delayed(const Duration(milliseconds: 500), () {
-                _mapController?.animateCamera(
-                  CameraUpdate.newLatLngBounds(
-                    LatLngBounds(
-                      southwest: LatLng(
-                        _delivery!.storeLocation.latitude < _delivery!.buyerLocation.latitude
-                            ? _delivery!.storeLocation.latitude
-                            : _delivery!.buyerLocation.latitude,
-                        _delivery!.storeLocation.longitude < _delivery!.buyerLocation.longitude
-                            ? _delivery!.storeLocation.longitude
-                            : _delivery!.buyerLocation.longitude,
-                      ),
-                      northeast: LatLng(
-                        _delivery!.storeLocation.latitude > _delivery!.buyerLocation.latitude
-                            ? _delivery!.storeLocation.latitude
-                            : _delivery!.buyerLocation.latitude,
-                        _delivery!.storeLocation.longitude > _delivery!.buyerLocation.longitude
-                            ? _delivery!.storeLocation.longitude
-                            : _delivery!.buyerLocation.longitude,
-                      ),
-                    ),
-                    100,
-                  ),
-                );
+                _showAutomaticRoute();
               });
             },
           ),
@@ -252,7 +427,7 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
                       ],
                     ),
                     child: IconButton(
-                      icon: const Icon(Iconsax.arrow_left),
+                      icon: const Icon(Iconsax.arrow_left, color: Color(0xFFb71000)),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
@@ -348,7 +523,7 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
                           _delivery!.storeName,
                           _delivery!.pickupAddress,
                           _delivery!.storePhone,
-                          Colors.black,
+                          const Color(0xFFb71000),
                           true,
                         ),
                         const SizedBox(height: 20),
@@ -359,7 +534,7 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
                           _delivery!.buyerName,
                           _delivery!.dropoffAddress,
                           _delivery!.buyerPhone,
-                          Colors.black,
+                          const Color(0xFFb71000),
                           false,
                         ),
                         const SizedBox(height: 24),
@@ -373,26 +548,14 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Iconsax.box, size: 24),
+                              const Icon(Iconsax.box, size: 24, color: Color(0xFFb71000)),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${_delivery!.itemCount} item${_delivery!.itemCount > 1 ? 's' : ''}',
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Text(
-                                      'UGX ${_delivery!.totalAmount.toStringAsFixed(0)}',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
+                                child: Text(
+                                  '${_delivery!.itemCount} item${_delivery!.itemCount > 1 ? 's' : ''}',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                               Text(
@@ -485,9 +648,9 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
             ],
           ),
         ),
-        IconButton(
-          onPressed: () => _makePhoneCall(phone),
-          icon: Container(
+        GestureDetector(
+          onTap: () => _makePhoneCall(phone),
+          child: Container(
             padding: const EdgeInsets.all(10),
             decoration: const BoxDecoration(
               color: Colors.black,
@@ -506,7 +669,7 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
 
   Widget _buildActionButtons() {
     if (_currentStatus == 'assigned') {
-      // Show only Start Journey button (route shows automatically)
+      // Show Arrive at Pickup button
       return SizedBox(
         width: double.infinity,
         child: ElevatedButton(
@@ -519,7 +682,7 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
             ),
           ),
           child: Text(
-            'Start Journey',
+            'Picked Up Package',
             style: GoogleFonts.poppins(
               color: Colors.white,
               fontWeight: FontWeight.w600,
@@ -529,7 +692,7 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
         ),
       );
     } else if (_currentStatus == 'picked_up') {
-      // Show only Complete Delivery button (route shows automatically)
+      // Show Complete Delivery button
       return SizedBox(
         width: double.infinity,
         child: ElevatedButton(
@@ -561,7 +724,7 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Iconsax.tick_circle, color: Colors.black),
+            const Icon(Iconsax.tick_circle, color: Color(0xFFb71000)),
             const SizedBox(width: 8),
             Text(
               'Delivery Completed',
@@ -593,7 +756,9 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
   Future<void> _getDirections(GeoPoint destination) async {
     try {
       // Get current location
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        timeLimit: const Duration(seconds: 10),
+      );
       final origin = LatLng(position.latitude, position.longitude);
       final dest = LatLng(destination.latitude, destination.longitude);
 
@@ -604,12 +769,17 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
           'destination=${dest.latitude},${dest.longitude}&'
           'key=$apiKey';
 
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(Uri.parse(url)).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException('Request timed out');
+        },
+      );
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
-        if (data['routes'].isNotEmpty) {
+        if (data['routes'] != null && data['routes'].isNotEmpty) {
           // Decode polyline
           final polylinePoints = data['routes'][0]['overview_polyline']['points'];
           final List<LatLng> routeCoords = _decodePolyline(polylinePoints);
@@ -651,20 +821,27 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
                   style: GoogleFonts.poppins(),
                 ),
                 backgroundColor: Colors.black,
+                duration: const Duration(seconds: 1),
               ),
             );
           }
+        } else {
+          throw Exception('No routes found');
         }
+      } else {
+        throw Exception('API returned status ${response.statusCode}');
       }
     } catch (e) {
+      print('❌ Error getting directions: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Could not get directions: $e',
+              'Could not load route. Check your internet connection.',
               style: GoogleFonts.poppins(),
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 2),
           ),
         );
       }

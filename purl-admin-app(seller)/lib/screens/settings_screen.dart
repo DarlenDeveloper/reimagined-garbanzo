@@ -264,7 +264,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Center(
       child: Column(
         children: [
-          Text('POP Manager', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[600])),
+          Text('POP Vendor', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[600])),
           Text('Version 1.0.0', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[400])),
         ],
       ),

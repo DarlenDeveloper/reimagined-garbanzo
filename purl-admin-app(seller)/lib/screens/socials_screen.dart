@@ -106,7 +106,7 @@ class _SocialsScreenState extends State<SocialsScreen> with SingleTickerProvider
       backgroundColor: Colors.transparent,
       builder: (context) => _CreatePostSheet(
         storeId: _storeId,
-        onPost: (content, mediaUrls) async {
+        onPost: (content, mediaUrls, taggedProductIds) async {
           if (_storeId == null) return;
           
           try {
@@ -116,6 +116,7 @@ class _SocialsScreenState extends State<SocialsScreen> with SingleTickerProvider
               storeLogoUrl: _storeLogoUrl,
               content: content,
               mediaUrls: mediaUrls,
+              taggedProductIds: taggedProductIds,
               isPremium: false,
             );
             
@@ -1275,7 +1276,7 @@ class _PostCardState extends State<_PostCard> {
 
 class _CreatePostSheet extends StatefulWidget {
   final String? storeId;
-  final Function(String content, List<Map<String, dynamic>> mediaUrls) onPost;
+  final Function(String content, List<Map<String, dynamic>> mediaUrls, List<String> taggedProductIds) onPost;
   const _CreatePostSheet({required this.storeId, required this.onPost});
 
   @override
@@ -1289,6 +1290,8 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
   
   List<File> _selectedMedia = [];
   List<String> _mediaTypes = []; // 'image' or 'video'
+  List<String> _taggedProductIds = [];
+  List<Map<String, dynamic>> _taggedProducts = [];
   bool _isPosting = false;
   bool _isUploadingMedia = false;
 
@@ -1377,7 +1380,7 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
         setState(() => _isUploadingMedia = false);
       }
 
-      await widget.onPost(_contentController.text, uploadedMedia);
+      await widget.onPost(_contentController.text, uploadedMedia, _taggedProductIds);
       if (mounted) Navigator.pop(context);
     } catch (e) {
       setState(() {
@@ -1394,65 +1397,101 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: BoxDecoration(color: Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
-      child: Column(
-        children: [
-          Container(margin: const EdgeInsets.only(top: 12), width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[200]!, borderRadius: BorderRadius.circular(2))),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton(
-                  onPressed: _isPosting ? null : () => Navigator.pop(context), 
-                  child: Text('Cancel', style: GoogleFonts.poppins(color: _isPosting ? Colors.grey[600]! : Colors.grey[600]!)),
-                ),
-                Text('Create Post', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
-                _isPosting
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                    : TextButton(
-                        onPressed: _handlePost,
-                        child: Text('Post', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
-                      ),
-              ],
-            ),
-          ),
-          Divider(height: 1, color: Colors.grey[200]!),
-          Expanded(
-            child: ListView(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        decoration: BoxDecoration(color: Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+        child: Column(
+          children: [
+            Container(margin: const EdgeInsets.only(top: 12), width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[200]!, borderRadius: BorderRadius.circular(2))),
+            Padding(
               padding: const EdgeInsets.all(16),
-              children: [
-                Container(
-                  height: 150,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                  child: TextField(
-                    controller: _contentController,
-                    maxLines: 6,
-                    enabled: !_isPosting,
-                    decoration: InputDecoration.collapsed(
-                      hintText: "What's happening at your store?", 
-                      hintStyle: GoogleFonts.poppins(color: Colors.grey[600]!)
-                    ),
-                    style: GoogleFonts.poppins(color: Colors.black),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: _isPosting ? null : () => Navigator.pop(context), 
+                    child: Text('Cancel', style: GoogleFonts.poppins(color: _isPosting ? Colors.grey[400]! : Colors.grey[600]!)),
                   ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Media buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: _mediaBtn(Iconsax.image, 'Photo', _pickImage, _selectedMedia.any((m) => _mediaTypes[_selectedMedia.indexOf(m)] == 'image')),
+                  Text('Create Post', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
+                  const SizedBox(width: 60), // Spacer for alignment
+                ],
+              ),
+            ),
+            Divider(height: 1, color: Colors.grey[200]!),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Container(
+                    height: 150,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _mediaBtn(Iconsax.video, 'Video', _pickVideo, _selectedMedia.any((m) => _mediaTypes[_selectedMedia.indexOf(m)] == 'video')),
+                    child: TextField(
+                      controller: _contentController,
+                      maxLines: 6,
+                      enabled: !_isPosting,
+                      decoration: InputDecoration.collapsed(
+                        hintText: "What's happening at your store?", 
+                        hintStyle: GoogleFonts.poppins(color: Colors.grey[400]!)
+                      ),
+                      style: GoogleFonts.poppins(color: Colors.black),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Media and tag buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _mediaBtn(Iconsax.image, 'Photo', _pickImage, _selectedMedia.any((m) => _mediaTypes[_selectedMedia.indexOf(m)] == 'image')),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _mediaBtn(Iconsax.video, 'Video', _pickVideo, _selectedMedia.any((m) => _mediaTypes[_selectedMedia.indexOf(m)] == 'video')),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _mediaBtn(Iconsax.tag, 'Tag', _showProductPicker, _taggedProducts.isNotEmpty),
+                      ),
+                    ],
+                  ),
+                  
+                  // Tagged products preview
+                  if (_taggedProducts.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _taggedProducts.map((product) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                product['name'] ?? 'Product',
+                                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500),
+                              ),
+                              const SizedBox(width: 6),
+                              GestureDetector(
+                                onTap: () => _removeProduct(product['id']),
+                                child: Icon(Icons.close, size: 14, color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ],
-                ),
                 
                 // Selected media preview
                 if (_selectedMedia.isNotEmpty) ...[
@@ -1494,7 +1533,133 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
               ],
             ),
           ),
+          // Post button at bottom
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Colors.grey[200]!)),
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _isPosting ? null : _handlePost,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFb71000),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey[300],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  elevation: 0,
+                ),
+                child: _isPosting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'Post',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+            ),
+          ),
         ],
+      ),
+    ),
+    );
+  }
+
+  Widget _mediaBtn(IconData icon, String label, VoidCallback onTap, bool isActive) {
+    return GestureDetector(
+      onTap: _isPosting ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.black : Colors.white, 
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isActive ? Colors.black : Colors.grey[200]!),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: isActive ? Colors.white : Colors.black),
+            const SizedBox(width: 6),
+            Text(label, style: GoogleFonts.poppins(fontSize: 13, color: isActive ? Colors.white : Colors.black)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required bool isActive,
+    String? badge,
+  }) {
+    return GestureDetector(
+      onTap: _isPosting ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.black : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isActive ? Colors.black : Colors.grey[300]!),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 22, color: isActive ? Colors.white : Colors.black),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: isActive ? Colors.white : Colors.black,
+                  ),
+                ),
+              ],
+            ),
+            if (badge != null)
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFb71000),
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                  child: Center(
+                    child: Text(
+                      badge,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1543,26 +1708,221 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
     );
   }
 
-  Widget _mediaBtn(IconData icon, String label, VoidCallback onTap, bool isActive) {
-    return GestureDetector(
-      onTap: _isPosting ? null : onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.black : Colors.white, 
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isActive ? Colors.black : Colors.grey[200]!),
+  void _showProductPicker() async {
+    if (widget.storeId == null) return;
+
+    try {
+      // Fetch store products
+      final productsSnapshot = await FirebaseFirestore.instance
+          .collection('stores')
+          .doc(widget.storeId)
+          .collection('products')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      final products = productsSnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+
+      if (!mounted) return;
+
+      if (products.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No products available to tag', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setModalState) => Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200]!,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey[600]!)),
+                      ),
+                      Text('Tag Products', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {}); // Update main UI
+                          Navigator.pop(context);
+                        },
+                        child: Text('Done', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(height: 1, color: Colors.grey[200]!),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: products.length,
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      final productId = product['id'];
+                      final isTagged = _taggedProductIds.contains(productId);
+
+                      return GestureDetector(
+                        onTap: () {
+                          setModalState(() {
+                            if (isTagged) {
+                              _taggedProductIds.remove(productId);
+                              _taggedProducts.removeWhere((p) => p['id'] == productId);
+                            } else {
+                              _taggedProductIds.add(productId);
+                              _taggedProducts.add(product);
+                            }
+                          });
+                        },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isTagged ? Colors.black.withOpacity(0.05) : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isTagged ? Colors.black : Colors.grey[200]!,
+                            width: isTagged ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: () {
+                                String? imageUrl;
+                                
+                                if (product['images'] != null && (product['images'] as List).isNotEmpty) {
+                                  final firstImage = (product['images'] as List)[0];
+                                  print('First image object: $firstImage');
+                                  if (firstImage is Map && firstImage['url'] != null) {
+                                    imageUrl = firstImage['url'].toString();
+                                    print('Extracted URL: $imageUrl');
+                                  }
+                                }
+                                
+                                if (imageUrl != null && imageUrl.isNotEmpty) {
+                                  print('Loading image: $imageUrl');
+                                  return Image.network(
+                                    imageUrl,
+                                    width: 50,
+                                    height: 50,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        width: 50,
+                                        height: 50,
+                                        color: Colors.grey[200],
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      print('Image error: $error');
+                                      return Container(
+                                        width: 50,
+                                        height: 50,
+                                        color: Colors.grey[200],
+                                        child: Icon(Iconsax.box, color: Colors.grey[400], size: 24),
+                                      );
+                                    },
+                                  );
+                                } else {
+                                  print('No image URL found');
+                                  return Container(
+                                    width: 50,
+                                    height: 50,
+                                    color: Colors.grey[200],
+                                    child: Icon(Iconsax.box, color: Colors.grey[400], size: 24),
+                                  );
+                                }
+                              }(),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product['name'] ?? 'Unnamed Product',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    'UGX ${product['price']?.toStringAsFixed(0) ?? '0'}',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isTagged)
+                              const Icon(Iconsax.tick_circle, color: Colors.black, size: 24),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: isActive ? Colors.white : Colors.black),
-            const SizedBox(width: 6),
-            Text(label, style: GoogleFonts.poppins(fontSize: 13, color: isActive ? Colors.white : Colors.black)),
-          ],
-        ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load products: $e')),
+        );
+      }
+    }
+  }
+
+  void _removeProduct(String productId) {
+    setState(() {
+      _taggedProductIds.remove(productId);
+      _taggedProducts.removeWhere((p) => p['id'] == productId);
+    });
   }
 }
 

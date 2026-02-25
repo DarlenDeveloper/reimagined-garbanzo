@@ -234,6 +234,7 @@ class StoreOrderData {
   final DateTime? deliveredAt;
   final String? promoCode;
   final double? promoDiscount;
+  final String? packageSize; // Add package size field
 
   StoreOrderData({
     required this.id,
@@ -257,6 +258,7 @@ class StoreOrderData {
     this.deliveredAt,
     this.promoCode,
     this.promoDiscount,
+    this.packageSize, // Add to constructor
   });
 
   factory StoreOrderData.fromFirestore(DocumentSnapshot doc, String storeId) {
@@ -289,6 +291,7 @@ class StoreOrderData {
       deliveredAt: (data['deliveredAt'] as Timestamp?)?.toDate(),
       promoCode: data['promoCode'] as String?,
       promoDiscount: (data['promoDiscount'] ?? 0).toDouble(),
+      packageSize: data['packageSize'] as String?, // Read package size
     );
   }
 

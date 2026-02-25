@@ -100,7 +100,6 @@ class FCMService {
       'Delivery Requests',
       description: 'Notifications for new delivery requests',
       importance: Importance.high,
-      sound: RawResourceAndroidNotificationSound('notification'),
     );
 
     const AndroidNotificationChannel deliveryUpdatesChannel = AndroidNotificationChannel(
@@ -108,7 +107,6 @@ class FCMService {
       'Delivery Updates',
       description: 'Notifications for delivery status updates',
       importance: Importance.high,
-      sound: RawResourceAndroidNotificationSound('notification'),
     );
 
     await _localNotifications
@@ -167,11 +165,9 @@ class FCMService {
                 : 'Notifications for delivery status updates',
             importance: Importance.high,
             priority: Priority.high,
-            sound: const RawResourceAndroidNotificationSound('notification'),
             icon: '@mipmap/ic_launcher',
           ),
           iOS: const DarwinNotificationDetails(
-            sound: 'notification.mp3',
             presentAlert: true,
             presentBadge: true,
             presentSound: true,

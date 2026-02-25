@@ -19,6 +19,7 @@ import 'dart:math' show cos, sqrt, asin;
 /// ├── buyerLocation: GeoPoint (dropoff)
 /// ├── buyerAddress: map
 /// ├── deliveryType: "self" | "purl_courier"
+/// ├── packageSize: string ("standard" | "bulky")
 /// ├── status: "searching" | "assigned" | "picked_up" | "in_transit" | "delivered" | "cancelled" | "no_courier_available"
 /// ├── searchExpiresAt: timestamp (3 minutes from creation)
 /// ├── assignedCourierId: string?
@@ -29,6 +30,7 @@ import 'dart:math' show cos, sqrt, asin;
 /// ├── courierLocation: GeoPoint? (real-time updates)
 /// ├── deliveryFee: number
 /// ├── distance: number (km)
+/// ├── routePolyline: string? (encoded polyline from Directions API)
 /// ├── items: array (summary)
 /// ├── totalAmount: number
 /// ├── createdAt: timestamp
@@ -77,8 +79,12 @@ class DeliveryService {
     // Calculate distance
     final distance = calculateDistance(storeLocation, buyerLocation);
 
-    // Calculate delivery fee (example: 1000 UGX per km, minimum 2000 UGX)
-    final deliveryFee = (distance * 1000).clamp(2000, 50000).toDouble();
+    // Calculate delivery fee based on package type
+    // Standard (motorcycle): 500 UGX/km, Bulky (car): 1000 UGX/km
+    // Minimum 1000 UGX, rounded to nearest 500
+    final rawFee = distance * 500.0; // Default to standard rate
+    final feeAfterMinimum = rawFee < 1000.0 ? 1000.0 : rawFee;
+    final deliveryFee = ((feeAfterMinimum / 500).round() * 500).toDouble();
 
     // Create delivery request
     final deliveryRef = await _firestore.collection('deliveries').add({

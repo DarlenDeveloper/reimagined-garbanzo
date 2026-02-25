@@ -4,9 +4,12 @@ import 'package:iconsax/iconsax.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:async';
 import '../services/order_service.dart';
 import '../services/delivery_service.dart';
 import '../services/currency_service.dart';
+import '../services/directions_service.dart';
+import 'delivery_tracking_screen.dart';
 
 class DeliveryScreen extends StatefulWidget {
   const DeliveryScreen({super.key});
@@ -20,6 +23,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
   final OrderService _orderService = OrderService();
   final DeliveryService _deliveryService = DeliveryService();
   final CurrencyService _currencyService = CurrencyService();
+  final DirectionsService _directionsService = DirectionsService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
   String _selectedTimeFilter = 'This Month';
@@ -942,6 +946,198 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
 
   // Request delivery rider for order
   Future<void> _requestDeliveryForOrder(StoreOrderData order) async {
+    // Check if order has packageSize, if not show selector dialog
+    if (order.packageSize == null) {
+      final selectedSize = await _showPackageSizeDialog();
+      if (selectedSize == null) return; // User cancelled
+      
+      // Update order with selected package size
+      await FirebaseFirestore.instance
+          .collection('stores')
+          .doc(order.storeId)
+          .collection('orders')
+          .doc(order.id)
+          .update({'packageSize': selectedSize});
+      
+      // Continue with updated package size
+      await _proceedWithDeliveryRequest(order, selectedSize);
+    } else {
+      // Package size already set, proceed
+      await _proceedWithDeliveryRequest(order, order.packageSize!);
+    }
+  }
+
+  Future<String?> _showPackageSizeDialog() async {
+    String? selectedSize;
+    
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Select Package Type',
+                      style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This order doesn\'t have a package type. Please select one:',
+                      style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Standard Package
+                    GestureDetector(
+                      onTap: () => setDialogState(() => selectedSize = 'standard'),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: selectedSize == 'standard' ? const Color(0xFFb71000) : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: selectedSize == 'standard' ? const Color(0xFFb71000) : Colors.grey[300]!,
+                            width: selectedSize == 'standard' ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Iconsax.driving5,
+                              size: 24,
+                              color: selectedSize == 'standard' ? Colors.white : Colors.black,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Standard',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: selectedSize == 'standard' ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Under 15 kg • Motorcycle',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      color: selectedSize == 'standard' ? Colors.white70 : Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (selectedSize == 'standard')
+                              const Icon(Iconsax.tick_circle5, color: Colors.white, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 12),
+                    
+                    // Bulky Package
+                    GestureDetector(
+                      onTap: () => setDialogState(() => selectedSize = 'bulky'),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: selectedSize == 'bulky' ? const Color(0xFFb71000) : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: selectedSize == 'bulky' ? const Color(0xFFb71000) : Colors.grey[300]!,
+                            width: selectedSize == 'bulky' ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Iconsax.car5,
+                              size: 24,
+                              color: selectedSize == 'bulky' ? Colors.white : Colors.black,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Bulky',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: selectedSize == 'bulky' ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Over 15 kg • Car/Vehicle',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      color: selectedSize == 'bulky' ? Colors.white70 : Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (selectedSize == 'bulky')
+                              const Icon(Iconsax.tick_circle5, color: Colors.white, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(dialogContext, null),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.grey),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: Text('Cancel', style: GoogleFonts.poppins()),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: selectedSize != null
+                                ? () => Navigator.pop(dialogContext, selectedSize)
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFb71000),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              disabledBackgroundColor: Colors.grey[300],
+                            ),
+                            child: Text('Confirm', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _proceedWithDeliveryRequest(StoreOrderData order, String packageSize) async {
     // Show loading
     showDialog(
       context: context,
@@ -1049,32 +1245,75 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
       final buyerLocation = orderData['deliveryLocation'] as GeoPoint;
       final deliveryAddress = orderData['deliveryAddress'] as Map<String, dynamic>? ?? {};
 
-      // Calculate delivery fee (simple calculation based on distance)
-      final distance = _calculateDistance(
-        storeLocation.latitude,
-        storeLocation.longitude,
-        buyerLocation.latitude,
-        buyerLocation.longitude,
+      // Get route information from Google Directions API
+      final routeInfo = await _directionsService.getRoute(
+        origin: storeLocation,
+        destination: buyerLocation,
       );
-      final deliveryFee = _calculateDeliveryFee(distance);
+
+      double distance;
+      double deliveryFee;
+      String? polylinePoints;
+
+      if (routeInfo != null) {
+        // Use route distance from Directions API with package size
+        distance = routeInfo.distanceKm;
+        deliveryFee = _directionsService.calculateDeliveryFee(distance, packageSize: packageSize);
+        polylinePoints = routeInfo.polylinePoints;
+        print('✅ Using route distance: ${distance.toStringAsFixed(2)} km, Fee: UGX ${deliveryFee.toStringAsFixed(0)} ($packageSize)');
+      } else {
+        // Fallback to straight-line distance if API fails
+        distance = _calculateDistance(
+          storeLocation.latitude,
+          storeLocation.longitude,
+          buyerLocation.latitude,
+          buyerLocation.longitude,
+        );
+        deliveryFee = _calculateDeliveryFee(distance, packageSize: packageSize);
+        print('⚠️ Using straight-line distance (API failed): ${distance.toStringAsFixed(2)} km');
+      }
+
+      // Get store data for phone number
+      final storeDoc = await FirebaseFirestore.instance
+          .collection('stores')
+          .doc(order.storeId)
+          .get();
+      
+      final storeData = storeDoc.data();
+      final storePhone = storeData?['contact']?['phone'] ?? '';
+      final storeName = storeData?['name'] ?? 'Store';
+
+      // Get buyer phone from user document
+      String buyerPhone = '';
+      if (order.userId.isNotEmpty) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(order.userId)
+            .get();
+        final userData = userDoc.data();
+        buyerPhone = userData?['phoneNumber'] ?? '';
+      }
 
       // Create delivery request in Firestore
       final deliveryRef = await FirebaseFirestore.instance.collection('deliveries').add({
         'orderId': order.id,
         'orderNumber': order.orderNumber,
         'storeId': order.storeId,
-        'storeName': orderData['storeName'] ?? 'Store',
+        'storeName': storeName,
         'storeLocation': storeLocation,
         'storeAddress': {}, // Add store address if available
-        'storePhone': orderData['storePhone'] ?? '',
+        'storePhone': storePhone,
+        'buyerId': order.userId,
         'buyerName': order.userName,
-        'buyerPhone': order.userPhone,
+        'buyerPhone': buyerPhone,
         'buyerLocation': buyerLocation,
         'buyerAddress': deliveryAddress,
         'deliveryType': 'purl_courier',
         'status': 'searching',
+        'packageSize': packageSize, // Store package size in delivery
         'deliveryFee': deliveryFee,
         'distance': distance,
+        'routePolyline': polylinePoints, // Store polyline for map display
         'items': order.items.map((item) => {
           'productName': item.productName,
           'quantity': item.quantity,
@@ -1087,16 +1326,21 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
 
       Navigator.pop(context); // Close loading
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Delivery request created successfully',
-            style: GoogleFonts.poppins(),
+      // Navigate to map-based tracking screen
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DeliveryTrackingScreen(
+              deliveryId: deliveryRef.id,
+              storeLocation: storeLocation,
+              buyerLocation: buyerLocation,
+              orderNumber: order.orderNumber,
+              routePolyline: polylinePoints,
+            ),
           ),
-          backgroundColor: Colors.green,
-        ),
-      );
+        );
+      }
     } catch (e) {
       Navigator.pop(context); // Close loading
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1121,10 +1365,17 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
     return R * 2 * (a).abs();
   }
 
-  double _calculateDeliveryFee(double distanceKm) {
-    // UGX 325 per km
-    const perKmFee = 325.0;
-    return distanceKm * perKmFee;
+  double _calculateDeliveryFee(double distanceKm, {String packageSize = 'standard'}) {
+    // Standard (motorcycle): 500 UGX/km, Bulky (car): 1000 UGX/km
+    // Minimum 1000 UGX, rounded to nearest 500
+    final perKmFee = packageSize == 'bulky' ? 1000.0 : 500.0;
+    const minimumFee = 1000.0;
+    
+    final rawFee = distanceKm * perKmFee;
+    final feeAfterMinimum = rawFee < minimumFee ? minimumFee : rawFee;
+    final roundedFee = (feeAfterMinimum / 500).round() * 500.0;
+    
+    return roundedFee;
   }
 
   // Tracking sheet for active deliveries
@@ -1289,6 +1540,271 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
           );
         },
       ),
+    );
+  }
+}
+
+
+// Courier Search Dialog with Countdown
+class _CourierSearchDialog extends StatefulWidget {
+  final String deliveryId;
+  final DeliveryService deliveryService;
+
+  const _CourierSearchDialog({
+    required this.deliveryId,
+    required this.deliveryService,
+  });
+
+  @override
+  State<_CourierSearchDialog> createState() => _CourierSearchDialogState();
+}
+
+class _CourierSearchDialogState extends State<_CourierSearchDialog> {
+  Timer? _timer;
+  StreamSubscription? _deliverySubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToDelivery();
+    _startTimeoutTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _deliverySubscription?.cancel();
+    super.dispose();
+  }
+
+  void _listenToDelivery() {
+    _deliverySubscription = widget.deliveryService
+        .listenToDelivery(widget.deliveryId)
+        .listen((delivery) {
+      if (delivery == null) return;
+
+      if (delivery.isAssigned) {
+        _timer?.cancel();
+        if (mounted) {
+          Navigator.pop(context);
+          _showSuccessDialog(delivery);
+        }
+      }
+    });
+  }
+
+  void _startTimeoutTimer() {
+    _timer = Timer(const Duration(minutes: 3), () {
+      if (mounted) {
+        widget.deliveryService.markNoCourierAvailable(widget.deliveryId);
+        Navigator.pop(context);
+        _showTimeoutDialog();
+      }
+    });
+  }
+
+  void _showSuccessDialog(DeliveryData delivery) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle, color: Colors.green, size: 32),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Courier Found!',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              delivery.assignedCourierName ?? 'Courier',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              delivery.assignedCourierPhone ?? '',
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Iconsax.routing, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${delivery.distance.toStringAsFixed(1)} km',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'UGX ${delivery.deliveryFee.toStringAsFixed(0)}',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTimeoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.access_time, color: Colors.orange, size: 32),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'No Courier Available',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'No couriers accepted the delivery request. You can try again or assign your own delivery person.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<DeliveryData?>(
+      stream: widget.deliveryService.listenToDelivery(widget.deliveryId),
+      builder: (context, snapshot) {
+        final delivery = snapshot.data;
+        final timeRemaining = delivery?.searchTimeRemaining ?? 180;
+        final minutes = timeRemaining ~/ 60;
+        final seconds = timeRemaining % 60;
+
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Searching for Courier',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 60,
+                height: 60,
+                child: CircularProgressIndicator(
+                  strokeWidth: 6,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFfb2a0a)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
+                style: GoogleFonts.poppins(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Notifying nearby couriers...',
+                style: GoogleFonts.poppins(color: Colors.grey[600]),
+              ),
+              if (delivery != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Iconsax.routing, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${delivery.distance.toStringAsFixed(1)} km • UGX ${delivery.deliveryFee.toStringAsFixed(0)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                widget.deliveryService.cancelDeliveryRequest(
+                  widget.deliveryId,
+                  reason: 'Cancelled by store',
+                );
+                Navigator.pop(context);
+              },
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.poppins(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

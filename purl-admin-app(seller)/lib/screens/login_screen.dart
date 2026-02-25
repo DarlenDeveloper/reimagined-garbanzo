@@ -51,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() => _isLoading = true);
     try {
       await _authService.signInWithEmail(email: email, password: password);
-      if (mounted) context.go('/dashboard');
+      if (mounted) context.go('/loading');
     } on FirebaseAuthException catch (e) {
       _showError(_getErrorMessage(e.code));
     } catch (e) {
@@ -65,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() => _isLoading = true);
     try {
       final result = await _authService.signInWithGoogle();
-      if (result != null && mounted) context.go('/dashboard');
+      if (result != null && mounted) context.go('/loading');
     } catch (e) {
       _showError('Google sign in failed. Please try again.');
     } finally {

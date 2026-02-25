@@ -61,16 +61,21 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
         return;
       }
       
-      // Check if email is verified
+      // Check if email is verified (skip for Google Sign-In users)
       await user.reload();
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null && !currentUser.emailVerified) {
-        // Email not verified, go to verify-email screen
-        if (mounted) {
-          await Future.delayed(const Duration(seconds: 1));
-          context.go('/verify-email');
+        // Check if this is a Google Sign-In user (they're auto-verified)
+        final isGoogleUser = currentUser.providerData.any((info) => info.providerId == 'google.com');
+        
+        if (!isGoogleUser) {
+          // Email not verified and not a Google user, go to verify-email screen
+          if (mounted) {
+            await Future.delayed(const Duration(seconds: 1));
+            context.go('/verify-email');
+          }
+          return;
         }
-        return;
       }
       
       // Check if store exists
@@ -192,7 +197,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
               const SizedBox(height: 24),
               // Store name or app name
               Text(
-                _storeName ?? 'POP Manager',
+                _storeName ?? 'POP Vendor',
                 style: GoogleFonts.poppins(
                   color: Colors.white,
                   fontSize: 20,

@@ -1,17 +1,32 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
+import 'directions_service.dart';
 
 class DeliveryFeeService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final DirectionsService _directionsService = DirectionsService();
   
-  // Pricing: 325 UGX per km
-  static const double pricePerKm = 325.0;
+  // Cache to prevent flickering
+  final Map<String, DeliveryFeeEstimate> _cache = {};
+  
+  // Pricing based on package type
+  static const double standardPricePerKm = 500.0; // Motorcycle
+  static const double bulkyPricePerKm = 1000.0; // Car
+  static const double minimumFee = 1000.0;
 
-  /// Calculate delivery fee for a store
+  /// Calculate delivery fee for a store using Google Directions API
   Future<DeliveryFeeEstimate> calculateDeliveryFee({
     required String storeId,
     required GeoPoint buyerLocation,
+    String packageSize = 'standard', // standard or bulky
   }) async {
+    // Check cache first to prevent flickering
+    final cacheKey = '$storeId-${buyerLocation.latitude}-${buyerLocation.longitude}-$packageSize';
+    if (_cache.containsKey(cacheKey)) {
+      print('💾 Using cached delivery fee for $storeId');
+      return _cache[cacheKey]!;
+    }
+
     try {
       print('🏪 Calculating delivery fee for store: $storeId');
       
@@ -30,9 +45,6 @@ class DeliveryFeeService {
 
       final storeData = storeDoc.data();
       final locationData = storeData?['location'];
-      
-      print('📍 Store location data type: ${locationData.runtimeType}');
-      print('📍 Store location value: $locationData');
 
       GeoPoint? storeLocation;
       if (locationData is GeoPoint) {
@@ -54,27 +66,53 @@ class DeliveryFeeService {
       print('📍 Store location: ${storeLocation.latitude}, ${storeLocation.longitude}');
       print('📍 Buyer location: ${buyerLocation.latitude}, ${buyerLocation.longitude}');
 
-      // Calculate distance
-      final distance = _calculateDistance(
-        storeLocation.latitude,
-        storeLocation.longitude,
-        buyerLocation.latitude,
-        buyerLocation.longitude,
+      // Get route from Google Directions API
+      final routeInfo = await _directionsService.getRoute(
+        origin: storeLocation,
+        destination: buyerLocation,
       );
 
-      print('📏 Distance calculated: ${distance.toStringAsFixed(2)} km');
+      double distance;
+      double fee;
+      int? estimatedDuration;
 
-      // Calculate fee
-      final fee = distance * pricePerKm;
+      if (routeInfo != null) {
+        // Use route-based distance
+        distance = routeInfo.distanceKm;
+        estimatedDuration = routeInfo.durationMinutes;
+        print('✅ Using route distance: ${distance.toStringAsFixed(2)} km');
+      } else {
+        // Fallback to straight-line distance
+        distance = _calculateDistance(
+          storeLocation.latitude,
+          storeLocation.longitude,
+          buyerLocation.latitude,
+          buyerLocation.longitude,
+        );
+        print('⚠️ Using fallback straight-line distance: ${distance.toStringAsFixed(2)} km');
+      }
 
-      print('💰 Fee calculated: ${fee.toStringAsFixed(0)} UGX');
+      // Calculate fee based on package size
+      final pricePerKm = packageSize == 'bulky' ? bulkyPricePerKm : standardPricePerKm;
+      final rawFee = distance * pricePerKm;
+      final feeAfterMinimum = rawFee < minimumFee ? minimumFee : rawFee;
+      fee = ((feeAfterMinimum / 500).round() * 500).toDouble(); // Round to nearest 500
 
-      return DeliveryFeeEstimate(
+      print('💰 Fee calculated: ${fee.toStringAsFixed(0)} UGX (${packageSize == 'bulky' ? 'Car' : 'Motorcycle'})');
+
+      final estimate = DeliveryFeeEstimate(
         storeId: storeId,
         distance: distance,
         fee: fee,
         storeName: storeData?['name'] ?? 'Store',
+        estimatedDuration: estimatedDuration,
+        polylinePoints: routeInfo?.polylinePoints,
       );
+
+      // Cache the result
+      _cache[cacheKey] = estimate;
+
+      return estimate;
     } catch (e) {
       print('❌ Error calculating delivery fee: $e');
       return DeliveryFeeEstimate(
@@ -90,6 +128,7 @@ class DeliveryFeeService {
   Future<List<DeliveryFeeEstimate>> calculateDeliveryFeesForStores({
     required List<String> storeIds,
     required GeoPoint buyerLocation,
+    String packageSize = 'standard',
   }) async {
     final estimates = <DeliveryFeeEstimate>[];
 
@@ -97,6 +136,7 @@ class DeliveryFeeService {
       final estimate = await calculateDeliveryFee(
         storeId: storeId,
         buyerLocation: buyerLocation,
+        packageSize: packageSize,
       );
       estimates.add(estimate);
     }
@@ -104,7 +144,7 @@ class DeliveryFeeService {
     return estimates;
   }
 
-  /// Calculate distance between two points using Haversine formula
+  /// Calculate distance between two points using Haversine formula (fallback)
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     const double earthRadius = 6371; // km
 
@@ -126,6 +166,11 @@ class DeliveryFeeService {
   double _toRadians(double degrees) {
     return degrees * pi / 180;
   }
+
+  /// Clear cache (call when location changes significantly)
+  void clearCache() {
+    _cache.clear();
+  }
 }
 
 class DeliveryFeeEstimate {
@@ -134,6 +179,8 @@ class DeliveryFeeEstimate {
   final double distance; // in km
   final double fee; // in UGX
   final String? error;
+  final int? estimatedDuration; // in minutes
+  final String? polylinePoints; // encoded polyline for map
 
   DeliveryFeeEstimate({
     required this.storeId,
@@ -141,10 +188,13 @@ class DeliveryFeeEstimate {
     required this.distance,
     required this.fee,
     this.error,
+    this.estimatedDuration,
+    this.polylinePoints,
   });
 
   bool get hasError => error != null;
 
   String get formattedDistance => '${distance.toStringAsFixed(1)} km';
   String get formattedFee => 'UGX ${fee.toStringAsFixed(0)}';
+  String get formattedDuration => estimatedDuration != null ? '~$estimatedDuration min' : '';
 }

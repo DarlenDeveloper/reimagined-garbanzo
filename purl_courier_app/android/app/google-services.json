@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "255612064321-k5lllgn7uu7js69lh4os9ekun606mb72.apps.googleusercontent.com",
+          "client_id": "255612064321-6pj6foukc3f3ero90c3ope61gmh2aoou.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.purl_courier_app",
-            "certificate_hash": "fe52bbb33a384c86bfbcb27806e3821231ce2e16"
+            "certificate_hash": "410349cdc47148f2ca9c754806deedd4f5f98c8a"
           }
         },
         {
@@ -39,10 +39,11 @@
               "client_type": 3
             },
             {
-              "client_id": "255612064321-8r11lhup4pgqfn7io55gbv73aht8qs6n.apps.googleusercontent.com",
+              "client_id": "255612064321-0dor6vu4m7qj71q72lge5mrjcpkkdnh4.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.purl.stores"
+                "bundle_id": "com.example.purlCourierApp",
+                "app_store_id": "6759604014"
               }
             }
           ]
@@ -51,18 +52,18 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:255612064321:android:8cbb3716f545cc39e52cc0",
+        "mobilesdk_app_id": "1:255612064321:android:315a2af04429ad4ce52cc0",
         "android_client_info": {
-          "package_name": "com.purl.admin"
+          "package_name": "com.pop.vendor"
         }
       },
       "oauth_client": [
         {
-          "client_id": "255612064321-2voq70fgdintfnh45jplmcgmc3pac1i7.apps.googleusercontent.com",
+          "client_id": "255612064321-6dguoe98j0aa5a03rimcjem4tinte0qq.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.purl.admin",
-            "certificate_hash": "fe52bbb33a384c86bfbcb27806e3821231ce2e16"
+            "package_name": "com.pop.vendor",
+            "certificate_hash": "410349cdc47148f2ca9c754806deedd4f5f98c8a"
           }
         },
         {
@@ -83,10 +84,11 @@
               "client_type": 3
             },
             {
-              "client_id": "255612064321-8r11lhup4pgqfn7io55gbv73aht8qs6n.apps.googleusercontent.com",
+              "client_id": "255612064321-0dor6vu4m7qj71q72lge5mrjcpkkdnh4.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.purl.stores"
+                "bundle_id": "com.example.purlCourierApp",
+                "app_store_id": "6759604014"
               }
             }
           ]
@@ -102,11 +104,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "255612064321-f700ifq3r3rr1qfu1frk3d24afp5dq52.apps.googleusercontent.com",
+          "client_id": "255612064321-10teag8urlcfp05srou09pa9qtjch5ga.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.purl.stores",
-            "certificate_hash": "fe52bbb33a384c86bfbcb27806e3821231ce2e16"
+            "certificate_hash": "410349cdc47148f2ca9c754806deedd4f5f98c8a"
           }
         },
         {
@@ -127,10 +129,11 @@
               "client_type": 3
             },
             {
-              "client_id": "255612064321-8r11lhup4pgqfn7io55gbv73aht8qs6n.apps.googleusercontent.com",
+              "client_id": "255612064321-0dor6vu4m7qj71q72lge5mrjcpkkdnh4.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.purl.stores"
+                "bundle_id": "com.example.purlCourierApp",
+                "app_store_id": "6759604014"
               }
             }
           ]

@@ -1,4 +1,4 @@
-package com.purl.admin
+package com.pop.vendor
 
 import io.flutter.embedding.android.FlutterActivity
 

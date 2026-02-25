@@ -21,6 +21,7 @@ import 'discount_service.dart';
 /// ├── paymentMethod: string (dummy for now)
 /// ├── deliveryAddress: map {label, street, city}
 /// ├── deliveryLocation: geopoint (for pickup point)
+/// ├── packageSize: string ("standard" | "bulky")
 /// ├── contactDetails: map {name, phone, email}
 /// ├── createdAt: timestamp
 /// ├── updatedAt: timestamp
@@ -44,6 +45,7 @@ class OrderService {
     required DeliveryAddress deliveryAddress,
     required ContactDetails contactDetails,
     required GeoPoint? deliveryLocation,
+    String packageSize = 'standard', // Add package size parameter
     Map<String, double>? deliveryFeesByStore,
     String? paymentId,
     String? paymentHash,
@@ -149,6 +151,7 @@ class OrderService {
           'city': deliveryAddress.city,
         },
         'deliveryLocation': deliveryLocation,
+        'packageSize': packageSize, // Store package size
         'contactDetails': {
           'name': contactDetails.name,
           'phone': contactDetails.phone,

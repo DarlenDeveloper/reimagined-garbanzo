@@ -23,11 +23,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
   final List<Map<String, String>> _currencies = [
     {'code': 'UGX', 'name': 'Ugandan Shilling', 'symbol': 'UGX'},
-    {'code': 'KES', 'name': 'Kenyan Shilling', 'symbol': 'KES'},
-    {'code': 'TZS', 'name': 'Tanzanian Shilling', 'symbol': 'TZS'},
-    {'code': 'USD', 'name': 'US Dollar', 'symbol': '\$'},
-    {'code': 'EUR', 'name': 'Euro', 'symbol': '€'},
-    {'code': 'GBP', 'name': 'British Pound', 'symbol': '£'},
   ];
 
   @override
@@ -86,55 +81,58 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 20),
-                      _buildHeader(),
-                      const SizedBox(height: 32),
-                      _buildProfileIcon(),
-                      const SizedBox(height: 32),
-                      _buildInputField(
-                        'First Name',
-                        _firstNameController,
-                        Iconsax.user,
-                        'Enter your first name',
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInputField(
-                        'Last Name',
-                        _lastNameController,
-                        Iconsax.user,
-                        'Enter your last name',
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInputField(
-                        'Phone Number',
-                        _phoneController,
-                        Iconsax.call,
-                        'Enter your phone number',
-                        keyboardType: TextInputType.phone,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildCurrencySelector(),
-                      const SizedBox(height: 32),
-                    ],
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 20),
+                        _buildHeader(),
+                        const SizedBox(height: 32),
+                        _buildProfileIcon(),
+                        const SizedBox(height: 32),
+                        _buildInputField(
+                          'First Name',
+                          _firstNameController,
+                          Iconsax.user,
+                          'Enter your first name',
+                        ),
+                        const SizedBox(height: 16),
+                        _buildInputField(
+                          'Last Name',
+                          _lastNameController,
+                          Iconsax.user,
+                          'Enter your last name',
+                        ),
+                        const SizedBox(height: 16),
+                        _buildInputField(
+                          'Phone Number',
+                          _phoneController,
+                          Iconsax.call,
+                          'Enter your phone number',
+                          keyboardType: TextInputType.phone,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildCurrencySelector(),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            _buildBottomBar(),
-          ],
+              _buildBottomBar(),
+            ],
+          ),
         ),
       ),
     );
@@ -198,22 +196,28 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         ),
         const SizedBox(height: 8),
         Container(
+          height: 52,
           decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(14),
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(26),
           ),
           child: TextFormField(
             controller: controller,
             keyboardType: keyboardType,
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
+            style: GoogleFonts.poppins(fontSize: 15, color: Colors.black),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
               prefixIcon: Icon(icon, size: 20, color: Colors.black),
+              filled: false,
               border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              errorBorder: InputBorder.none,
+              focusedErrorBorder: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
+                horizontal: 20,
+                vertical: 16,
               ),
             ),
             validator: (value) {
@@ -242,28 +246,32 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         ),
         const SizedBox(height: 8),
         Container(
+          height: 52,
           decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(14),
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(26),
           ),
           child: DropdownButtonFormField<String>(
             value: _selectedCurrency,
             decoration: InputDecoration(
               prefixIcon: const Icon(Iconsax.money, size: 20, color: Colors.black),
+              filled: false,
               border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
+                horizontal: 20,
+                vertical: 16,
               ),
             ),
             dropdownColor: Colors.white,
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
+            style: GoogleFonts.poppins(fontSize: 15, color: Colors.black),
             items: _currencies.map((currency) {
               return DropdownMenuItem<String>(
                 value: currency['code'],
                 child: Text(
                   '${currency['symbol']} ${currency['name']}',
-                  style: GoogleFonts.poppins(fontSize: 14),
+                  style: GoogleFonts.poppins(fontSize: 15),
                 ),
               );
             }).toList(),
@@ -302,12 +310,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         child: ElevatedButton(
           onPressed: _isSaving ? null : _saveProfile,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.black,
+            backgroundColor: const Color(0xFFb71000),
             foregroundColor: Colors.white,
             disabledBackgroundColor: Colors.grey[300],
             elevation: 0,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(27),
             ),
           ),
           child: _isSaving

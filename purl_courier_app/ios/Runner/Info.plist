@@ -76,5 +76,16 @@
 	<string>We need your location to track deliveries in the background and provide real-time updates to customers</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>We need your location to track deliveries in the background and provide real-time updates to customers</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.255612064321-0dor6vu4m7qj71q72lge5mrjcpkkdnh4</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

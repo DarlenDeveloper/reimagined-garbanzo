@@ -15,6 +15,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   final _authService = AuthService();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  String _selectedVehicleType = 'motorcycle'; // motorcycle or car
   bool _isLoading = false;
 
   @override
@@ -27,6 +28,27 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     final user = _authService.currentUser;
     if (user != null) {
       _nameController.text = user.displayName ?? '';
+      
+      // Load existing courier data for old users
+      try {
+        final courierDoc = await FirebaseFirestore.instance
+            .collection('couriers')
+            .doc(user.uid)
+            .get();
+        
+        if (courierDoc.exists) {
+          final data = courierDoc.data();
+          if (data != null) {
+            setState(() {
+              _nameController.text = data['fullName'] ?? user.displayName ?? '';
+              _phoneController.text = data['phone'] ?? '';
+              _selectedVehicleType = data['vehicleType'] ?? 'motorcycle';
+            });
+          }
+        }
+      } catch (e) {
+        print('Error loading courier data: $e');
+      }
     }
   }
 
@@ -46,6 +68,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       await FirebaseFirestore.instance.collection('couriers').doc(uid).update({
         'fullName': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
+        'vehicleType': _selectedVehicleType, // Add vehicle type
         'profileCompleted': true,
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -131,7 +154,114 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               
               const SizedBox(height: 24),
               
-              // Phone Number
+              // Vehicle Type
+              Text(
+                'Vehicle Type',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              
+              // Motorcycle Option
+              GestureDetector(
+                onTap: () => setState(() => _selectedVehicleType = 'motorcycle'),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _selectedVehicleType == 'motorcycle' ? const Color(0xFFb71000) : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: _selectedVehicleType == 'motorcycle' ? const Color(0xFFb71000) : Colors.grey[300]!,
+                      width: _selectedVehicleType == 'motorcycle' ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Iconsax.driving5,
+                        size: 24,
+                        color: _selectedVehicleType == 'motorcycle' ? Colors.white : Colors.black,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Motorcycle',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: _selectedVehicleType == 'motorcycle' ? Colors.white : Colors.black,
+                              ),
+                            ),
+                            Text(
+                              'For standard packages (under 15 kg)',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: _selectedVehicleType == 'motorcycle' ? Colors.white70 : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_selectedVehicleType == 'motorcycle')
+                        const Icon(Iconsax.tick_circle5, color: Colors.white, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Car Option
+              GestureDetector(
+                onTap: () => setState(() => _selectedVehicleType = 'car'),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _selectedVehicleType == 'car' ? const Color(0xFFb71000) : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: _selectedVehicleType == 'car' ? const Color(0xFFb71000) : Colors.grey[300]!,
+                      width: _selectedVehicleType == 'car' ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Iconsax.car5,
+                        size: 24,
+                        color: _selectedVehicleType == 'car' ? Colors.white : Colors.black,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Car/Vehicle',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: _selectedVehicleType == 'car' ? Colors.white : Colors.black,
+                              ),
+                            ),
+                            Text(
+                              'For bulky packages (over 15 kg)',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: _selectedVehicleType == 'car' ? Colors.white70 : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_selectedVehicleType == 'car')
+                        const Icon(Iconsax.tick_circle5, color: Colors.white, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 40),
               Text(
                 'Phone Number',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(

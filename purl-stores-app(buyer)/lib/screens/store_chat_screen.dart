@@ -179,7 +179,7 @@ class _StoreChatScreenState extends State<StoreChatScreen> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                         decoration: BoxDecoration(
-                                          color: isMe ? Colors.black : Colors.grey[100],
+                                          color: isMe ? const Color(0xFFfb2a0a) : Colors.grey[100],
                                           borderRadius: BorderRadius.only(
                                             topLeft: const Radius.circular(16),
                                             topRight: const Radius.circular(16),
@@ -249,9 +249,9 @@ class _StoreChatScreenState extends State<StoreChatScreen> {
                             },
                             child: Container(
                               padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.black,
-                                borderRadius: BorderRadius.circular(12),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFb71000),
+                                shape: BoxShape.circle,
                               ),
                               child: const Icon(Iconsax.send_1, color: Colors.white, size: 20),
                             ),

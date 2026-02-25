@@ -10,6 +10,7 @@ import '../services/cart_service.dart';
 import '../services/order_service.dart';
 import '../services/currency_service.dart';
 import '../services/delivery_fee_service.dart';
+import '../services/directions_service.dart';
 import 'order_history_screen.dart';
 import 'location_picker_screen.dart';
 import 'main_screen.dart';
@@ -49,6 +50,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _locationError;
   List<DeliveryFeeEstimate> _deliveryEstimates = [];
   bool _isCalculatingFees = false;
+  String _selectedPackageSize = 'standard'; // standard or bulky
   
   // Promo code fields
   late String? _promoCode;
@@ -349,6 +351,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final estimates = await _deliveryFeeService.calculateDeliveryFeesForStores(
         storeIds: storeIds,
         buyerLocation: _currentLocation!,
+        packageSize: _selectedPackageSize,
       );
 
       print('💰 Delivery estimates calculated: ${estimates.length}');
@@ -425,6 +428,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         _buildLocationSection(),
                         const SizedBox(height: 24),
                         _buildDeliveryAddressSection(),
+                        const SizedBox(height: 24),
+                        _buildPackageSizeSection(),
                         const SizedBox(height: 24),
                         _buildContactDetailsSection(),
                         const SizedBox(height: 24),
@@ -959,6 +964,194 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
+  Widget _buildPackageSizeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('Package Type', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 4),
+            const Text('*', style: TextStyle(color: Colors.red, fontSize: 16)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Standard Package Card
+        GestureDetector(
+          onTap: () async {
+            if (_selectedPackageSize != 'standard') {
+              setState(() => _selectedPackageSize = 'standard');
+              await _calculateDeliveryFees();
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _selectedPackageSize == 'standard' ? const Color(0xFFb71000) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: _selectedPackageSize == 'standard' ? const Color(0xFFb71000) : Colors.grey[300]!,
+                width: _selectedPackageSize == 'standard' ? 2 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: (_selectedPackageSize == 'standard' ? const Color(0xFFb71000) : Colors.black).withOpacity(_selectedPackageSize == 'standard' ? 0.15 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: _selectedPackageSize == 'standard' ? Colors.white.withOpacity(0.2) : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Iconsax.driving5,
+                      size: 30,
+                      color: _selectedPackageSize == 'standard' ? Colors.white : Colors.black,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Standard delivery',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: _selectedPackageSize == 'standard' ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'All items fit in a backpack',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: _selectedPackageSize == 'standard' ? Colors.white.withOpacity(0.85) : Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Under 15 kg • Motorcycle',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: _selectedPackageSize == 'standard' ? Colors.white.withOpacity(0.7) : Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  _selectedPackageSize == 'standard' ? Iconsax.tick_circle5 : Iconsax.arrow_right_3,
+                  color: _selectedPackageSize == 'standard' ? Colors.white : Colors.grey[400],
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Bulky Package Card
+        GestureDetector(
+          onTap: () async {
+            if (_selectedPackageSize != 'bulky') {
+              setState(() => _selectedPackageSize = 'bulky');
+              await _calculateDeliveryFees();
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _selectedPackageSize == 'bulky' ? const Color(0xFFb71000) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: _selectedPackageSize == 'bulky' ? const Color(0xFFb71000) : Colors.grey[300]!,
+                width: _selectedPackageSize == 'bulky' ? 2 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: (_selectedPackageSize == 'bulky' ? const Color(0xFFb71000) : Colors.black).withOpacity(_selectedPackageSize == 'bulky' ? 0.15 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: _selectedPackageSize == 'bulky' ? Colors.white.withOpacity(0.2) : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Iconsax.car5,
+                      size: 30,
+                      color: _selectedPackageSize == 'bulky' ? Colors.white : Colors.black,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bulky delivery',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: _selectedPackageSize == 'bulky' ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Large or heavy items',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: _selectedPackageSize == 'bulky' ? Colors.white.withOpacity(0.85) : Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Over 15 kg • Car/Vehicle',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: _selectedPackageSize == 'bulky' ? Colors.white.withOpacity(0.7) : Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  _selectedPackageSize == 'bulky' ? Iconsax.tick_circle5 : Iconsax.arrow_right_3,
+                  color: _selectedPackageSize == 'bulky' ? Colors.white : Colors.grey[400],
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildOrderSummary(
     Map<String, List<CartItemData>> itemsByStore,
     Map<String, CartTotals> totalsByStore,
@@ -1344,6 +1537,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       'totalsByStore': totalsByStore,
       'selectedAddress': selectedAddress,
       'deliveryLocation': _currentLocation,
+      'packageSize': _selectedPackageSize, // Add package size
       'deliveryFeesByStore': _deliveryEstimates.fold<Map<String, double>>(
         {},
         (map, estimate) {

@@ -27,7 +27,7 @@
     </queries>
     
     <application
-        android:label="POP Manager"
+        android:label="POP Vendor"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

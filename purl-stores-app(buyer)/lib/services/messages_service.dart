@@ -70,6 +70,7 @@ class MessagesService {
     required String conversationId,
     required String senderId,
     required String text,
+    List<String> taggedProductIds = const [],
   }) async {
     final conversationRef = _firestore.collection('conversations').doc(conversationId);
     final messagesRef = conversationRef.collection('messages');
@@ -82,10 +83,11 @@ class MessagesService {
     final participants = List<String>.from(conversationData['participants'] ?? []);
     final receiverId = participants.firstWhere((id) => id != senderId, orElse: () => '');
 
-    // Add message
+    // Add message with tagged products
     await messagesRef.add({
       'senderId': senderId,
       'text': text,
+      'taggedProductIds': taggedProductIds,
       'createdAt': Timestamp.now(),
       'read': false,
     });

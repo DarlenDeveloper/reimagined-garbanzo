@@ -12,11 +12,15 @@ import '../services/messages_service.dart';
 import '../services/followers_service.dart';
 import '../services/posts_preloader_service.dart';
 import '../services/notification_service.dart';
+import '../services/product_service.dart';
+import '../services/cart_service.dart';
 import 'messages_screen.dart';
 import 'notifications_screen.dart';
 import 'search_screen.dart';
 import 'store_profile_screen.dart';
 import 'media_preview_screen.dart';
+import 'product_detail_screen.dart';
+import 'main_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,11 +36,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final FollowersService _followersService = FollowersService();
   final PostsPreloaderService _preloaderService = PostsPreloaderService();
   final NotificationService _notificationService = NotificationService();
+  final ProductService _productService = ProductService();
+  final CartService _cartService = CartService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
   final Set<String> _likedPosts = {};
   final Set<String> _savedPosts = {};
   final Set<String> _followedVendors = {};
+  final Set<String> _expandedPosts = {}; // Track expanded posts
   
   // Cache for store data to prevent repeated fetches
   final Map<String, Map<String, dynamic>> _storeDataCache = {};
@@ -487,7 +494,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          Text('POP STORE', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
+          Text('POP', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black)),
           const Spacer(),
           _buildHeaderIcon(Iconsax.search_normal, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()))),
           const SizedBox(width: 16),
@@ -721,22 +728,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ],
-                // Action buttons - like, save, share, DM
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Row(
-                    children: [
-                      _buildActionBtn(isLiked ? Iconsax.heart5 : Iconsax.heart, '${likes + (isLiked ? 1 : 0)}', () => _toggleLike(postId, storeId), isActive: isLiked),
-                      const SizedBox(width: 24),
-                      _buildActionBtn(isSaved ? Iconsax.archive_tick : Iconsax.archive_add, '', () => _toggleSave(postId, storeId), isActive: isSaved),
-                      // Share button disabled for now
-                      // const SizedBox(width: 24),
-                      // _buildActionBtn(Iconsax.share, '', () => _sharePost(post)),
-                      const Spacer(),
-                      _buildActionBtn(Iconsax.direct_send, '', () => _sendDM(storeId, storeName)),
-                    ],
-                  ),
-                ),
+                // Tagged products or action buttons
+                _buildPostActions(post, postId, storeId, storeName, likes, isLiked, isSaved),
               ],
             ),
           ),
@@ -825,6 +818,634 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildPostActions(Map<String, dynamic> post, String postId, String storeId, String storeName, int likes, bool isLiked, bool isSaved) {
+    final taggedProductIds = List<String>.from(post['taggedProductIds'] ?? []);
+    final hasTaggedProducts = taggedProductIds.isNotEmpty;
+    final isExpanded = _expandedPosts.contains(postId);
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Main action buttons row
+          Row(
+            children: [
+              _buildActionBtn(isLiked ? Iconsax.heart5 : Iconsax.heart, '${likes + (isLiked ? 1 : 0)}', () => _toggleLike(postId, storeId), isActive: isLiked),
+              const SizedBox(width: 24),
+              _buildActionBtn(isSaved ? Iconsax.archive_tick : Iconsax.archive_add, '', () => _toggleSave(postId, storeId), isActive: isSaved),
+              const Spacer(),
+              // Show expand/collapse button if has tagged products, otherwise show DM
+              if (hasTaggedProducts)
+                _buildExpandButton(isExpanded, () => _togglePostExpansion(postId))
+              else
+                _buildActionBtn(Iconsax.direct_send, '', () => _sendDM(storeId, storeName)),
+            ],
+          ),
+          
+          // Tagged products section (expandable)
+          if (hasTaggedProducts) ...[
+            const SizedBox(height: 12),
+            _buildTaggedProductsSection(taggedProductIds, storeId, storeName, isExpanded),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExpandButton(bool isExpanded, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFfb2a0a),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isExpanded ? Iconsax.arrow_up_2 : Iconsax.shopping_bag,
+              size: 14,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              isExpanded ? 'Hide' : 'Shop',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _togglePostExpansion(String postId) {
+    setState(() {
+      if (_expandedPosts.contains(postId)) {
+        _expandedPosts.remove(postId);
+      } else {
+        _expandedPosts.add(postId);
+      }
+    });
+  }
+
+  Widget _buildTaggedProductsSection(List<String> productIds, String storeId, String storeName, bool isExpanded) {
+    if (!isExpanded) {
+      // Show compact preview
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFFfb2a0a),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Iconsax.shopping_bag,
+                size: 18,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tagged Products',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Text(
+                    '${productIds.length} product${productIds.length > 1 ? 's' : ''} featured',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Iconsax.arrow_right_3,
+              size: 16,
+              color: Colors.grey[400],
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Show expanded view with products
+    return _buildExpandedTaggedProducts(productIds, storeId, storeName);
+  }
+
+  Widget _buildExpandedTaggedProducts(List<String> productIds, String storeId, String storeName) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _fetchTaggedProducts(productIds, storeId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFfb2a0a),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Icon(
+                        Iconsax.shopping_bag,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Tagged Products',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Loading skeleton for horizontal products
+                Column(
+                  children: List.generate(
+                    productIds.length.clamp(0, 3),
+                    (index) => Container(
+                      height: 80,
+                      margin: EdgeInsets.only(bottom: index < 2 ? 12 : 0),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFfb2a0a),
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        
+        final products = snapshot.data!;
+        
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with Ask button
+              Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFfb2a0a),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Iconsax.shopping_bag,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tagged Products',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Enhanced Ask button
+                  GestureDetector(
+                    onTap: () => _openStoreChat(storeId, storeName),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Iconsax.message,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Ask Store',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // Horizontal product list
+              Column(
+                children: products.map((product) => _buildHorizontalProductCard(product, storeId, storeName)).toList(),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Add to Cart button
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () => _addMultipleToCart(products, storeId, storeName),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFb71000),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Iconsax.shopping_bag, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        products.length == 1 ? 'Add to Cart' : 'Add All (${products.length})',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHorizontalProductCard(Map<String, dynamic> product, String storeId, String storeName) {
+    final productName = product['name'] ?? 'Product';
+    final price = product['price'] ?? 0.0;
+    final currency = product['currency'] ?? 'UGX';
+    final imageUrl = product['images'] != null && (product['images'] as List).isNotEmpty
+        ? (product['images'] as List)[0]['url'] ?? ''
+        : '';
+    
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailScreen(
+              productId: product['id'],
+              productName: productName,
+              storeName: storeName,
+              storeId: storeId,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        height: 80,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            // Product image
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: imageUrl.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                            child: Icon(Iconsax.box, size: 20, color: Colors.grey[400]),
+                          );
+                        },
+                      ),
+                    )
+                  : Center(
+                      child: Icon(Iconsax.box, size: 20, color: Colors.grey[400]),
+                    ),
+            ),
+            const SizedBox(width: 12),
+            
+            // Product info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    productName,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$currency ${price.toStringAsFixed(0)}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFfb2a0a),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Arrow indicator
+            Icon(
+              Iconsax.arrow_right_3,
+              size: 16,
+              color: Colors.grey[400],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addMultipleToCart(List<Map<String, dynamic>> products, String storeId, String storeName) async {
+    try {
+      print('🛒 Adding ${products.length} products to cart');
+      
+      for (final product in products) {
+        print('Adding product: ${product['name']} (${product['id']})');
+        
+        await _cartService.addToCart(
+          productId: product['id'],
+          storeId: storeId,
+          storeName: storeName,
+          productName: product['name'] ?? 'Product',
+          productImage: product['images'] != null && (product['images'] as List).isNotEmpty
+              ? (product['images'] as List)[0]['url'] ?? ''
+              : '',
+          price: (product['price'] ?? 0.0).toDouble(),
+          currency: product['currency'] ?? 'UGX',
+          quantity: 1,
+        );
+      }
+      
+      print('✅ Successfully added all products to cart');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              products.length == 1 
+                  ? 'Added item to cart' 
+                  : 'Added ${products.length} items to cart',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: const Color(0xFFfb2a0a),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'View Cart',
+              textColor: Colors.white,
+              onPressed: () {
+                // Navigate to cart tab using MainScreen method
+                try {
+                  MainScreen.navigateToCart(context);
+                } catch (e) {
+                  print('Navigation error: $e');
+                  // Fallback navigation
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/main',
+                    (route) => false,
+                    arguments: {'initialIndex': 2},
+                  );
+                }
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Error adding to cart: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add to cart: ${e.toString()}', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildEnhancedProductCard(Map<String, dynamic> product, String storeId, String storeName, bool hasMargin) {
+    final productName = product['name'] ?? 'Product';
+    final price = product['price'] ?? 0.0;
+    final currency = product['currency'] ?? 'UGX';
+    final imageUrl = product['images'] != null && (product['images'] as List).isNotEmpty
+        ? (product['images'] as List)[0]['url'] ?? ''
+        : '';
+    
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailScreen(
+              productId: product['id'],
+              productName: productName,
+              storeName: storeName,
+              storeId: storeId,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 100,
+        margin: EdgeInsets.only(right: hasMargin ? 12 : 0),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Product image
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                ),
+                child: imageUrl.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Center(
+                              child: Icon(Iconsax.box, size: 24, color: Colors.grey[400]),
+                            );
+                          },
+                        ),
+                      )
+                    : Center(
+                        child: Icon(Iconsax.box, size: 24, color: Colors.grey[400]),
+                      ),
+              ),
+            ),
+            // Product info
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    productName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$currency ${price.toStringAsFixed(0)}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFfb2a0a),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchTaggedProducts(List<String> productIds, String storeId) async {
+    final products = <Map<String, dynamic>>[];
+    
+    for (final productId in productIds) {
+      try {
+        final productDoc = await FirebaseFirestore.instance
+            .collection('stores')
+            .doc(storeId)
+            .collection('products')
+            .doc(productId)
+            .get();
+        
+        if (productDoc.exists) {
+          final data = productDoc.data()!;
+          data['id'] = productDoc.id;
+          products.add(data);
+        }
+      } catch (e) {
+        print('Error fetching product $productId: $e');
+      }
+    }
+    
+    return products;
   }
 
   Widget _buildActionBtn(IconData icon, String count, VoidCallback onTap, {bool isActive = false}) {
@@ -926,6 +1547,73 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const MessagesScreen()));
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Start a conversation with $vendorName', style: GoogleFonts.poppins()), backgroundColor: Colors.black, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))));
+    }
+  }
+
+  void _openStoreChat(String storeId, String storeName) async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) return;
+
+    // Get user name and store logo
+    String userName = 'User';
+    String? userPhotoUrl;
+    String? storeLogoUrl;
+    
+    try {
+      // Fetch user data
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      final userData = userDoc.data();
+      if (userData != null && userData['name'] != null && (userData['name'] as String).isNotEmpty) {
+        userName = userData['name'];
+      }
+      userPhotoUrl = userData?['photoUrl'] as String?;
+      
+      // Fetch store logo from cache or Firestore
+      if (_storeDataCache.containsKey(storeId)) {
+        storeLogoUrl = _storeDataCache[storeId]!['logoUrl'] as String?;
+      } else {
+        final storeDoc = await FirebaseFirestore.instance.collection('stores').doc(storeId).get();
+        if (storeDoc.exists) {
+          storeLogoUrl = storeDoc.data()?['logoUrl'] as String?;
+        }
+      }
+    } catch (e) {
+      print('Error fetching data: $e');
+    }
+    
+    // Fallback to Firebase Auth displayName
+    if (userName == 'User' && _auth.currentUser?.displayName != null && _auth.currentUser!.displayName!.isNotEmpty) {
+      userName = _auth.currentUser!.displayName!;
+    }
+    
+    // Fallback to email username
+    if (userName == 'User' && _auth.currentUser?.email != null) {
+      userName = _auth.currentUser!.email!.split('@')[0];
+    }
+
+    // Get or create conversation
+    final conversationId = await _messagesService.getOrCreateConversation(
+      storeId: storeId,
+      storeName: storeName,
+      storeLogoUrl: storeLogoUrl,
+      userId: userId,
+      userName: userName,
+      userPhotoUrl: userPhotoUrl,
+    );
+
+    // Navigate directly to chat screen using the same ChatScreen from messages
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            conversationId: conversationId,
+            storeName: storeName,
+            storeLogoUrl: storeLogoUrl,
+            userId: userId,
+          ),
+        ),
+      );
     }
   }
 

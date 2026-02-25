@@ -13,6 +13,9 @@ import '../screens/profile_completion_screen.dart';
 import '../screens/phone_verification_screen.dart';
 import '../screens/pending_verification_screen.dart';
 import '../screens/withdraw_screen.dart';
+import '../screens/vehicle_type_screen.dart';
+import '../screens/edit_profile_screen.dart';
+import '../screens/vehicle_info_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/',
@@ -46,6 +49,10 @@ final router = GoRouter(
       builder: (context, state) => const ProfileCompletionScreen(),
     ),
     GoRoute(
+      path: '/vehicle-type',
+      builder: (context, state) => const VehicleTypeScreen(),
+    ),
+    GoRoute(
       path: '/phone-verification',
       builder: (context, state) => const PhoneVerificationScreen(),
     ),
@@ -72,6 +79,14 @@ final router = GoRouter(
     GoRoute(
       path: '/withdraw',
       builder: (context, state) => const WithdrawScreen(),
+    ),
+    GoRoute(
+      path: '/edit-profile',
+      builder: (context, state) => const EditProfileScreen(),
+    ),
+    GoRoute(
+      path: '/vehicle-info',
+      builder: (context, state) => const VehicleInfoScreen(),
     ),
   ],
 );

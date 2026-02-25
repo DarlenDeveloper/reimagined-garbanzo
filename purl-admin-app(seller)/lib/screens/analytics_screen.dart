@@ -8,6 +8,8 @@ import '../services/analytics_service.dart';
 import '../services/currency_service.dart';
 import '../services/visitor_service.dart';
 import '../services/order_service.dart';
+import '../services/ai_service.dart';
+import '../models/ai_config.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -23,6 +25,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
   final CurrencyService _currencyService = CurrencyService();
   final VisitorService _visitorService = VisitorService();
   final OrderService _orderService = OrderService();
+  final AIService _aiService = AIService();
   String? _storeId;
   
   final List<double> _salesData = [2400, 1800, 3200, 2800, 4100, 3600, 4800];
@@ -783,35 +786,374 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
   }
 
   Widget _buildSupportTab() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Iconsax.headphone, size: 64, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text(
-              'Support Analytics',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Support analytics coming soon',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
+    return _storeId == null
+        ? const Center(
+            child: CircularProgressIndicator(color: const Color(0xFFb71000)),
+          )
+        : StreamBuilder<AIServiceConfig?>(
+            stream: _aiService.streamAIConfig(_storeId!),
+            builder: (context, configSnapshot) {
+              final config = configSnapshot.data;
+              
+              if (config == null || !config.enabled) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Iconsax.headphone, size: 64, color: Colors.grey[300]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'AI Service Not Active',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Enable AI customer service to see analytics',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return StreamBuilder<List<CallLog>>(
+                stream: _aiService.streamCallLogs(_storeId!, limit: 100),
+                builder: (context, callsSnapshot) {
+                  final allCalls = callsSnapshot.data ?? [];
+                  
+                  // Calculate metrics
+                  final today = DateTime.now();
+                  final todayCalls = allCalls.where((call) {
+                    return call.createdAt.year == today.year &&
+                           call.createdAt.month == today.month &&
+                           call.createdAt.day == today.day;
+                  }).toList();
+
+                  final totalCalls = allCalls.length;
+                  final todayCallsCount = todayCalls.length;
+                  
+                  // Calculate average duration
+                  final totalDuration = allCalls.fold<int>(
+                    0,
+                    (sum, call) => sum + call.duration,
+                  );
+                  final avgDuration = totalCalls > 0 ? totalDuration / totalCalls : 0;
+                  final avgMinutes = (avgDuration / 60).toStringAsFixed(1);
+                  
+                  // Calculate satisfaction score
+                  final callsWithRating = allCalls.where((call) => call.csatScore != null).toList();
+                  final avgSatisfaction = callsWithRating.isNotEmpty
+                      ? callsWithRating.fold<int>(0, (sum, call) => sum + (call.csatScore ?? 0)) / callsWithRating.length
+                      : 0.0;
+                  final satisfactionPercent = ((avgSatisfaction / 10) * 100).toStringAsFixed(0);
+                  
+                  // Calculate yesterday's calls for comparison
+                  final yesterday = today.subtract(const Duration(days: 1));
+                  final yesterdayCalls = allCalls.where((call) {
+                    return call.createdAt.year == yesterday.year &&
+                           call.createdAt.month == yesterday.month &&
+                           call.createdAt.day == yesterday.day;
+                  }).length;
+                  
+                  final callsChange = yesterdayCalls > 0
+                      ? ((todayCallsCount - yesterdayCalls) / yesterdayCalls * 100).toStringAsFixed(0)
+                      : (todayCallsCount > 0 ? '+100' : '0');
+
+                  return ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      // AI Service Summary
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFb71000),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Iconsax.call, color: Colors.white, size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Total AI Calls',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white.withOpacity(0.7),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '$totalCalls',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 32,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$todayCallsCount calls today',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white.withOpacity(0.7),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // AI Metrics
+                      _sectionHeader('AI Performance', Iconsax.chart_1),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _MetricCard(
+                              title: 'Today\'s Calls',
+                              value: '$todayCallsCount',
+                              change: '$callsChange%',
+                              isPositive: !callsChange.startsWith('-'),
+                              icon: Iconsax.call_calling,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _MetricCard(
+                              title: 'Avg Duration',
+                              value: '${avgMinutes}m',
+                              change: '+0%',
+                              isPositive: true,
+                              icon: Iconsax.clock,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _MetricCard(
+                              title: 'Satisfaction',
+                              value: '$satisfactionPercent%',
+                              change: '+0%',
+                              isPositive: true,
+                              icon: Iconsax.emoji_happy,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _MetricCard(
+                              title: 'Minutes Used',
+                              value: '${config.subscription.usedMinutes.toStringAsFixed(0)}',
+                              change: '+0%',
+                              isPositive: false,
+                              icon: Iconsax.timer_1,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      // Usage Progress
+                      _sectionHeader('Monthly Usage', Iconsax.chart_21),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${config.subscription.usedMinutes.toStringAsFixed(1)} min',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Used',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '${config.subscription.remainingMinutes} min',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Remaining',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: config.subscription.usedMinutes / config.subscription.minutesIncluded,
+                                backgroundColor: Colors.grey[300],
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  config.subscription.usedMinutes >= config.subscription.minutesIncluded
+                                      ? Colors.red
+                                      : const Color(0xFFb71000),
+                                ),
+                                minHeight: 8,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Recent Calls
+                      _sectionHeader('Recent Calls', Iconsax.call_received),
+                      const SizedBox(height: 16),
+                      if (allCalls.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Icon(Iconsax.call_slash, size: 48, color: Colors.grey[400]),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No calls yet',
+                                  style: GoogleFonts.poppins(color: Colors.grey[600]),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        ...allCalls.take(10).map((call) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFb71000).withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Iconsax.call,
+                                    color: Color(0xFFb71000),
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        call.formattedPhone,
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _getTimeAgo(call.createdAt),
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.grey[600],
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      call.formattedDuration,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    if (call.csatScore != null) ...[
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          Icon(Iconsax.star1, size: 12, color: Colors.amber[700]),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${call.csatScore}/10',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                    ],
+                  );
+                },
+              );
+            },
+          );
   }
 
   Widget _sectionHeader(String title, IconData icon) {
@@ -849,6 +1191,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
         ),
       ),
     );
+  }
+
+  String _getTimeAgo(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inDays > 0) {
+      return '${diff.inDays}d ago';
+    } else if (diff.inHours > 0) {
+      return '${diff.inHours}h ago';
+    } else if (diff.inMinutes > 0) {
+      return '${diff.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
   }
 }
 

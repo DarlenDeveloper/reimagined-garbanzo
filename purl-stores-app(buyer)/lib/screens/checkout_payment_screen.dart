@@ -810,6 +810,7 @@ class _CheckoutPaymentScreenState extends State<CheckoutPaymentScreen> {
           email: widget.orderData['email'],
         ),
         deliveryLocation: deliveryLocation,
+        packageSize: widget.orderData['packageSize'] ?? 'standard', // Add package size
         deliveryFeesByStore: deliveryFeesByStore,
         paymentId: transactionId,
         paymentMethod: _selectedPaymentLogo == 'mtn' || _selectedPaymentLogo == 'airtel' 

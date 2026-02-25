@@ -7,28 +7,101 @@ class DeliveryService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   /// Get available deliveries within radius (status = "searching")
+  /// Filters by courier's vehicle type to match package requirements
   Stream<List<DeliveryRequest>> getAvailableDeliveries({
     GeoPoint? courierLocation,
     double radiusKm = 2.0,
-  }) {
-    return _firestore
+  }) async* {
+    final courierId = _auth.currentUser?.uid;
+    print('👤 Courier ID: $courierId');
+    if (courierId == null) {
+      yield [];
+      return;
+    }
+
+    // Get courier's vehicle type
+    final courierDoc = await _firestore.collection('couriers').doc(courierId).get();
+    final vehicleType = courierDoc.data()?['vehicleType'] as String?;
+    
+    print('🚗 Courier vehicle type: $vehicleType');
+    
+    // Query only non-expired deliveries (created in last 1 minute)
+    final oneMinuteAgo = Timestamp.fromDate(DateTime.now().subtract(const Duration(minutes: 1)));
+    
+    print('⏰ Querying deliveries created after: ${oneMinuteAgo.toDate()}');
+    
+    // If no vehicle type set, show all deliveries (backward compatibility)
+    if (vehicleType == null) {
+      print('⚠️ No vehicle type set, showing all deliveries');
+      yield* _firestore
+          .collection('deliveries')
+          .where('status', isEqualTo: 'searching')
+          .where('deliveryType', isEqualTo: 'purl_courier')
+          .snapshots()
+          .map((snapshot) {
+        print('📦 Query returned ${snapshot.docs.length} deliveries');
+        final now = DateTime.now();
+        final filtered = snapshot.docs
+            .map((doc) => DeliveryRequest.fromFirestore(doc))
+            .where((delivery) {
+              // Only show deliveries from last 3 minutes
+              final createdAt = delivery.createdAt.toDate();
+              if (now.difference(createdAt).inMinutes > 3) {
+                return false;
+              }
+              if (delivery.searchExpiresAt != null) {
+                return delivery.searchExpiresAt!.toDate().isAfter(now);
+              }
+              return true;
+            })
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        print('✅ After filtering: ${filtered.length} deliveries');
+        return filtered;
+      });
+      return;
+    }
+
+    // Filter by vehicle type: motorcycle for standard, car for bulky
+    print('🔍 Filtering deliveries for $vehicleType');
+    yield* _firestore
         .collection('deliveries')
         .where('status', isEqualTo: 'searching')
         .where('deliveryType', isEqualTo: 'purl_courier')
         .snapshots()
         .map((snapshot) {
+      print('📦 Query returned ${snapshot.docs.length} deliveries');
       final now = DateTime.now();
-      return snapshot.docs
+      final filtered = snapshot.docs
           .map((doc) => DeliveryRequest.fromFirestore(doc))
           .where((delivery) {
+            // Only show deliveries from last 3 minutes
+            final createdAt = delivery.createdAt.toDate();
+            if (now.difference(createdAt).inMinutes > 3) {
+              return false;
+            }
+            
             // Filter expired deliveries
             if (delivery.searchExpiresAt != null) {
-              return delivery.searchExpiresAt!.toDate().isAfter(now);
+              if (!delivery.searchExpiresAt!.toDate().isAfter(now)) {
+                return false;
+              }
             }
+            
+            // Filter by vehicle type
+            final packageSize = delivery.packageSize ?? 'standard';
+            if (vehicleType == 'motorcycle' && packageSize == 'bulky') {
+              print('❌ Filtered out bulky package for motorcycle: ${delivery.orderNumber}');
+              return false; // Motorcycles can't handle bulky packages
+            }
+            // Cars can handle both standard and bulky
+            
             return true;
           })
           .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Newest first
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      print('✅ After filtering: ${filtered.length} deliveries');
+      return filtered;
     });
   }
 
@@ -101,17 +174,77 @@ class DeliveryService {
 
     await _firestore.collection('deliveries').doc(deliveryId).update(updates);
 
-    // Update courier stats if delivered
+    // Get delivery data for order updates
+    final deliveryDoc = await _firestore.collection('deliveries').doc(deliveryId).get();
+    final deliveryData = deliveryDoc.data();
+    final orderId = deliveryData?['orderId'] as String?;
+    final storeId = deliveryData?['storeId'] as String?;
+    final buyerId = deliveryData?['buyerId'] as String?;
+
+    // Update order status when picked up
+    if (status == 'picked_up' && orderId != null && storeId != null) {
+      // Update store's order
+      await _firestore
+          .collection('stores')
+          .doc(storeId)
+          .collection('orders')
+          .doc(orderId)
+          .update({
+        'status': 'picked_up',
+        'shippedAt': FieldValue.serverTimestamp(),
+      });
+      
+      // Update buyer's order copy
+      if (buyerId != null && buyerId.isNotEmpty) {
+        await _firestore
+            .collection('users')
+            .doc(buyerId)
+            .collection('orders')
+            .doc(orderId)
+            .update({
+          'status': 'picked_up',
+          'shippedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    }
+
+    // Update courier stats and order status if delivered
     if (status == 'delivered') {
       final courierId = _auth.currentUser?.uid;
       if (courierId != null) {
-        final deliveryDoc = await _firestore.collection('deliveries').doc(deliveryId).get();
-        final deliveryFee = (deliveryDoc.data()?['deliveryFee'] ?? 0).toDouble();
+        final deliveryFee = (deliveryData?['deliveryFee'] ?? 0).toDouble();
 
+        // Update courier stats
         await _firestore.collection('couriers').doc(courierId).update({
           'totalDeliveries': FieldValue.increment(1),
           'totalEarnings': FieldValue.increment(deliveryFee),
         });
+        
+        // Update store's order to delivered
+        if (orderId != null && storeId != null) {
+          await _firestore
+              .collection('stores')
+              .doc(storeId)
+              .collection('orders')
+              .doc(orderId)
+              .update({
+            'status': 'delivered',
+            'deliveredAt': FieldValue.serverTimestamp(),
+          });
+          
+          // Update buyer's order copy
+          if (buyerId != null && buyerId.isNotEmpty) {
+            await _firestore
+                .collection('users')
+                .doc(buyerId)
+                .collection('orders')
+                .doc(orderId)
+                .update({
+              'status': 'delivered',
+              'deliveredAt': FieldValue.serverTimestamp(),
+            });
+          }
+        }
       }
     }
   }
@@ -154,6 +287,7 @@ class DeliveryRequest {
   final GeoPoint buyerLocation;
   final Map<String, dynamic> buyerAddress;
   final String status;
+  final String? packageSize; // Add package size field
   final Timestamp? searchExpiresAt;
   final double deliveryFee;
   final double distance;
@@ -178,6 +312,7 @@ class DeliveryRequest {
     required this.buyerLocation,
     required this.buyerAddress,
     required this.status,
+    this.packageSize, // Add to constructor
     this.searchExpiresAt,
     required this.deliveryFee,
     required this.distance,
@@ -205,6 +340,7 @@ class DeliveryRequest {
       buyerLocation: data['buyerLocation'] as GeoPoint,
       buyerAddress: Map<String, dynamic>.from(data['buyerAddress'] ?? {}),
       status: data['status'] ?? 'searching',
+      packageSize: data['packageSize'] as String?, // Read package size
       searchExpiresAt: data['searchExpiresAt'] as Timestamp?,
       deliveryFee: (data['deliveryFee'] ?? 0).toDouble(),
       distance: (data['distance'] ?? 0).toDouble(),

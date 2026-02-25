@@ -15,6 +15,7 @@ class MessagesScreen extends StatefulWidget {
 
 class _MessagesScreenState extends State<MessagesScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
   final MessagesService _messagesService = MessagesService();
   final StoreService _storeService = StoreService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -112,6 +113,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _messageController.dispose();
     super.dispose();
   }
 
@@ -474,6 +476,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final isMe = message['senderId'] == _storeId;
     final createdAt = message['createdAt'] as Timestamp?;
     final time = createdAt != null ? _messagesService.getMessageTime(createdAt) : '';
+    final taggedProductIds = message['taggedProductIds'] as List<dynamic>?;
+    final hasTaggedProducts = taggedProductIds != null && taggedProductIds.isNotEmpty;
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -494,8 +498,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   bottomRight: Radius.circular(isMe ? 4 : 16),
                 ),
               ),
-              child: Text(message['text'] ?? '', style: GoogleFonts.poppins(fontSize: 14, color: isMe ? Colors.white : const Color(0xFFfb2a0a))),
+              child: Text(message['text'] ?? '', style: GoogleFonts.poppins(fontSize: 14, color: isMe ? Colors.white : Colors.black)),
             ),
+            
+            // Tagged products
+            if (hasTaggedProducts) ...[
+              const SizedBox(height: 6),
+              _buildTaggedProducts(taggedProductIds!.cast<String>()),
+            ],
+            
             const SizedBox(height: 4),
             Text(time, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
           ],
@@ -503,10 +514,130 @@ class _MessagesScreenState extends State<MessagesScreen> {
       ),
     );
   }
+  
+  Widget _buildTaggedProducts(List<String> productIds) {
+    if (_storeId == null) return const SizedBox.shrink();
+    
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _fetchTaggedProducts(_storeId!, productIds),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        
+        final products = snapshot.data!;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: products.map((product) {
+            return Container(
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Row(
+                children: [
+                  // Product image
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: product['imageUrl'] != null && product['imageUrl'].isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              product['imageUrl'],
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(Iconsax.box, size: 24, color: Colors.grey[400]);
+                              },
+                            ),
+                          )
+                        : Icon(Iconsax.box, size: 24, color: Colors.grey[400]),
+                  ),
+                  const SizedBox(width: 10),
+                  
+                  // Product info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product['name'] ?? 'Product',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${product['currency'] ?? 'UGX'} ${(product['price'] ?? 0.0).toStringAsFixed(0)}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: const Color(0xFFfb2a0a),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Tag icon
+                  Icon(Iconsax.tag, size: 16, color: Colors.grey[600]),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+  
+  Future<List<Map<String, dynamic>>> _fetchTaggedProducts(String storeId, List<String> productIds) async {
+    try {
+      final List<Map<String, dynamic>> products = [];
+      
+      for (final productId in productIds) {
+        final doc = await FirebaseFirestore.instance
+            .collection('stores')
+            .doc(storeId)
+            .collection('products')
+            .doc(productId)
+            .get();
+        
+        if (doc.exists) {
+          final data = doc.data()!;
+          final imageUrl = data['images'] != null && (data['images'] as List).isNotEmpty
+              ? (data['images'] as List)[0]['url'] ?? ''
+              : '';
+          
+          products.add({
+            'id': doc.id,
+            'name': data['name'],
+            'price': data['price'],
+            'currency': data['currency'],
+            'imageUrl': imageUrl,
+          });
+        }
+      }
+      
+      return products;
+    } catch (e) {
+      print('❌ Error fetching tagged products: $e');
+      return [];
+    }
+  }
 
   Widget _buildMessageInput() {
-    final messageController = TextEditingController();
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey[200]!))),
@@ -514,7 +645,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         children: [
           Expanded(
             child: TextField(
-              controller: messageController,
+              controller: _messageController,
               style: GoogleFonts.poppins(fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Type a message...',
@@ -529,15 +660,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
           const SizedBox(width: 12),
           GestureDetector(
             onTap: () async {
-              if (messageController.text.trim().isEmpty || _selectedConversationId == null) return;
+              if (_messageController.text.trim().isEmpty || _selectedConversationId == null) return;
+              
+              final messageText = _messageController.text.trim();
+              _messageController.clear();
               
               await _messagesService.sendMessage(
                 conversationId: _selectedConversationId!,
                 senderId: _storeId!,
-                text: messageController.text.trim(),
+                text: messageText,
               );
-              
-              messageController.clear();
             },
             child: Container(
               padding: const EdgeInsets.all(12),
@@ -636,8 +768,13 @@ class _ChatDetailScreen extends StatefulWidget {
 
 class _ChatDetailScreenState extends State<_ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
+  final FocusNode _messageFocusNode = FocusNode();
+  final ValueNotifier<bool> _hasTextNotifier = ValueNotifier<bool>(false);
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ScrollController _scrollController = ScrollController();
   String? _resolvedUserName;
+  List<Map<String, dynamic>> _storeProducts = [];
+  List<Map<String, dynamic>> _taggedProducts = [];
 
   @override
   void initState() {
@@ -648,6 +785,76 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
       userId: widget.storeId,
     );
     _resolveUserName();
+    _messageController.addListener(_onTextChanged);
+    _loadStoreProducts();
+  }
+  
+  void _onTextChanged() {
+    final hasText = _messageController.text.trim().isNotEmpty;
+    _hasTextNotifier.value = hasText;
+  }
+  
+  Future<void> _loadStoreProducts() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('stores')
+          .doc(widget.storeId)
+          .collection('products')
+          .where('isActive', isEqualTo: true)
+          .limit(50)
+          .get();
+      
+      _storeProducts = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      print('❌ Error loading products: $e');
+    }
+  }
+  
+  void _showProductPickerOverlay() {
+    FocusScope.of(context).unfocus();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildProductPickerSheet(),
+    );
+  }
+  
+  void _selectProduct(Map<String, dynamic> product) {
+    if (!_taggedProducts.any((p) => p['id'] == product['id'])) {
+      setState(() => _taggedProducts.add(product));
+    }
+    Navigator.pop(context);
+    _messageFocusNode.requestFocus();
+  }
+  
+  @override
+  void dispose() {
+    _messageController.removeListener(_onTextChanged);
+    _messageController.dispose();
+    _messageFocusNode.dispose();
+    _hasTextNotifier.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+  
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
   }
 
   Future<void> _resolveUserName() async {
@@ -709,12 +916,14 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
           IconButton(icon: const Icon(Iconsax.more, color: const Color(0xFFfb2a0a)), onPressed: _showOptions),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: widget.messagesService.getMessages(widget.conversation['id']),
-              builder: (context, snapshot) {
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Column(
+          children: [
+            Expanded(
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: widget.messagesService.getMessages(widget.conversation['id']),
+                builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator(color: const Color(0xFFfb2a0a)));
                 }
@@ -735,7 +944,12 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
                 }
 
                 final messages = snapshot.data!;
+                
+                // Auto-scroll to bottom when messages change
+                WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                
                 return ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.all(16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
@@ -743,6 +957,8 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
                     final isMe = message['senderId'] == widget.storeId;
                     final createdAt = message['createdAt'] as Timestamp?;
                     final time = createdAt != null ? widget.messagesService.getMessageTime(createdAt) : '';
+                    final taggedProductIds = message['taggedProductIds'] as List<dynamic>?;
+                    final hasTaggedProducts = taggedProductIds != null && taggedProductIds.isNotEmpty;
 
                     return Align(
                       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -763,8 +979,15 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
                                   bottomRight: Radius.circular(isMe ? 4 : 16),
                                 ),
                               ),
-                              child: Text(message['text'] ?? '', style: GoogleFonts.poppins(fontSize: 14, color: isMe ? Colors.white : const Color(0xFFfb2a0a))),
+                              child: Text(message['text'] ?? '', style: GoogleFonts.poppins(fontSize: 14, color: isMe ? Colors.white : Colors.black)),
                             ),
+                            
+                            // Tagged products
+                            if (hasTaggedProducts) ...[
+                              const SizedBox(height: 6),
+                              _buildTaggedProductsDetail(taggedProductIds!.cast<String>()),
+                            ],
+                            
                             const SizedBox(height: 4),
                             Text(time, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
                           ],
@@ -779,35 +1002,99 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
           Container(
             padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
             decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey[200]!))),
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    style: GoogleFonts.poppins(fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Type a message...',
-                      hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                // Tagged products preview
+                if (_taggedProducts.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: _taggedProducts.map((product) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFfb2a0a).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFfb2a0a).withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Iconsax.tag, size: 12, color: const Color(0xFFfb2a0a)),
+                              const SizedBox(width: 4),
+                              Text(
+                                product['name'] ?? 'Product',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFFfb2a0a),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() => _taggedProducts.removeWhere((p) => p['id'] == product['id']));
+                                },
+                                child: Icon(Icons.close, size: 12, color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: _sendMessage,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: const Color(0xFFb71000), borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Iconsax.send_1, color: Colors.white, size: 20),
-                  ),
+                ],
+                
+                // Message input row
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        focusNode: _messageFocusNode,
+                        style: GoogleFonts.poppins(fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Type a message...',
+                          hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Tag or Send button
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _hasTextNotifier,
+                      builder: (context, hasText, child) {
+                        return GestureDetector(
+                          onTap: hasText ? _sendMessage : _showProductPickerOverlay,
+                          child: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFb71000),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: Icon(
+                              hasText ? Icons.arrow_upward_rounded : Iconsax.tag,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -815,13 +1102,151 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
   void _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
 
+    final messageText = _messageController.text.trim();
+    final taggedIds = _taggedProducts.map((p) => p['id'] as String).toList();
+    
+    _messageController.clear();
+    
+    if (_taggedProducts.isNotEmpty) {
+      _taggedProducts.clear();
+      if (mounted) setState(() {});
+    }
+
     await widget.messagesService.sendMessage(
       conversationId: widget.conversation['id'],
       senderId: widget.storeId,
-      text: _messageController.text.trim(),
+      text: messageText,
+      taggedProductIds: taggedIds,
     );
-
-    _messageController.clear();
+  }
+  
+  Widget _buildProductPickerSheet() {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.6,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFfb2a0a),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Iconsax.tag, size: 20, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Tag a Product',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          Divider(height: 1, color: Colors.grey[200]),
+          
+          Expanded(
+            child: _storeProducts.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Iconsax.box, size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No products available',
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: _storeProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = _storeProducts[index];
+                      final imageUrl = product['images'] != null && (product['images'] as List).isNotEmpty
+                          ? (product['images'] as List)[0]['url'] ?? ''
+                          : '';
+                      final isSelected = _taggedProducts.any((p) => p['id'] == product['id']);
+                      
+                      return ListTile(
+                        onTap: () => _selectProduct(product),
+                        leading: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: imageUrl.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(Iconsax.box, size: 24, color: Colors.grey[400]);
+                                    },
+                                  ),
+                                )
+                              : Icon(Iconsax.box, size: 24, color: Colors.grey[400]),
+                        ),
+                        title: Text(
+                          product['name'] ?? 'Product',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          '${product['currency'] ?? 'UGX'} ${(product['price'] ?? 0.0).toStringAsFixed(0)}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: const Color(0xFFfb2a0a),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(
+                                Iconsax.tick_circle5,
+                                color: Color(0xFFfb2a0a),
+                                size: 24,
+                              )
+                            : null,
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showOptions() {
@@ -853,5 +1278,125 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
         ),
       ),
     );
+  }
+  
+  Widget _buildTaggedProductsDetail(List<String> productIds) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _fetchTaggedProductsDetail(productIds),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        
+        final products = snapshot.data!;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: products.map((product) {
+            return Container(
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Row(
+                children: [
+                  // Product image
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: product['imageUrl'] != null && product['imageUrl'].isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              product['imageUrl'],
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(Iconsax.box, size: 24, color: Colors.grey[400]);
+                              },
+                            ),
+                          )
+                        : Icon(Iconsax.box, size: 24, color: Colors.grey[400]),
+                  ),
+                  const SizedBox(width: 10),
+                  
+                  // Product info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product['name'] ?? 'Product',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${product['currency'] ?? 'UGX'} ${(product['price'] ?? 0.0).toStringAsFixed(0)}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: const Color(0xFFfb2a0a),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Tag icon
+                  Icon(Iconsax.tag, size: 16, color: Colors.grey[600]),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+  
+  Future<List<Map<String, dynamic>>> _fetchTaggedProductsDetail(List<String> productIds) async {
+    try {
+      final List<Map<String, dynamic>> products = [];
+      
+      for (final productId in productIds) {
+        final doc = await FirebaseFirestore.instance
+            .collection('stores')
+            .doc(widget.storeId)
+            .collection('products')
+            .doc(productId)
+            .get();
+        
+        if (doc.exists) {
+          final data = doc.data()!;
+          final imageUrl = data['images'] != null && (data['images'] as List).isNotEmpty
+              ? (data['images'] as List)[0]['url'] ?? ''
+              : '';
+          
+          products.add({
+            'id': doc.id,
+            'name': data['name'],
+            'price': data['price'],
+            'currency': data['currency'],
+            'imageUrl': imageUrl,
+          });
+        }
+      }
+      
+      return products;
+    } catch (e) {
+      print('❌ Error fetching tagged products: $e');
+      return [];
+    }
   }
 }
