@@ -4,9 +4,12 @@ import 'package:iconsax/iconsax.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../services/store_service.dart';
 import '../services/auth_service.dart';
 import '../services/currency_service.dart';
+import '../services/image_service.dart';
 import 'currency_selection_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -20,6 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _storeService = StoreService();
   final _authService = AuthService();
   final _currencyService = CurrencyService();
+  final _imageService = ImageService();
   bool _notificationsEnabled = true;
   String _language = 'English';
   String _currency = 'UGX';
@@ -31,6 +35,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _logoUrl;
   Map<String, dynamic>? _storeData;
   bool _isLoading = true;
+  
+  // Image picker state
+  XFile? _selectedImage;
+  bool _isUploadingImage = false;
 
   @override
   void initState() {
@@ -354,8 +362,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         margin: const EdgeInsets.only(bottom: 24),
-        decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12)),
-        child: Center(child: Text('Save Changes', style: GoogleFonts.poppins(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600))),
+        decoration: BoxDecoration(
+          color: const Color(0xFFb71000),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            'Save Changes', 
+            style: GoogleFonts.poppins(
+              color: Colors.white, 
+              fontSize: 15, 
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -365,29 +385,129 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _showBottomSheet(context, 'Edit Profile', Column(
       children: [
         Center(
-          child: Stack(
-            children: [
-              Container(
-                width: 80, height: 80,
-                decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
-                child: _logoUrl != null && _logoUrl!.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: CachedNetworkImage(imageUrl: _logoUrl!, fit: BoxFit.cover, width: 80, height: 80),
-                      )
-                    : const Icon(Iconsax.user, color: Colors.white, size: 36),
-              ),
-              Positioned(bottom: 0, right: 0, child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.grey[200], shape: BoxShape.circle), child: const Icon(Iconsax.camera, size: 16, color: Colors.black))),
-            ],
+          child: GestureDetector(
+            onTap: _pickProfileImage,
+            child: Stack(
+              children: [
+                Container(
+                  width: 80, height: 80,
+                  decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
+                  child: _selectedImage != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.file(File(_selectedImage!.path), fit: BoxFit.cover, width: 80, height: 80),
+                        )
+                      : _logoUrl != null && _logoUrl!.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: CachedNetworkImage(imageUrl: _logoUrl!, fit: BoxFit.cover, width: 80, height: 80),
+                            )
+                          : const Icon(Iconsax.user, color: Colors.white, size: 36),
+                ),
+                Positioned(
+                  bottom: 0, 
+                  right: 0, 
+                  child: Container(
+                    padding: const EdgeInsets.all(6), 
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFfb2a0a), 
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ), 
+                    child: _isUploadingImage
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Iconsax.camera, size: 16, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 24),
         _buildTextField('Full Name', _userName.isNotEmpty ? _userName : 'Enter your name'),
         _buildTextField('Email', _userEmail.isNotEmpty ? _userEmail : 'Enter your email'),
         _buildTextField('Phone', contact['phone']?.toString() ?? 'Enter phone number'),
-        _buildSaveButton(() => Navigator.pop(context)),
+        _buildSaveButton(() => _saveProfileChanges(context)),
       ],
     ));
+  }
+  
+  Future<void> _pickProfileImage() async {
+    try {
+      final image = await _imageService.pickImage();
+      if (image != null) {
+        setState(() {
+          _selectedImage = image;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick image: $e', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+  
+  Future<void> _saveProfileChanges(BuildContext context) async {
+    if (_selectedImage == null) {
+      Navigator.pop(context);
+      return;
+    }
+    
+    setState(() => _isUploadingImage = true);
+    
+    try {
+      final storeId = await _storeService.getUserStoreId();
+      if (storeId == null) {
+        throw Exception('Store not found');
+      }
+      
+      // Convert XFile to File
+      final imageFile = File(_selectedImage!.path);
+      
+      // Upload the new logo
+      final logoUrl = await _imageService.uploadStoreLogo(storeId, imageFile);
+      
+      // Update store with new logo
+      await _storeService.updateStoreLogo(storeId, logoUrl);
+      
+      setState(() {
+        _logoUrl = logoUrl;
+        _selectedImage = null;
+        _isUploadingImage = false;
+      });
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profile picture updated', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.black,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isUploadingImage = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update profile picture: $e', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showPersonalInfoSheet(BuildContext context) {

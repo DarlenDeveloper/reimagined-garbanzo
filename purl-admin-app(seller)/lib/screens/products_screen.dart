@@ -10,6 +10,7 @@ import '../services/currency_service.dart';
 import '../services/product_service.dart';
 import '../services/store_service.dart';
 import '../services/image_service.dart';
+import 'socials_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -735,6 +736,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
   final _priceController = TextEditingController();
   final _stockController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _scrollController = ScrollController();
 
   // Image picker
   final _imageService = ImageService();
@@ -762,7 +764,18 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     _priceController.dispose();
     _stockController.dispose();
     _descriptionController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+  
+  void _scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   void _resetSelections({bool keepCategory = false}) {
@@ -872,12 +885,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Product added', style: GoogleFonts.poppins()),
-            backgroundColor: Colors.black,
-          ),
-        );
+        _showPostEncouragementDialog(productId, _nameController.text.trim());
       }
     } catch (e) {
       if (mounted) {
@@ -897,109 +905,350 @@ class _AddProductSheetState extends State<_AddProductSheet> {
       }
     }
   }
+  
+  void _showPostEncouragementDialog(String productId, String productName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Success icon
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFfb2a0a).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_circle,
+                  size: 56,
+                  color: Color(0xFFfb2a0a),
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Title
+              Text(
+                'Product Added!',
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              
+              // Message
+              Text(
+                'Your product "$productName" is now live!',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              
+              // Encouragement card
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFfb2a0a),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Iconsax.video_square,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Share it on Store Feed',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Get more visibility & sales',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(color: Colors.grey[300]!),
+                        ),
+                      ),
+                      child: Text(
+                        'Later',
+                        style: GoogleFonts.poppins(
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // Close the dialog
+                        Navigator.pop(context);
+                        // Navigate to Socials screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SocialsScreen()),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFb71000),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'Create Post',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.92,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          _buildHeader(),
-          const Divider(height: 1),
-          _buildStepIndicator(),
-          Expanded(child: _buildCurrentStep()),
-        ],
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.92,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            _buildHeader(),
+            const Divider(height: 1),
+            _buildStepIndicator(),
+            Expanded(child: _buildCurrentStep()),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              TextButton(
-                onPressed: _isSaving
-                    ? null
-                    : () {
-                        if (_currentStep > 0) {
-                          setState(() => _currentStep--);
-                        } else {
-                          Navigator.pop(context);
-                        }
-                      },
-                child: Text(
-                  _currentStep > 0 ? 'Back' : 'Cancel',
-                  style: GoogleFonts.poppins(color: Colors.grey[600]),
-                ),
-              ),
-              Text(
-                'Add Product',
-                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              TextButton(
-                onPressed: _isSaving
-                    ? null
-                    : () {
-                        if (_currentStep < 2) {
-                          if (_currentStep == 0 && _selectedProductType == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Please select a product type', style: GoogleFonts.poppins()),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-                          setState(() => _currentStep++);
-                        } else {
-                          _saveProduct();
-                        }
-                      },
-                child: _isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                      )
-                    : Text(
-                        _currentStep < 2 ? 'Next' : 'Save',
-                        style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600),
-                      ),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Header row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Back/Cancel button
+                TextButton.icon(
+                  onPressed: _isSaving
+                      ? null
+                      : () {
+                          if (_currentStep > 0) {
+                            setState(() => _currentStep--);
+                          } else {
+                            Navigator.pop(context);
+                          }
+                        },
+                  icon: Icon(
+                    _currentStep > 0 ? Iconsax.arrow_left : Icons.close,
+                    size: 20,
+                    color: _isSaving ? Colors.grey[400] : Colors.black,
+                  ),
+                  label: Text(
+                    _currentStep > 0 ? 'Back' : 'Cancel',
+                    style: GoogleFonts.poppins(
+                      color: _isSaving ? Colors.grey[400] : Colors.black,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                // Title
+                Text(
+                  'Add Product',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                // Next/Save button
+                _isSaving
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFFfb2a0a),
+                        ),
+                      )
+                    : TextButton(
+                        onPressed: () {
+                          if (_currentStep < 2) {
+                            // Validate step 0 (Category)
+                            if (_currentStep == 0 && _selectedProductType == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Please select a product type', style: GoogleFonts.poppins()),
+                                  backgroundColor: const Color(0xFFb71000),
+                                ),
+                              );
+                              return;
+                            }
+                            
+                            // Validate step 1 (Details)
+                            if (_currentStep == 1) {
+                              if (_nameController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Please enter product name', style: GoogleFonts.poppins()),
+                                    backgroundColor: const Color(0xFFb71000),
+                                  ),
+                                );
+                                return;
+                              }
+                              if (_priceController.text.trim().isEmpty || double.tryParse(_priceController.text) == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Please enter a valid price', style: GoogleFonts.poppins()),
+                                    backgroundColor: const Color(0xFFb71000),
+                                  ),
+                                );
+                                return;
+                              }
+                              if (_stockController.text.trim().isEmpty || int.tryParse(_stockController.text) == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Please enter a valid stock quantity', style: GoogleFonts.poppins()),
+                                    backgroundColor: const Color(0xFFb71000),
+                                  ),
+                                );
+                                return;
+                              }
+                            }
+                            
+                            setState(() => _currentStep++);
+                            _scrollToTop();
+                          } else {
+                            _saveProduct();
+                          }
+                        },
+                        style: TextButton.styleFrom(
+                          backgroundColor: const Color(0xFFb71000),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: Text(
+                          _currentStep < 2 ? 'Next' : 'Save',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildStepIndicator() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+      ),
       child: Row(
         children: [
           _stepDot(0, 'Category'),
           _stepLine(0),
           _stepDot(1, 'Details'),
           _stepLine(1),
-          _stepDot(2, 'Attributes'),
+          _stepDot(2, 'Specs'),
         ],
       ),
     );
@@ -1007,35 +1256,42 @@ class _AddProductSheetState extends State<_AddProductSheet> {
 
   Widget _stepDot(int step, String label) {
     final isActive = _currentStep >= step;
+    final isCompleted = _currentStep > step;
+    
     return Expanded(
       child: Column(
         children: [
           Container(
-            width: 28,
-            height: 28,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              color: isActive ? Colors.black : Colors.grey[200],
+              color: isActive ? const Color(0xFFfb2a0a) : Colors.white,
               shape: BoxShape.circle,
+              border: Border.all(
+                color: isActive ? const Color(0xFFfb2a0a) : Colors.grey[300]!,
+                width: 2,
+              ),
             ),
             child: Center(
-              child: isActive && _currentStep > step
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
+              child: isCompleted
+                  ? const Icon(Icons.check, color: Colors.white, size: 18)
                   : Text(
                       '${step + 1}',
                       style: GoogleFonts.poppins(
-                        color: isActive ? Colors.white : Colors.grey[500],
-                        fontSize: 12,
+                        color: isActive ? Colors.white : Colors.grey[400],
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             label,
             style: GoogleFonts.poppins(
               fontSize: 11,
-              color: isActive ? Colors.black : Colors.grey[500],
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+              color: isActive ? const Color(0xFFfb2a0a) : Colors.grey[500],
             ),
           ),
         ],
@@ -1048,8 +1304,11 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     return Container(
       width: 40,
       height: 2,
-      margin: const EdgeInsets.only(bottom: 18),
-      color: isActive ? Colors.black : Colors.grey[200],
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: isActive ? const Color(0xFFfb2a0a) : Colors.grey[200],
+        borderRadius: BorderRadius.circular(1),
+      ),
     );
   }
 
@@ -1070,26 +1329,63 @@ class _AddProductSheetState extends State<_AddProductSheet> {
   // ============ STEP 1: CATEGORY SELECTION ============
   Widget _buildCategoryStep() {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      controller: _scrollController,
+      padding: const EdgeInsets.all(20),
       children: [
-        Text('Select Category', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 12),
+        Text(
+          'Select Category',
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Choose the category that best fits your product',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 16),
         _buildCategoryGrid(),
         if (_selectedCategory != null) ...[
-          const SizedBox(height: 24),
-          Text('Select Subcategory', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 32),
+          Text(
+            'Select Subcategory',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
           const SizedBox(height: 12),
           _buildSubcategoryList(),
         ],
         if (_selectedSubcategory != null) ...[
-          const SizedBox(height: 24),
-          Text('Select Product Type', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 32),
+          Text(
+            'Select Product Type',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
           const SizedBox(height: 12),
           _buildProductTypeList(),
         ],
         if (_selectedProductType != null) ...[
-          const SizedBox(height: 24),
-          Text('Select Condition', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 32),
+          Text(
+            'Select Condition',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
           const SizedBox(height: 12),
           _buildConditionChips(),
         ],
@@ -1104,7 +1400,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        childAspectRatio: 1,
+        childAspectRatio: 0.95,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
@@ -1116,26 +1412,54 @@ class _AddProductSheetState extends State<_AddProductSheet> {
           onTap: () {
             _resetSelections();
             setState(() => _selectedCategory = category);
+            // Auto-scroll to show subcategories
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (_scrollController.hasClients) {
+                _scrollController.animateTo(
+                  _scrollController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeOut,
+                );
+              }
+            });
           },
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected ? Colors.black : Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-              border: isSelected ? null : Border.all(color: Colors.grey[200]!),
+              color: isSelected ? const Color(0xFFfb2a0a) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected ? const Color(0xFFfb2a0a) : Colors.grey[200]!,
+                width: isSelected ? 2 : 1,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFFfb2a0a).withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(category.icon, size: 28, color: isSelected ? Colors.white : Colors.black),
+                Icon(
+                  category.icon,
+                  size: 32,
+                  color: isSelected ? Colors.white : const Color(0xFFfb2a0a),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   category.name.split(' ').first,
                   style: GoogleFonts.poppins(
                     fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                     color: isSelected ? Colors.white : Colors.black,
                   ),
                   textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -1158,13 +1482,36 @@ class _AddProductSheetState extends State<_AddProductSheet> {
               _attributes.clear();
               _multiSelectValues.clear();
             });
+            // Auto-scroll to show product types
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (_scrollController.hasClients) {
+                _scrollController.animateTo(
+                  _scrollController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeOut,
+                );
+              }
+            });
           },
           child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.black : Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
+              color: isSelected ? const Color(0xFFfb2a0a) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isSelected ? const Color(0xFFfb2a0a) : Colors.grey[200]!,
+                width: isSelected ? 2 : 1,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFFfb2a0a).withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
             ),
             child: Row(
               children: [
@@ -1172,12 +1519,17 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                   child: Text(
                     sub.name,
                     style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                       color: isSelected ? Colors.white : Colors.black,
                     ),
                   ),
                 ),
-                Icon(Icons.chevron_right, color: isSelected ? Colors.white : Colors.grey[400]),
+                Icon(
+                  isSelected ? Icons.check_circle : Icons.chevron_right,
+                  color: isSelected ? Colors.white : Colors.grey[400],
+                  size: 22,
+                ),
               ],
             ),
           ),
@@ -1240,23 +1592,27 @@ class _AddProductSheetState extends State<_AddProductSheet> {
 
   Widget _buildConditionChips() {
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 10,
+      runSpacing: 10,
       children: _selectedProductType!.allowedConditions.map((condition) {
         final isSelected = _selectedCondition == condition;
         return GestureDetector(
           onTap: () => setState(() => _selectedCondition = condition),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.black : Colors.grey[100],
-              borderRadius: BorderRadius.circular(20),
+              color: isSelected ? const Color(0xFFfb2a0a) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: isSelected ? const Color(0xFFfb2a0a) : Colors.grey[300]!,
+                width: isSelected ? 2 : 1,
+              ),
             ),
             child: Text(
               condition,
               style: GoogleFonts.poppins(
                 fontSize: 13,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: isSelected ? Colors.white : Colors.black,
               ),
             ),
@@ -1268,81 +1624,172 @@ class _AddProductSheetState extends State<_AddProductSheet> {
 
   // ============ STEP 2: PRODUCT DETAILS ============
   Widget _buildDetailsStep() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Category summary
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+          // Category summary card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [const Color(0xFFfb2a0a).withOpacity(0.1), const Color(0xFFfb2a0a).withOpacity(0.05)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
           child: Row(
             children: [
-              Icon(_selectedCategory?.icon ?? Iconsax.box, size: 24, color: Colors.black),
-              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFfb2a0a),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(_selectedCategory?.icon ?? Iconsax.box, size: 24, color: Colors.white),
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_selectedProductType?.name ?? '', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                    Text(
+                      _selectedProductType?.name ?? '',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
                     Text(
                       '${_selectedCategory?.name} › ${_selectedSubcategory?.name}',
-                      style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: Colors.grey[700],
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(6)),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFfb2a0a),
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: Text(
                   _selectedCondition ?? '',
-                  style: GoogleFonts.poppins(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w500),
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 28),
 
         // Product Name
-        _buildTextField('Product Name *', _nameController, 'Enter product name'),
-        const SizedBox(height: 16),
+        _buildTextField('Product Name *', _nameController, 'e.g., iPhone 13 Pro Max'),
+        const SizedBox(height: 20),
 
         // Price and Stock row
         Row(
           children: [
-            Expanded(child: _buildTextField('Price (${widget.currencyService.currentCurrency}) *', _priceController, '0', keyboardType: TextInputType.number)),
-            const SizedBox(width: 12),
-            Expanded(child: _buildTextField('Stock Qty *', _stockController, '0', keyboardType: TextInputType.number)),
+            Expanded(
+              child: _buildTextField(
+                'Price (${widget.currencyService.currentCurrency}) *',
+                _priceController,
+                '0',
+                keyboardType: TextInputType.number,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: _buildTextField(
+                'Stock Qty *',
+                _stockController,
+                '0',
+                keyboardType: TextInputType.number,
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 28),
 
-        // Image upload placeholder
-        Text('Product Images', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        _buildImagePicker(),
-        const SizedBox(height: 24),
-
-        // Description
-        Text('Description', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        Container(
-          height: 120,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-          child: TextField(
-            controller: _descriptionController,
-            maxLines: 5,
-            decoration: InputDecoration.collapsed(
-              hintText: 'Describe your product...',
-              hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-            ),
-            style: GoogleFonts.poppins(),
+        // Image upload section
+        Text(
+          'Product Images',
+          style: GoogleFonts.poppins(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
           ),
         ),
-        const SizedBox(height: 100),
-      ],
+        const SizedBox(height: 4),
+        Text(
+          'Add up to 10 images. First image will be the cover.',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildImagePicker(),
+        const SizedBox(height: 28),
+
+        // Description
+        Text(
+          'Description',
+          style: GoogleFonts.poppins(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Describe your product in detail',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 140,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: TextField(
+            controller: _descriptionController,
+            maxLines: 6,
+            decoration: InputDecoration.collapsed(
+              hintText: 'Tell buyers about your product...',
+              hintStyle: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 14),
+            ),
+            style: GoogleFonts.poppins(fontSize: 14),
+          ),
+        ),
+          const SizedBox(height: 100),
+        ],
+        ),
+      ),
     );
   }
 
@@ -1350,20 +1797,34 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 10),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: hint,
-              hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+              hintStyle: GoogleFonts.poppins(
+                color: Colors.grey[400],
+                fontSize: 14,
+              ),
             ),
-            style: GoogleFonts.poppins(),
+            style: GoogleFonts.poppins(fontSize: 14),
           ),
         ),
       ],
@@ -1416,7 +1877,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
         // Selected images grid
         if (_selectedImages.isNotEmpty) ...[
           SizedBox(
-            height: 100,
+            height: 110,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: _selectedImages.length + (_selectedImages.length < 10 ? 1 : 0),
@@ -1432,28 +1893,52 @@ class _AddProductSheetState extends State<_AddProductSheet> {
             ),
           ),
         ] else ...[
-          // Empty state - tap to add
+          // Empty state - horizontal tap to add
           GestureDetector(
             onTap: _pickImages,
             child: Container(
-              height: 120,
+              height: 100,
               decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
+                color: const Color(0xFFfb2a0a).withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Column(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Iconsax.gallery_add, size: 32, color: Colors.grey[400]),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tap to add images',
-                    style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 13),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFfb2a0a).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Iconsax.gallery_add,
+                      size: 28,
+                      color: const Color(0xFFfb2a0a),
+                    ),
                   ),
-                  Text(
-                    'Up to 10 images',
-                    style: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 11),
+                  const SizedBox(width: 16),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tap to add images',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFFfb2a0a),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Up to 10 images',
+                        style: GoogleFonts.poppins(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1466,54 +1951,61 @@ class _AddProductSheetState extends State<_AddProductSheet> {
 
   Widget _buildImagePreview(int index) {
     return Container(
-      width: 100,
-      height: 100,
-      margin: const EdgeInsets.only(right: 8),
+      width: 110,
+      height: 110,
+      margin: const EdgeInsets.only(right: 10),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         image: DecorationImage(
           image: FileImage(File(_selectedImages[index].path)),
           fit: BoxFit.cover,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Stack(
         children: [
           // Image number badge
           Positioned(
-            left: 6,
-            top: 6,
+            left: 8,
+            top: 8,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.black.withAlpha(150),
-                borderRadius: BorderRadius.circular(4),
+                color: const Color(0xFFfb2a0a),
+                borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 '${index + 1}',
                 style: GoogleFonts.poppins(
                   color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
           ),
           // Remove button
           Positioned(
-            right: 4,
-            top: 4,
+            right: 6,
+            top: 6,
             child: GestureDetector(
               onTap: () => _removeImage(index),
               child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.close,
                   color: Colors.white,
-                  size: 14,
+                  size: 16,
                 ),
               ),
             ),
@@ -1527,23 +2019,27 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     return GestureDetector(
       onTap: _pickImages,
       child: Container(
-        width: 100,
-        height: 100,
+        width: 110,
+        height: 110,
         decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!),
+          color: const Color(0xFFfb2a0a).withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFFfb2a0a).withOpacity(0.3),
+            width: 2,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Iconsax.add, size: 24, color: Colors.grey[500]),
-            const SizedBox(height: 4),
+            Icon(Iconsax.add_circle, size: 28, color: const Color(0xFFfb2a0a)),
+            const SizedBox(height: 6),
             Text(
-              'Add',
+              'Add More',
               style: GoogleFonts.poppins(
-                color: Colors.grey[500],
-                fontSize: 12,
+                color: const Color(0xFFfb2a0a),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
