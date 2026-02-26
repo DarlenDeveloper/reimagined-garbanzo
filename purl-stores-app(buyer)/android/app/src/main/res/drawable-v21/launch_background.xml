@@ -3,9 +3,12 @@
     <item>
         <color android:color="#FFfb2a0a" />
     </item>
-    <item>
+    <item
+        android:width="200dp"
+        android:height="200dp"
+        android:gravity="center">
         <bitmap
-            android:gravity="center"
-            android:src="@drawable/splash_screen" />
+            android:src="@drawable/splash_screen"
+            android:gravity="center" />
     </item>
 </layer-list>

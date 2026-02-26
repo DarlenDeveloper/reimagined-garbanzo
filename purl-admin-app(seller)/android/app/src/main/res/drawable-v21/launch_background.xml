@@ -3,4 +3,12 @@
     <item>
         <color android:color="#FFfb2a0a" />
     </item>
+    <item
+        android:width="200dp"
+        android:height="200dp"
+        android:gravity="center">
+        <bitmap
+            android:src="@drawable/pop_vendor_logo"
+            android:gravity="center" />
+    </item>
 </layer-list>

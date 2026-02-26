@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:255612064321:android:670bf661c73b5635e52cc0",
         "android_client_info": {
-          "package_name": "com.example.purl_courier_app"
+          "package_name": "com.pop.courier"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "255612064321-6pj6foukc3f3ero90c3ope61gmh2aoou.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.purl_courier_app",
+            "package_name": "com.pop.courier",
             "certificate_hash": "410349cdc47148f2ca9c754806deedd4f5f98c8a"
           }
         },
