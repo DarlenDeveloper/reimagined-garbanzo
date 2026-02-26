@@ -8,6 +8,7 @@ import '../data/category_taxonomy.dart';
 import '../models/product.dart';
 import '../services/currency_service.dart';
 import '../services/product_service.dart';
+import '../services/product_questions_service.dart';
 import '../services/store_service.dart';
 import '../services/image_service.dart';
 import 'socials_screen.dart';
@@ -613,7 +614,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
 
 // ============ PRODUCT ITEM ============
-class _ProductItem extends StatelessWidget {
+class _ProductItem extends StatefulWidget {
   final Product product;
   final VoidCallback onTap;
   final CurrencyService currencyService;
@@ -625,18 +626,53 @@ class _ProductItem extends StatelessWidget {
   });
 
   @override
+  State<_ProductItem> createState() => _ProductItemState();
+}
+
+class _ProductItemState extends State<_ProductItem> {
+  final ProductQuestionsService _questionsService = ProductQuestionsService();
+  int _unansweredCount = 0;
+  bool _isLoadingCount = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuestionCount();
+  }
+
+  Future<void> _loadQuestionCount() async {
+    setState(() => _isLoadingCount = true);
+    try {
+      final count = await _questionsService.getProductUnansweredCount(
+        storeId: widget.product.storeId,
+        productId: widget.product.id,
+      );
+      if (mounted) {
+        setState(() {
+          _unansweredCount = count;
+          _isLoadingCount = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingCount = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final category = CategoryTaxonomy.getCategoryById(product.categoryId);
-    final status = product.stockStatus;
+    final category = CategoryTaxonomy.getCategoryById(widget.product.categoryId);
+    final status = widget.product.stockStatus;
     final statusColor = status == 'In Stock'
         ? Colors.black
         : status == 'Low Stock'
             ? Colors.orange[700]!
             : Colors.grey[500]!;
-    final formattedPrice = currencyService.formatPrice(product.price);
+    final formattedPrice = widget.currencyService.formatPrice(widget.product.price);
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -652,14 +688,14 @@ class _ProductItem extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                image: product.primaryImageUrl != null
+                image: widget.product.primaryImageUrl != null
                     ? DecorationImage(
-                        image: NetworkImage(product.primaryImageUrl!),
+                        image: NetworkImage(widget.product.primaryImageUrl!),
                         fit: BoxFit.cover,
                       )
                     : null,
               ),
-              child: product.primaryImageUrl == null
+              child: widget.product.primaryImageUrl == null
                   ? Center(
                       child: Icon(
                         category?.icon ?? Iconsax.box,
@@ -675,18 +711,51 @@ class _ProductItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product.name,
+                    widget.product.name,
                     style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '$formattedPrice • ${product.stock} in stock',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        '$formattedPrice • ${widget.product.stock} in stock',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      if (_unansweredCount > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFfb2a0a),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.question_answer,
+                                size: 10,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                '$_unansweredCount',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -698,9 +767,9 @@ class _ProductItem extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                product.isActive ? status : 'Inactive',
+                widget.product.isActive ? status : 'Inactive',
                 style: GoogleFonts.poppins(
-                  color: product.isActive ? statusColor : Colors.grey,
+                  color: widget.product.isActive ? statusColor : Colors.grey,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),

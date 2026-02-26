@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'home_screen.dart';
 import 'orders_screen.dart';
 import 'products_screen.dart';
@@ -19,8 +21,11 @@ import 'settings_screen.dart';
 import 'messages_screen.dart';
 import 'ads_screen.dart';
 import 'store_verification_screen.dart';
+import 'product_questions_screen.dart';
 import '../services/location_service.dart';
+import '../services/product_questions_service.dart';
 import '../widgets/location_update_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -246,6 +251,22 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
                     
                     _buildMenuItem(Iconsax.gallery, 'Socials', () => widget.onNavigateScreen(const SocialsScreen())),
                     _buildMenuItem(Iconsax.message, 'Messages', () => widget.onNavigateScreen(const MessagesScreen())),
+                    _buildMenuItemWithBadge(Iconsax.message_question, 'Questions', () async {
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user != null) {
+                        // Get the actual store ID from Firestore
+                        final storeQuery = await FirebaseFirestore.instance
+                            .collection('stores')
+                            .where('authorizedUsers', arrayContains: user.uid)
+                            .limit(1)
+                            .get();
+                        
+                        if (storeQuery.docs.isNotEmpty) {
+                          final storeId = storeQuery.docs.first.id;
+                          widget.onNavigateScreen(ProductQuestionsScreen(storeId: storeId));
+                        }
+                      }
+                    }),
                     _buildMenuItem(Iconsax.cpu, 'Customer Service', () => widget.onNavigateScreen(const AICustomerServiceScreen())),
                     _buildMenuItem(Iconsax.notification, 'Notifications', () => widget.onNavigateScreen(const NotificationsScreen())),
                     
@@ -284,6 +305,69 @@ class _MoreMenuSheetState extends State<_MoreMenuSheet> with SingleTickerProvide
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
+  }
+
+  Widget _buildMenuItemWithBadge(IconData icon, String label, VoidCallback onTap) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return _buildMenuItem(icon, label, onTap);
+    }
+
+    return FutureBuilder<int>(
+      future: _getUnansweredCountForUser(user.uid),
+      builder: (context, snapshot) {
+        final count = snapshot.data ?? 0;
+        
+        return ListTile(
+          leading: Icon(icon, color: Colors.white, size: 22),
+          title: Row(
+            children: [
+              Text(label, style: GoogleFonts.poppins(color: Colors.white, fontSize: 16)),
+              if (count > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFb71000),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          trailing: Icon(Iconsax.arrow_right_3, color: Colors.grey[600], size: 18),
+          onTap: onTap,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        );
+      },
+    );
+  }
+
+  Future<int> _getUnansweredCountForUser(String userId) async {
+    try {
+      // Get the actual store ID
+      final storeQuery = await FirebaseFirestore.instance
+          .collection('stores')
+          .where('authorizedUsers', arrayContains: userId)
+          .limit(1)
+          .get();
+      
+      if (storeQuery.docs.isEmpty) return 0;
+      
+      final storeId = storeQuery.docs.first.id;
+      return await ProductQuestionsService().getUnansweredCount(storeId: storeId);
+    } catch (e) {
+      return 0;
+    }
   }
 
   Widget _buildExpandableItem({required IconData icon, required String label, required VoidCallback onTap, required List<Widget> children}) {

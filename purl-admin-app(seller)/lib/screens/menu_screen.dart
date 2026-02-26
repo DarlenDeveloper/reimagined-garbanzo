@@ -1,10 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/product_questions_service.dart';
+import 'product_questions_screen.dart';
 
-class MenuScreen extends StatelessWidget {
+class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
 
-  static const darkGreen = Color(0xFF1B4332);
+  @override
+  State<MenuScreen> createState() => _MenuScreenState();
+}
+
+class _MenuScreenState extends State<MenuScreen> {
+  static const darkGreen = Color(0xFFfb2a0a); // POP main red
+  final ProductQuestionsService _questionsService = ProductQuestionsService();
+  int _unansweredCount = 0;
+  bool _isLoadingCount = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnansweredCount();
+  }
+
+  Future<void> _loadUnansweredCount() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final count = await _questionsService.getUnansweredCount(
+        storeId: user.uid,
+      );
+      if (mounted) {
+        setState(() {
+          _unansweredCount = count;
+          _isLoadingCount = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingCount = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +91,24 @@ class MenuScreen extends StatelessWidget {
                           _MenuItem(icon: Icons.shopping_bag_outlined, label: 'Orders'),
                           _MenuItem(icon: Icons.people_outline, label: 'Customers'),
                           _MenuItem(icon: Icons.discount_outlined, label: 'Discounts'),
+                          _MenuItem(
+                            icon: Icons.question_answer_outlined,
+                            label: 'Questions',
+                            badge: _unansweredCount > 0 ? _unansweredCount : null,
+                            onTap: () {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user != null) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ProductQuestionsScreen(
+                                      storeId: user.uid,
+                                    ),
+                                  ),
+                                ).then((_) => _loadUnansweredCount());
+                              }
+                            },
+                          ),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -146,27 +202,55 @@ class _MenuItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final String? route;
+  final int? badge;
+  final VoidCallback? onTap;
 
   const _MenuItem({
     required this.icon,
     required this.label,
     this.route,
+    this.badge,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFF1B4332), size: 22),
-      title: Text(
-        label,
-        style: GoogleFonts.poppins(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
+      leading: Icon(icon, color: const Color(0xFFfb2a0a), size: 22),
+      title: Row(
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (badge != null && badge! > 0) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFfb2a0a),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$badge',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
       trailing: Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
       onTap: () {
-        if (route != null) {
+        if (onTap != null) {
+          onTap!();
+        } else if (route != null) {
           Navigator.pushNamed(context, route!);
         }
       },

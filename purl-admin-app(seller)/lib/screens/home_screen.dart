@@ -11,12 +11,14 @@ import 'main_screen.dart';
 import 'messages_screen.dart';
 import 'store_verification_screen.dart';
 import 'live_screen.dart';
+import 'product_questions_screen.dart';
 import '../services/store_service.dart';
 import '../services/messages_service.dart';
 import '../services/order_service.dart';
 import '../services/currency_service.dart';
 import '../services/visitor_service.dart';
 import '../services/verification_service.dart';
+import '../services/product_questions_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -257,7 +259,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text("Today's Overview", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
-            TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AnalyticsScreen())), child: Text('View All', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13))),
+            TextButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AnalyticsScreen())),
+              child: Text(
+                'View All',
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFFb71000),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -366,7 +378,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             Text('Recent Orders', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
             TextButton(
               onPressed: () => MainScreen.navigateToTab(context, 1),
-              child: Text('See All', style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 13)),
+              child: Text(
+                'See All',
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFFb71000),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ],
         ),
@@ -461,6 +480,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             Expanded(child: _ActionButton(icon: Iconsax.truck_fast, label: 'New Delivery', onTap: () => MainScreen.navigateToTab(context, 3))),
             const SizedBox(width: 12),
             Expanded(child: _ActionButton(icon: Iconsax.ticket_discount, label: 'Discounts', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DiscountsScreen())))),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _storeId == null
+                  ? _ActionButton(icon: Iconsax.message_question, label: 'Questions', onTap: () {})
+                  : _ActionButtonWithBadge(
+                      icon: Iconsax.message_question,
+                      label: 'Questions',
+                      storeId: _storeId!,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProductQuestionsScreen(storeId: _storeId!),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Container()), // Empty space for symmetry
+            const SizedBox(width: 12),
+            Expanded(child: Container()), // Empty space for symmetry
           ],
         ),
       ],
@@ -660,6 +705,23 @@ class _AnalyticCardState extends State<_AnalyticCard> with SingleTickerProviderS
 
   @override
   Widget build(BuildContext context) {
+    // Determine if trend is positive, negative, or neutral
+    final trendValue = widget.trend.replaceAll('%', '').replaceAll('+', '');
+    final isPositive = widget.trend.startsWith('+') || (!widget.trend.startsWith('-') && trendValue != '0');
+    final isNegative = widget.trend.startsWith('-') && trendValue != '0';
+    
+    final trendColor = isPositive 
+        ? Colors.green 
+        : isNegative 
+            ? Colors.red 
+            : Colors.grey[700]!;
+    
+    final trendBgColor = isPositive 
+        ? Colors.green.withOpacity(0.1) 
+        : isNegative 
+            ? Colors.red.withOpacity(0.1) 
+            : Colors.grey[200]!;
+    
     return ScaleTransition(
       scale: _scaleAnimation,
       child: Container(
@@ -678,8 +740,18 @@ class _AnalyticCardState extends State<_AnalyticCard> with SingleTickerProviderS
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)),
-                  child: Text(widget.trend, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[700])),
+                  decoration: BoxDecoration(
+                    color: trendBgColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    widget.trend,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: trendColor,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -714,12 +786,8 @@ class _OrderCardState extends State<_OrderCard> with SingleTickerProviderStateMi
   late Animation<double> _fadeAnimation;
 
   Color get statusColor {
-    switch (widget.status) {
-      case 'Pending': return Colors.grey[600]!;
-      case 'Shipped': return Colors.grey[700]!;
-      case 'Delivered': return Colors.black;
-      default: return Colors.grey;
-    }
+    // All statuses use black background with white text
+    return Colors.black;
   }
 
   @override
@@ -761,8 +829,18 @@ class _OrderCardState extends State<_OrderCard> with SingleTickerProviderStateMi
                         Text(widget.orderId, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black)),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: statusColor.withAlpha(25), borderRadius: BorderRadius.circular(8)),
-                          child: Text(widget.status, style: GoogleFonts.poppins(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600)),
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            widget.status,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -808,6 +886,103 @@ class _ActionButton extends StatelessWidget {
             Text(label, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white), textAlign: TextAlign.center),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ActionButtonWithBadge extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final String storeId;
+  final VoidCallback onTap;
+
+  const _ActionButtonWithBadge({
+    required this.icon,
+    required this.label,
+    required this.storeId,
+    required this.onTap,
+  });
+
+  @override
+  State<_ActionButtonWithBadge> createState() => _ActionButtonWithBadgeState();
+}
+
+class _ActionButtonWithBadgeState extends State<_ActionButtonWithBadge> {
+  final ProductQuestionsService _questionsService = ProductQuestionsService();
+  int _unansweredCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnansweredCount();
+  }
+
+  Future<void> _loadUnansweredCount() async {
+    try {
+      final count = await _questionsService.getUnansweredCount(
+        storeId: widget.storeId,
+      );
+      if (mounted) {
+        setState(() => _unansweredCount = count);
+      }
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFfb2a0a),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: [
+                Icon(widget.icon, color: Colors.white, size: 26),
+                const SizedBox(height: 8),
+                Text(
+                  widget.label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          if (_unansweredCount > 0)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                child: Center(
+                  child: Text(
+                    _unansweredCount > 99 ? '99+' : '$_unansweredCount',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFfb2a0a),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

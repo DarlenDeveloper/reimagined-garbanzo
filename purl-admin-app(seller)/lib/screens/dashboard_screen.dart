@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
-  static const darkGreen = Color(0xFF1B4332);
+  static const darkGreen = Color(0xFFfb2a0a); // POP main red
 
   @override
   Widget build(BuildContext context) {
