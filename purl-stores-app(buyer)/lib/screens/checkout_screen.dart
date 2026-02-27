@@ -380,6 +380,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return _deliveryEstimates.fold(0.0, (sum, estimate) => sum + estimate.fee);
   }
 
+  bool _hasStoresTooFar() {
+    const maxDistance = 40.0; // 40km limit
+    return _deliveryEstimates.any((estimate) => estimate.distance > maxDistance);
+  }
+
+  String? _getTooFarStoreMessage() {
+    const maxDistance = 40.0; // 40km limit
+    final tooFarStores = _deliveryEstimates.where((estimate) => estimate.distance > maxDistance).toList();
+    if (tooFarStores.isNotEmpty) {
+      final storeNames = tooFarStores.map((e) => e.storeName ?? e.storeId).join(', ');
+      return 'The store is too far from you ($storeNames is ${tooFarStores.first.distance.toStringAsFixed(1)} km away)';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1397,6 +1412,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     Map<String, List<CartItemData>> itemsByStore,
     Map<String, CartTotals> totalsByStore,
   ) {
+    final hasTooFarStore = _hasStoresTooFar();
+    final tooFarMessage = _getTooFarStoreMessage();
+    
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: BoxDecoration(
@@ -1412,12 +1430,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Show distance error if applicable
+          if (hasTooFarStore) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFfb2a0a).withValues(alpha: 0.1), // Main red light
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Iconsax.warning_2, size: 16, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      tooFarMessage ?? 'The store is too far from you',
+                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           // Main Pay Button
           SizedBox(
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: _isProcessing ? null : () => _processOrder(itemsByStore, totalsByStore),
+              onPressed: (_isProcessing || hasTooFarStore) ? null : () => _processOrder(itemsByStore, totalsByStore),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFb71000), // Button red
                 foregroundColor: Colors.white,

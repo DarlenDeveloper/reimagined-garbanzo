@@ -665,7 +665,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onTap: () => _toggleFollow(storeId),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(color: const Color(0xFFfb2a0a), borderRadius: BorderRadius.circular(16)),
+                          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(16)),
                           child: Text('Follow', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white)),
                         ),
                       ),
@@ -909,59 +909,99 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTaggedProductsSection(List<String> productIds, String storeId, String storeName, bool isExpanded) {
     if (!isExpanded) {
-      // Show compact preview
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
+      // Show compact preview with FutureBuilder to get first product details
+      return FutureBuilder<Map<String, dynamic>?>(
+        future: _fetchFirstTaggedProduct(productIds, storeId),
+        builder: (context, snapshot) {
+          final firstProduct = snapshot.data;
+          final productName = firstProduct?['name'] ?? 'Tagged Products';
+          final imageUrl = firstProduct?['images'] != null && (firstProduct!['images'] as List).isNotEmpty
+              ? (firstProduct['images'] as List)[0]['url'] ?? ''
+              : '';
+          final firstProductId = productIds.isNotEmpty ? productIds.first : null;
+          
+          return GestureDetector(
+            onTap: firstProductId != null
+                ? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProductDetailScreen(
+                          productId: firstProductId,
+                          productName: productName,
+                          storeName: storeName,
+                          storeId: storeId,
+                        ),
+                      ),
+                    );
+                  }
+                : null,
+            child: Container(
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFfb2a0a),
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
               ),
-              child: const Icon(
-                Iconsax.shopping_bag,
-                size: 18,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    'Tagged Products',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                  // Product image or icon
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFfb2a0a),
+                      borderRadius: BorderRadius.circular(8),
+                      image: imageUrl.isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(imageUrl),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: imageUrl.isEmpty
+                        ? const Icon(
+                            Iconsax.shopping_bag,
+                            size: 18,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          productName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                          ),
+                        ),
+                        Text(
+                          '${productIds.length} product${productIds.length > 1 ? 's' : ''} featured',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    '${productIds.length} product${productIds.length > 1 ? 's' : ''} featured',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: Colors.grey[600],
-                    ),
+                  Icon(
+                    Iconsax.arrow_right_3,
+                    size: 16,
+                    color: Colors.grey[400],
                   ),
                 ],
               ),
             ),
-            Icon(
-              Iconsax.arrow_right_3,
-              size: 16,
-              color: Colors.grey[400],
-            ),
-          ],
-        ),
+          );
+        },
       );
     }
 
@@ -969,10 +1009,39 @@ class _HomeScreenState extends State<HomeScreen> {
     return _buildExpandedTaggedProducts(productIds, storeId, storeName);
   }
 
+  Future<Map<String, dynamic>?> _fetchFirstTaggedProduct(List<String> productIds, String storeId) async {
+    if (productIds.isEmpty) return null;
+    
+    try {
+      final productDoc = await FirebaseFirestore.instance
+          .collection('stores')
+          .doc(storeId)
+          .collection('products')
+          .doc(productIds.first)
+          .get();
+      
+      if (productDoc.exists) {
+        final data = productDoc.data()!;
+        data['id'] = productDoc.id;
+        return data;
+      }
+    } catch (e) {
+      print('Error fetching first product: $e');
+    }
+    
+    return null;
+  }
+
   Widget _buildExpandedTaggedProducts(List<String> productIds, String storeId, String storeName) {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _fetchTaggedProducts(productIds, storeId),
       builder: (context, snapshot) {
+        final firstProduct = snapshot.data?.isNotEmpty == true ? snapshot.data!.first : null;
+        final productName = firstProduct?['name'] ?? 'Tagged Products';
+        final imageUrl = firstProduct?['images'] != null && (firstProduct!['images'] as List).isNotEmpty
+            ? (firstProduct['images'] as List)[0]['url'] ?? ''
+            : '';
+        
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(
             padding: const EdgeInsets.all(16),
@@ -998,16 +1067,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFFfb2a0a),
                         borderRadius: BorderRadius.circular(6),
+                        image: imageUrl.isNotEmpty
+                            ? DecorationImage(
+                                image: NetworkImage(imageUrl),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                       ),
-                      child: const Icon(
-                        Iconsax.shopping_bag,
-                        size: 14,
-                        color: Colors.white,
-                      ),
+                      child: imageUrl.isEmpty
+                          ? const Icon(
+                              Iconsax.shopping_bag,
+                              size: 14,
+                              color: Colors.white,
+                            )
+                          : null,
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Tagged Products',
+                      productName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -1073,16 +1152,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFfb2a0a),
                       borderRadius: BorderRadius.circular(6),
+                      image: imageUrl.isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(imageUrl),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                     ),
-                    child: const Icon(
-                      Iconsax.shopping_bag,
-                      size: 14,
-                      color: Colors.white,
-                    ),
+                    child: imageUrl.isEmpty
+                        ? const Icon(
+                            Iconsax.shopping_bag,
+                            size: 14,
+                            color: Colors.white,
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Tagged Products',
+                    productName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
