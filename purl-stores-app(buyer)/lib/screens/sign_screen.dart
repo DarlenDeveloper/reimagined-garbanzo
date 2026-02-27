@@ -79,6 +79,21 @@ class _SignScreenState extends State<SignScreen> with SingleTickerProviderStateM
     }
   }
 
+  Future<void> _signInWithApple() async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await _authService.signInWithApple();
+      if (result != null && mounted) {
+        PostsPreloaderService().preloadPosts();
+        context.go('/interests');
+      }
+    } catch (e) {
+      _showError('Apple sign in failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   String _getErrorMessage(String code) {
     switch (code) {
       case 'user-not-found': return 'No account found with this email';
@@ -167,7 +182,7 @@ class _SignScreenState extends State<SignScreen> with SingleTickerProviderStateM
                 _buildPremiumSocialButton(
                   icon: Icons.apple,
                   label: 'Continue with Apple',
-                  onTap: _isLoading ? null : () {},
+                  onTap: _isLoading ? null : _signInWithApple,
                   backgroundColor: Colors.black,
                   textColor: Colors.white,
                   iconColor: Colors.white,

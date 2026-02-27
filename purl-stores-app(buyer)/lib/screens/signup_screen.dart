@@ -106,6 +106,21 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
     }
   }
 
+  Future<void> _signUpWithApple() async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await _authService.signInWithApple();
+      if (result != null && mounted) {
+        PostsPreloaderService().preloadPosts();
+        context.go('/interests');
+      }
+    } catch (e) {
+      _showError('Apple sign up failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   String _getErrorMessage(String code) {
     switch (code) {
       case 'email-already-in-use': return 'This email is already registered';
@@ -195,7 +210,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                 _buildSocialButton(
                   icon: Icons.apple,
                   label: 'Continue with Apple',
-                  onTap: _isLoading ? null : () {},
+                  onTap: _isLoading ? null : _signUpWithApple,
                   backgroundColor: Colors.black,
                   textColor: Colors.white,
                   iconColor: Colors.white,

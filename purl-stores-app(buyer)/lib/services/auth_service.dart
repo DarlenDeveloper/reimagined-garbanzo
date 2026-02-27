@@ -1,12 +1,16 @@
+import 'dart:convert';
+import 'dart:math';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'notification_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    // Use web client ID for Android OAuth
-    clientId: '255612064321-8p09as8bg59k9nph3p7n7dp6p1nk50vg.apps.googleusercontent.com',
+    // No clientId or serverClientId needed - google_sign_in automatically reads
+    // from GoogleService-Info.plist (iOS) and google-services.json (Android)
   );
 
   // Get current user
@@ -69,6 +73,58 @@ class AuthService {
     await NotificationService().initialize();
     
     return userCredential;
+  }
+
+  // Sign in with Apple
+  Future<UserCredential?> signInWithApple() async {
+    // Generate a nonce for security
+    final rawNonce = _generateNonce();
+    final nonce = _sha256ofString(rawNonce);
+
+    // Request Apple credentials
+    final appleCredential = await SignInWithApple.getAppleIDCredential(
+      scopes: [
+        AppleIDAuthorizationScopes.email,
+        AppleIDAuthorizationScopes.fullName,
+      ],
+      nonce: nonce,
+    );
+
+    // Create an OAuthCredential from the Apple credential
+    final oauthCredential = OAuthProvider('apple.com').credential(
+      idToken: appleCredential.identityToken,
+      rawNonce: rawNonce,
+    );
+
+    // Sign in with Firebase
+    final userCredential = await _auth.signInWithCredential(oauthCredential);
+
+    // Apple only provides the name on first sign-in, so save it
+    if (appleCredential.givenName != null && userCredential.user != null) {
+      final displayName = '${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}'.trim();
+      if (displayName.isNotEmpty) {
+        await userCredential.user!.updateDisplayName(displayName);
+      }
+    }
+
+    // Initialize notifications after successful Apple sign in
+    await NotificationService().initialize();
+
+    return userCredential;
+  }
+
+  /// Generates a cryptographically secure random nonce
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  /// Returns the sha256 hash of [input] in hex notation
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
   }
 
   // Send email verification
