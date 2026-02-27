@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:convert';
 import '../services/posts_service.dart';
 import '../services/messages_service.dart';
@@ -47,6 +48,10 @@ class _HomeScreenState extends State<HomeScreen> {
   
   // Cache for store data to prevent repeated fetches
   final Map<String, Map<String, dynamic>> _storeDataCache = {};
+  
+  // Cache for tagged product data to prevent repeated fetches
+  // Key format: "storeId_productId"
+  final Map<String, Map<String, dynamic>> _taggedProductCache = {};
   
   // Persistent cache for verification status
   SharedPreferences? _prefs;
@@ -847,52 +852,17 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 24),
               _buildActionBtn(isSaved ? Iconsax.archive_tick : Iconsax.archive_add, '', () => _toggleSave(postId, storeId), isActive: isSaved),
               const Spacer(),
-              // Show expand/collapse button if has tagged products, otherwise show DM
-              if (hasTaggedProducts)
-                _buildExpandButton(isExpanded, () => _togglePostExpansion(postId))
-              else
-                _buildActionBtn(Iconsax.direct_send, '', () => _sendDM(storeId, storeName)),
+              // Show DM button (no more Shop button - tagged product preview is the trigger)
+              _buildActionBtn(Iconsax.direct_send, '', () => _sendDM(storeId, storeName)),
             ],
           ),
           
-          // Tagged products section (expandable)
+          // Tagged products section (expandable) - tapping the preview toggles expansion
           if (hasTaggedProducts) ...[
             const SizedBox(height: 12),
-            _buildTaggedProductsSection(taggedProductIds, storeId, storeName, isExpanded),
+            _buildTaggedProductsSection(taggedProductIds, storeId, storeName, isExpanded, postId),
           ],
         ],
-      ),
-    );
-  }
-
-  Widget _buildExpandButton(bool isExpanded, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: const Color(0xFFfb2a0a),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isExpanded ? Iconsax.arrow_up_2 : Iconsax.shopping_bag,
-              size: 14,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              isExpanded ? 'Hide' : 'Shop',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -907,9 +877,9 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Widget _buildTaggedProductsSection(List<String> productIds, String storeId, String storeName, bool isExpanded) {
+  Widget _buildTaggedProductsSection(List<String> productIds, String storeId, String storeName, bool isExpanded, String postId) {
     if (!isExpanded) {
-      // Show compact preview with FutureBuilder to get first product details
+      // Show compact preview - tapping toggles expansion (acts as dropdown trigger)
       return FutureBuilder<Map<String, dynamic>?>(
         future: _fetchFirstTaggedProduct(productIds, storeId),
         builder: (context, snapshot) {
@@ -918,24 +888,9 @@ class _HomeScreenState extends State<HomeScreen> {
           final imageUrl = firstProduct?['images'] != null && (firstProduct!['images'] as List).isNotEmpty
               ? (firstProduct['images'] as List)[0]['url'] ?? ''
               : '';
-          final firstProductId = productIds.isNotEmpty ? productIds.first : null;
           
           return GestureDetector(
-            onTap: firstProductId != null
-                ? () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProductDetailScreen(
-                          productId: firstProductId,
-                          productName: productName,
-                          storeName: storeName,
-                          storeId: storeId,
-                        ),
-                      ),
-                    );
-                  }
-                : null,
+            onTap: () => _togglePostExpansion(postId),
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -954,7 +909,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(8),
                       image: imageUrl.isNotEmpty
                           ? DecorationImage(
-                              image: NetworkImage(imageUrl),
+                              image: CachedNetworkImageProvider(imageUrl),
                               fit: BoxFit.cover,
                             )
                           : null,
@@ -993,7 +948,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   Icon(
-                    Iconsax.arrow_right_3,
+                    Iconsax.arrow_down_1,
                     size: 16,
                     color: Colors.grey[400],
                   ),
@@ -1006,11 +961,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // Show expanded view with products
-    return _buildExpandedTaggedProducts(productIds, storeId, storeName);
+    return _buildExpandedTaggedProducts(productIds, storeId, storeName, postId);
   }
 
   Future<Map<String, dynamic>?> _fetchFirstTaggedProduct(List<String> productIds, String storeId) async {
     if (productIds.isEmpty) return null;
+    
+    final cacheKey = '${storeId}_${productIds.first}';
+    
+    // Check in-memory cache first
+    if (_taggedProductCache.containsKey(cacheKey)) {
+      return _taggedProductCache[cacheKey];
+    }
     
     try {
       final productDoc = await FirebaseFirestore.instance
@@ -1023,6 +985,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (productDoc.exists) {
         final data = productDoc.data()!;
         data['id'] = productDoc.id;
+        _taggedProductCache[cacheKey] = data;
         return data;
       }
     } catch (e) {
@@ -1032,7 +995,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return null;
   }
 
-  Widget _buildExpandedTaggedProducts(List<String> productIds, String storeId, String storeName) {
+  Widget _buildExpandedTaggedProducts(List<String> productIds, String storeId, String storeName, String postId) {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _fetchTaggedProducts(productIds, storeId),
       builder: (context, snapshot) {
@@ -1069,7 +1032,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(6),
                         image: imageUrl.isNotEmpty
                             ? DecorationImage(
-                                image: NetworkImage(imageUrl),
+                                image: CachedNetworkImageProvider(imageUrl),
                                 fit: BoxFit.cover,
                               )
                             : null,
@@ -1154,7 +1117,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(6),
                       image: imageUrl.isNotEmpty
                           ? DecorationImage(
-                              image: NetworkImage(imageUrl),
+                              image: CachedNetworkImageProvider(imageUrl),
                               fit: BoxFit.cover,
                             )
                           : null,
@@ -1179,34 +1142,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const Spacer(),
-                  // Enhanced Ask button
+                  // Collapse/dismiss button
                   GestureDetector(
-                    onTap: () => _openStoreChat(storeId, storeName),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Iconsax.message,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Ask Store',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
+                    onTap: () => _togglePostExpansion(postId),
+                    child: Icon(
+                      Iconsax.arrow_up_2,
+                      size: 18,
+                      color: Colors.grey[600],
                     ),
                   ),
                 ],
@@ -1301,14 +1243,22 @@ class _HomeScreenState extends State<HomeScreen> {
               child: imageUrl.isNotEmpty
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        imageUrl,
+                      child: CachedNetworkImage(
+                        imageUrl: imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                            child: Icon(Iconsax.box, size: 20, color: Colors.grey[400]),
-                          );
-                        },
+                        placeholder: (context, url) => Center(
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Center(
+                          child: Icon(Iconsax.box, size: 20, color: Colors.grey[400]),
+                        ),
                       ),
                     )
                   : Center(
@@ -1526,6 +1476,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final products = <Map<String, dynamic>>[];
     
     for (final productId in productIds) {
+      final cacheKey = '${storeId}_$productId';
+      
+      // Check in-memory cache first
+      if (_taggedProductCache.containsKey(cacheKey)) {
+        products.add(_taggedProductCache[cacheKey]!);
+        continue;
+      }
+      
       try {
         final productDoc = await FirebaseFirestore.instance
             .collection('stores')
@@ -1537,6 +1495,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (productDoc.exists) {
           final data = productDoc.data()!;
           data['id'] = productDoc.id;
+          _taggedProductCache[cacheKey] = data;
           products.add(data);
         }
       } catch (e) {
