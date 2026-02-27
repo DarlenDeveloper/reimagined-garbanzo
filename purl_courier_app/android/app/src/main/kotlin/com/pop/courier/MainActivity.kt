@@ -1,4 +1,4 @@
-package com.example.purl_courier_app
+package com.pop.courier
 
 import io.flutter.embedding.android.FlutterActivity
 
