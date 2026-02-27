@@ -54,12 +54,12 @@ dev_dependencies:
   flutter_native_splash: ^2.4.3
 
 flutter_native_splash:
-  color: "#FFFFFF"
+  color: "#fb2a0a"
   image: assets/images/popstoreslogo.PNG
   android: true
   ios: true
   android_12:
-    color: "#FFFFFF"
+    color: "#fb2a0a"
     image: assets/images/popstoreslogo.PNG
 
 flutter_launcher_icons:

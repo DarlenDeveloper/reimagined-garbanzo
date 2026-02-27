@@ -40,6 +40,16 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.3
+
+flutter_native_splash:
+  color: "#fb2a0a"
+  image: assets/images/pop_rider_logo.png
+  android: true
+  ios: true
+  android_12:
+    color: "#fb2a0a"
+    image: assets/images/pop_rider_logo.png
 
 flutter_launcher_icons:
   android: true

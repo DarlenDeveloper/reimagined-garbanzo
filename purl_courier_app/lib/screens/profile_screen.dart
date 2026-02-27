@@ -1,11 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+  void _showDeleteAccountDialog(BuildContext context, AuthService authService) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text(
+            'Delete Account',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Your account deletion request has been submitted.',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'You will be notified via email once your request is processed. This action cannot be undone.',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              RichText(
+                text: TextSpan(
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  children: [
+                    const TextSpan(text: 'For more information, see our '),
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      style: const TextStyle(
+                        color: Color(0xFFfb2a0a),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () async {
+                          final uri = Uri.parse('https://purlstores-za.web.app/privacy.html');
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                await authService.signOut();
+                if (context.mounted) {
+                  context.go('/welcome');
+                }
+              },
+              child: const Text(
+                'OK',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFfb2a0a)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -207,6 +279,11 @@ class ProfileScreen extends StatelessWidget {
                   icon: Iconsax.document_text,
                   title: 'Documents',
                   onTap: () {},
+                ),
+                _MenuItem(
+                  icon: Iconsax.trash,
+                  title: 'Delete Account',
+                  onTap: () => _showDeleteAccountDialog(context, authService),
                 ),
               ],
             ),

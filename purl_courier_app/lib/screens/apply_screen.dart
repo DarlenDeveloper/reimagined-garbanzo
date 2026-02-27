@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/onboarding_service.dart';
 
@@ -266,6 +268,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
               
               // Terms Checkbox
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Checkbox(
                     value: _agreedToTerms,
@@ -273,27 +276,46 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     activeColor: Colors.black,
                   ),
                   Expanded(
-                    child: Text.rich(
-                      TextSpan(
-                        text: 'I agree to the ',
-                        style: Theme.of(context).textTheme.bodySmall,
-                        children: [
-                          TextSpan(
-                            text: 'Terms & Conditions',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              decoration: TextDecoration.underline,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: RichText(
+                        text: TextSpan(
+                          text: 'I agree to the ',
+                          style: Theme.of(context).textTheme.bodySmall,
+                          children: [
+                            TextSpan(
+                              text: 'Terms & Conditions',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                decoration: TextDecoration.underline,
+                                color: Color(0xFFfb2a0a),
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () async {
+                                  final uri = Uri.parse('https://purlstores-za.web.app/terms.html');
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  }
+                                },
                             ),
-                          ),
-                          const TextSpan(text: ' and '),
-                          TextSpan(
-                            text: 'Privacy Policy',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              decoration: TextDecoration.underline,
+                            const TextSpan(text: ' and '),
+                            TextSpan(
+                              text: 'Privacy Policy',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                decoration: TextDecoration.underline,
+                                color: Color(0xFFfb2a0a),
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () async {
+                                  final uri = Uri.parse('https://purlstores-za.web.app/privacy.html');
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  }
+                                },
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
