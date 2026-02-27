@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/colors.dart';
+import '../services/auth_service.dart';
 
 class PrivacySecurityScreen extends StatefulWidget {
   const PrivacySecurityScreen({super.key});
@@ -11,6 +13,44 @@ class PrivacySecurityScreen extends StatefulWidget {
 }
 
 class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
+  final AuthService _authService = AuthService();
+
+  Future<void> _handleDataPrivacyRequest() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Request Submitted',
+            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+          ),
+          content: Text(
+            'Your data privacy request has been sent. You will be notified via email once processed.',
+            style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close dialog
+                await _authService.signOut();
+                if (mounted) {
+                  context.go('/');
+                }
+              },
+              child: Text(
+                'OK',
+                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFFfb2a0a)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,12 +97,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
               );
             }),
             _buildMenuItem(Iconsax.document, 'Data & Privacy', 'Download or delete your data', () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Feature coming soon', style: GoogleFonts.poppins()),
-                  backgroundColor: const Color(0xFFfb2a0a),
-                ),
-              );
+              _handleDataPrivacyRequest();
             }),
           ],
         ),

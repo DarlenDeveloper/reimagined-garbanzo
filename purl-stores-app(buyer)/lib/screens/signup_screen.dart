@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/posts_preloader_service.dart';
 
@@ -22,6 +24,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  bool _acceptedTerms = false;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
@@ -52,6 +55,11 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
 
     if (name.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
       _showError('Please fill in all fields');
+      return;
+    }
+
+    if (!_acceptedTerms) {
+      _showError('Please accept the Privacy Policy and Terms of Service');
       return;
     }
 
@@ -262,6 +270,72 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                     ),
                     onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                   ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Terms and Privacy Policy checkbox
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: Checkbox(
+                        value: _acceptedTerms,
+                        onChanged: _isLoading ? null : (value) {
+                          setState(() => _acceptedTerms = value ?? false);
+                        },
+                        activeColor: popButtonRed,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                            height: 1.4,
+                          ),
+                          children: [
+                            const TextSpan(text: 'I agree to the '),
+                            TextSpan(
+                              text: 'Privacy Policy',
+                              style: GoogleFonts.poppins(
+                                color: popRed,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () async {
+                                  final uri = Uri.parse('https://purlstores-za.web.app/privacy.html');
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  }
+                                },
+                            ),
+                            const TextSpan(text: ' and '),
+                            TextSpan(
+                              text: 'Terms of Service',
+                              style: GoogleFonts.poppins(
+                                color: popRed,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () async {
+                                  final uri = Uri.parse('https://purlstores-za.web.app/terms.html');
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  }
+                                },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 32),
                 

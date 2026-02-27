@@ -482,32 +482,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             Expanded(child: _ActionButton(icon: Iconsax.ticket_discount, label: 'Discounts', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DiscountsScreen())))),
           ],
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _storeId == null
-                  ? _ActionButton(icon: Iconsax.message_question, label: 'Questions', onTap: () {})
-                  : _ActionButtonWithBadge(
-                      icon: Iconsax.message_question,
-                      label: 'Questions',
-                      storeId: _storeId!,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProductQuestionsScreen(storeId: _storeId!),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Container()), // Empty space for symmetry
-            const SizedBox(width: 12),
-            Expanded(child: Container()), // Empty space for symmetry
-          ],
-        ),
       ],
     );
   }

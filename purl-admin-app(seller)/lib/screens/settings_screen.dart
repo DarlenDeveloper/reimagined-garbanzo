@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -104,6 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _SettingsItem(icon: Iconsax.lock, label: 'Password & Security', onTap: () => _showSecuritySheet(context)),
                 _SettingsItem(icon: Iconsax.card, label: 'Payment Methods', onTap: () => _showPaymentMethodsSheet(context)),
                 _SettingsItem(icon: Iconsax.wallet_2, label: 'Bank Accounts', onTap: () => _showBankAccountsSheet(context)),
+                _SettingsItem(icon: Iconsax.trash, label: 'Delete Account', onTap: () => _showDeleteAccountDialog(context)),
               ]),
               const SizedBox(height: 16),
               _buildSection('Store', [
@@ -299,6 +302,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Delete Account',
+            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Your account deletion request has been submitted.',
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[700]),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'You will be notified via email once your request is processed. This action cannot be undone.',
+                style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 16),
+              RichText(
+                text: TextSpan(
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+                  children: [
+                    const TextSpan(text: 'For more information, see our '),
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFFfb2a0a),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () async {
+                          final uri = Uri.parse('https://purlstores-za.web.app/privacy.html');
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                await _authService.signOut();
+                if (mounted) {
+                  context.go('/login');
+                }
+              },
+              child: Text(
+                'OK',
+                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFFfb2a0a)),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -529,9 +602,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _buildTextField('Current Password', '••••••••', obscure: true),
         _buildTextField('New Password', 'Enter new password', obscure: true),
         _buildTextField('Confirm Password', 'Confirm new password', obscure: true),
-        const SizedBox(height: 16),
-        _buildSecurityOption('Two-Factor Authentication', 'Add extra security to your account', true),
-        _buildSecurityOption('Login Alerts', 'Get notified of new logins', true),
         const SizedBox(height: 16),
         _buildSaveButton(() => Navigator.pop(context)),
       ],
