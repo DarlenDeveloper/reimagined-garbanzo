@@ -150,7 +150,7 @@ class _AIShoppingAssistantScreenState extends State<AIShoppingAssistantScreen> {
             width: 48,
             height: 48,
             child: Image.asset(
-              'assets/images/popailogo.png',
+              'assets/images/shoppingassistantlogo.png',
               fit: BoxFit.contain,
             ),
           ),
@@ -260,7 +260,7 @@ class _AIShoppingAssistantScreenState extends State<AIShoppingAssistantScreen> {
                 width: 100,
                 height: 100,
                 child: Image.asset(
-                  'assets/images/popailogo.png',
+                  'assets/images/shoppingassistantlogo.png',
                   fit: BoxFit.contain,
                 ),
               ),
@@ -325,7 +325,7 @@ class _AIShoppingAssistantScreenState extends State<AIShoppingAssistantScreen> {
                   width: 40,
                   height: 40,
                   child: Image.asset(
-                    'assets/images/popailogo.png',
+                    'assets/images/shoppingassistantlogo.png',
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -489,7 +489,7 @@ class _AIShoppingAssistantScreenState extends State<AIShoppingAssistantScreen> {
             width: 40,
             height: 40,
             child: Image.asset(
-              'assets/images/popailogo.png',
+              'assets/images/shoppingassistantlogo.png',
               fit: BoxFit.contain,
             ),
           ),

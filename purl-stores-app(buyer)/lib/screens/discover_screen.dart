@@ -493,7 +493,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               height: 56,
               width: 56,
               child: Image.asset(
-                'assets/images/popailogo.png',
+                'assets/images/shoppingassistantlogo.png',
                 fit: BoxFit.contain,
               ),
             ),

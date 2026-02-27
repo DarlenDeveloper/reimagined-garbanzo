@@ -43,10 +43,6 @@ post_install do |installer|
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
         '$(inherited)',
       ]
-      # Fix for mobile_scanner module visibility
-      if target.name == 'mobile_scanner'
-        config.build_settings['MODULEMAP_PRIVATE_HEADERS'] = 'YES'
-      end
     end
   end
 end

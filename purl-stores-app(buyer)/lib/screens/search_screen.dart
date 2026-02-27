@@ -189,7 +189,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   height: 56,
                   width: 56,
                   child: Image.asset(
-                    'assets/images/popailogo.png',
+                    'assets/images/shoppingassistantlogo.png',
                     fit: BoxFit.contain,
                   ),
                 ),
