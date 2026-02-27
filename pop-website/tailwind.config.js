@@ -23,8 +23,11 @@ module.exports = {
       padding: "16px",
     },
     extend: {
+      fontFamily: {
+        sans: ['Poppins', 'sans-serif'],
+      },
       colors: {
-        black: "#212b36",
+        black: "#000000",
         "dark-700": "#090e34b3",
         dark: {
           DEFAULT: "#111928",
@@ -36,7 +39,10 @@ module.exports = {
           7: "#D1D5DB",
           8: "#E5E7EB",
         },
-        primary: "#3758F9",
+        primary: "#fb2a0a",
+        "pop-red": "#fb2a0a",
+        "pop-dark-red": "#e02509",
+        "pop-button-red": "#b71000",
         "blue-dark": "#1B44C8",
         secondary: "#13C296",
         "body-color": "#637381",
