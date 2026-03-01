@@ -2,6 +2,17 @@
   "projects": {
     "default": "purlstores-za"
   },
-  "targets": {},
+  "targets": {
+    "purlstores-za": {
+      "hosting": {
+        "website": [
+          "purlstores-za"
+        ],
+        "admin": [
+          "purl-admin"
+        ]
+      }
+    }
+  },
   "etags": {}
 }
