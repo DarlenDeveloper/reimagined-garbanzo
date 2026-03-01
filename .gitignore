@@ -59,6 +59,9 @@ npm-debug.log*
 firebase-debug.log
 firebase-debug.*.log
 
+# Firebase
+.firebase/
+
 # Testing
 coverage/
 
