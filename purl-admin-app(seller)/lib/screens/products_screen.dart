@@ -207,125 +207,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 
   void _showProductDetails(Product product) {
-    final category = CategoryTaxonomy.getCategoryById(product.categoryId);
-    final formattedPrice = _currencyService.formatPrice(product.price);
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                    image: product.primaryImageUrl != null
-                        ? DecorationImage(
-                            image: NetworkImage(product.primaryImageUrl!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: product.primaryImageUrl == null
-                      ? Center(
-                          child: Icon(
-                            category?.icon ?? Iconsax.box,
-                            size: 28,
-                            color: Colors.black,
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.name,
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        formattedPrice,
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Stock info
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _infoItem('Stock', '${product.stock}'),
-                  _infoItem('Sold', '${product.totalSold}'),
-                  _infoItem('Status', product.isActive ? 'Active' : 'Inactive'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: _actionButton(Iconsax.edit, 'Edit', () {
-                    Navigator.pop(context);
-                    _showEditProductSheet(product);
-                  }),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _actionButton(
-                    Iconsax.trash,
-                    'Delete',
-                    () async {
-                      Navigator.pop(context);
-                      await _deleteProduct(product);
-                    },
-                    isDestructive: true,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
+      isScrollControlled: true,
+      builder: (context) => _ProductDetailsSheet(
+        product: product,
+        storeId: _storeId!,
+        currencyService: _currencyService,
+        onEdit: () {
+          Navigator.pop(context);
+          _showEditProductSheet(product);
+        },
+        onDelete: () async {
+          Navigator.pop(context);
+          await _deleteProduct(product);
+        },
       ),
     );
   }
@@ -537,9 +434,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
       onRefresh: _refreshProducts,
       color: Colors.black,
       child: ListView.builder(
+        key: const PageStorageKey('products_list'),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _filteredProducts.length,
         itemBuilder: (context, index) => _ProductItem(
+          key: ValueKey(_filteredProducts[index].id),
           product: _filteredProducts[index],
           onTap: () => _showProductDetails(_filteredProducts[index]),
           currencyService: _currencyService,
@@ -614,65 +513,31 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
 
 // ============ PRODUCT ITEM ============
-class _ProductItem extends StatefulWidget {
+class _ProductItem extends StatelessWidget {
   final Product product;
   final VoidCallback onTap;
   final CurrencyService currencyService;
 
   const _ProductItem({
+    super.key,
     required this.product,
     required this.onTap,
     required this.currencyService,
   });
 
   @override
-  State<_ProductItem> createState() => _ProductItemState();
-}
-
-class _ProductItemState extends State<_ProductItem> {
-  final ProductQuestionsService _questionsService = ProductQuestionsService();
-  int _unansweredCount = 0;
-  bool _isLoadingCount = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadQuestionCount();
-  }
-
-  Future<void> _loadQuestionCount() async {
-    setState(() => _isLoadingCount = true);
-    try {
-      final count = await _questionsService.getProductUnansweredCount(
-        storeId: widget.product.storeId,
-        productId: widget.product.id,
-      );
-      if (mounted) {
-        setState(() {
-          _unansweredCount = count;
-          _isLoadingCount = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoadingCount = false);
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final category = CategoryTaxonomy.getCategoryById(widget.product.categoryId);
-    final status = widget.product.stockStatus;
+    final category = CategoryTaxonomy.getCategoryById(product.categoryId);
+    final status = product.stockStatus;
     final statusColor = status == 'In Stock'
         ? Colors.black
         : status == 'Low Stock'
             ? Colors.orange[700]!
             : Colors.grey[500]!;
-    final formattedPrice = widget.currencyService.formatPrice(widget.product.price);
+    final formattedPrice = currencyService.formatPrice(product.price);
 
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -688,14 +553,14 @@ class _ProductItemState extends State<_ProductItem> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                image: widget.product.primaryImageUrl != null
+                image: product.primaryImageUrl != null
                     ? DecorationImage(
-                        image: NetworkImage(widget.product.primaryImageUrl!),
+                        image: NetworkImage(product.primaryImageUrl!),
                         fit: BoxFit.cover,
                       )
                     : null,
               ),
-              child: widget.product.primaryImageUrl == null
+              child: product.primaryImageUrl == null
                   ? Center(
                       child: Icon(
                         category?.icon ?? Iconsax.box,
@@ -711,51 +576,18 @@ class _ProductItemState extends State<_ProductItem> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.product.name,
+                    product.name,
                     style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        '$formattedPrice • ${widget.product.stock} in stock',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      if (_unansweredCount > 0) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFfb2a0a),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.question_answer,
-                                size: 10,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                '$_unansweredCount',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
+                  Text(
+                    '$formattedPrice • ${product.stock} in stock',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
                   ),
                 ],
               ),
@@ -767,9 +599,9 @@ class _ProductItemState extends State<_ProductItem> {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                widget.product.isActive ? status : 'Inactive',
+                product.isActive ? status : 'Inactive',
                 style: GoogleFonts.poppins(
-                  color: widget.product.isActive ? statusColor : Colors.grey,
+                  color: product.isActive ? statusColor : Colors.grey,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -2994,6 +2826,553 @@ class _EditProductSheetState extends State<_EditProductSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+// Product Details Sheet Widget
+class _ProductDetailsSheet extends StatefulWidget {
+  final Product product;
+  final String storeId;
+  final CurrencyService currencyService;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _ProductDetailsSheet({
+    required this.product,
+    required this.storeId,
+    required this.currencyService,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  State<_ProductDetailsSheet> createState() => _ProductDetailsSheetState();
+}
+
+class _ProductDetailsSheetState extends State<_ProductDetailsSheet> {
+  final ProductQuestionsService _questionsService = ProductQuestionsService();
+  bool _isQuestionsExpanded = false;
+  int _unansweredCount = 0;
+  bool _isLoadingQuestions = false;
+  List<Map<String, dynamic>> _questions = [];
+  StreamSubscription<List<Map<String, dynamic>>>? _questionsSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuestionCount();
+  }
+
+  @override
+  void dispose() {
+    _questionsSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadQuestionCount() async {
+    try {
+      final count = await _questionsService.getProductUnansweredCount(
+        storeId: widget.storeId,
+        productId: widget.product.id,
+      );
+      if (mounted) {
+        setState(() => _unansweredCount = count);
+      }
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  void _loadQuestions() {
+    if (_questions.isNotEmpty) return; // Already loaded
+    
+    if (!mounted) return;
+    
+    setState(() => _isLoadingQuestions = true);
+    
+    _questionsSubscription?.cancel();
+    _questionsSubscription = _questionsService.getProductQuestions(
+      storeId: widget.storeId,
+      productId: widget.product.id,
+    ).listen(
+      (questions) {
+        if (mounted) {
+          setState(() {
+            _questions = questions;
+            _isLoadingQuestions = false;
+          });
+        }
+      },
+      onError: (e) {
+        if (mounted) {
+          setState(() => _isLoadingQuestions = false);
+        }
+      },
+    );
+  }
+
+  Future<void> _answerQuestion(String questionId, String answer) async {
+    try {
+      await _questionsService.answerQuestion(
+        storeId: widget.storeId,
+        productId: widget.product.id,
+        questionId: questionId,
+        answer: answer,
+      );
+      
+      // Reload questions and count
+      if (mounted) {
+        setState(() => _questions.clear());
+        _questionsSubscription?.cancel();
+        _loadQuestions();
+        await _loadQuestionCount();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Answer posted', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.black,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to post answer', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showAnswerDialog(String questionId, String questionText) {
+    final answerController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Answer Question', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Question:',
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              questionText,
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: answerController,
+              decoration: InputDecoration(
+                hintText: 'Type your answer...',
+                hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              maxLines: 3,
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              if (answerController.text.trim().isNotEmpty) {
+                Navigator.pop(context);
+                _answerQuestion(questionId, answerController.text.trim());
+              }
+            },
+            child: Text('Post Answer', style: GoogleFonts.poppins(color: const Color(0xFFb71000))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final category = CategoryTaxonomy.getCategoryById(widget.product.categoryId);
+    final formattedPrice = widget.currencyService.formatPrice(widget.product.price);
+    final status = widget.product.stockStatus;
+    final statusColor = status == 'In Stock'
+        ? Colors.black
+        : status == 'Low Stock'
+            ? Colors.orange[700]!
+            : Colors.grey[500]!;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Product header
+                  Row(
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          image: widget.product.primaryImageUrl != null
+                              ? DecorationImage(
+                                  image: NetworkImage(widget.product.primaryImageUrl!),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: widget.product.primaryImageUrl == null
+                            ? Center(
+                                child: Icon(
+                                  category?.icon ?? Iconsax.box,
+                                  size: 28,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.product.name,
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              formattedPrice,
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Stock info
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _infoItem('Stock', '${widget.product.stock}'),
+                        _infoItem('Sold', '${widget.product.totalSold}'),
+                        _infoItem('Status', widget.product.isActive ? status : 'Inactive'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Questions dropdown
+                  GestureDetector(
+                    onTap: () {
+                      setState(() => _isQuestionsExpanded = !_isQuestionsExpanded);
+                      if (_isQuestionsExpanded && _questions.isEmpty) {
+                        _loadQuestions();
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Iconsax.message_question,
+                            size: 20,
+                            color: _unansweredCount > 0 ? const Color(0xFFfb2a0a) : Colors.grey[600],
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Product Questions',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          if (_unansweredCount > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFfb2a0a),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '$_unansweredCount',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            _isQuestionsExpanded ? Iconsax.arrow_up_2 : Iconsax.arrow_down_1,
+                            size: 18,
+                            color: Colors.grey[600],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Questions list (expanded)
+                  if (_isQuestionsExpanded) ...[
+                    const SizedBox(height: 12),
+                    if (_isLoadingQuestions)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: CircularProgressIndicator(color: Colors.black),
+                        ),
+                      )
+                    else if (_questions.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'No questions yet',
+                            style: GoogleFonts.poppins(
+                              color: Colors.grey[500],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      ...(_questions.map((q) => _buildQuestionItem(q))),
+                  ],
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _actionButton(Iconsax.edit, 'Edit', widget.onEdit),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _actionButton(
+                          Iconsax.trash,
+                          'Delete',
+                          widget.onDelete,
+                          isDestructive: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoItem(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuestionItem(Map<String, dynamic> question) {
+    final isAnswered = question['answer'] != null && question['answer'].toString().isNotEmpty;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isAnswered ? Colors.grey[200]! : const Color(0xFFfb2a0a).withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  question['question'] ?? '',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              if (!isAnswered)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFfb2a0a),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'NEW',
+                    style: GoogleFonts.poppins(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (isAnswered) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Iconsax.message_text, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      question['answer'] ?? '',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => _showAnswerDialog(
+                  question['id'] ?? '',
+                  question['question'] ?? '',
+                ),
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFFb71000),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'Answer',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _actionButton(IconData icon, String label, VoidCallback onTap, {bool isDestructive = false}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isDestructive ? Colors.red.withAlpha(25) : Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: isDestructive ? Colors.red : Colors.black, size: 22),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: isDestructive ? Colors.red : Colors.black,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
